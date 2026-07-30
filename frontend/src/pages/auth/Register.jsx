@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../../api/axios';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 
 const Register = () => {
@@ -51,7 +51,7 @@ const Register = () => {
         setError('');
         
         try {
-            const res = await axios.post('http://localhost:5000/api/auth/register', formData);
+const res = await api.post('/auth/register', formData);
             
             // Success Modal Data Set karna
             const today = new Date();
