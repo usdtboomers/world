@@ -1,4 +1,4 @@
-// C:\Users\HP\Desktop\WorldFinance24\backend\models\Support.js
+// C:\Users\HP\Desktop\worldfinance24\backend\models\Support.js
 const mongoose = require("mongoose");
 
 const supportSchema = new mongoose.Schema(

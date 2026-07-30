@@ -70,7 +70,7 @@ const AdminManageUsers = () => {
       
   //     const targetBaseUrl = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" 
   //       ? "http://localhost:3000" 
-  //       : "https://WorldFinance24.online"; 
+  //       : "https://worldfinance24.online"; 
 
   //     const mainWebsiteUrl = `${targetBaseUrl}/login?token=${userToken}&user=${encodeURIComponent(userDataStr)}`;
   //     window.open(mainWebsiteUrl, '_blank', 'noopener,noreferrer');

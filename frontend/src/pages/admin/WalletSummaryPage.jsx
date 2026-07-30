@@ -1,4 +1,4 @@
-// C:\Users\HP\Desktop\WorldFinance24\frontend\src\pages\admin\AdminWalletHistory.jsx
+// C:\Users\HP\Desktop\worldfinance24\frontend\src\pages\admin\AdminWalletHistory.jsx
 
 import React, { useEffect, useState, useMemo } from "react";
 import api from "../../api/axios"; 

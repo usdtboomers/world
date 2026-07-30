@@ -225,7 +225,7 @@ const UserLogin = () => {
 
         <div style={contentWrapper}>
           <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-            <img src="/logo.jpg" alt="WorldFinance" style={{ height: '55px', borderRadius: '8px', marginBottom: '10px' }} />
+            <img src="/logo.jpg" alt="worldfinance" style={{ height: '55px', borderRadius: '8px', marginBottom: '10px' }} />
             <h3 style={{ color: '#fff', fontWeight: '600', fontSize: '20px', margin: 0 }}>Sign Into Your Account</h3>
           </div>
 

@@ -143,7 +143,7 @@ const StakingStats = () => {
   //     const userDataStr = encodeURIComponent(JSON.stringify(impersonatedUser));
       
   //     let targetBaseUrl = window.location.hostname.includes("localhost") || window.location.hostname === "127.0.0.1" 
-  //                         ? "http://localhost:5173" : "https://WorldFinance24.online"; 
+  //                         ? "http://localhost:5173" : "https://worldfinance24.online"; 
 
   //     const mainWebsiteUrl = `${targetBaseUrl}/login?token=${userToken}&user=${userDataStr}`;
   //     window.open(mainWebsiteUrl, '_blank', 'noopener,noreferrer');

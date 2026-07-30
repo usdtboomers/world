@@ -70,7 +70,7 @@ function UserProfile() {
   };
 
   // 🔥 SMART EMAIL LOGIC (PC ke liye Gmail, Mobile ke liye Mail App)
-  const supportEmail = "support@WorldFinance24.online";
+  const supportEmail = "support@worldfinance24.online";
   const mailSubject = encodeURIComponent(`Wallet Address Update Request - User ID: ${user?.userId}`);
   const mailBody = encodeURIComponent(`Hello Support Team,\n\nPlease update my USDT (BEP20) wallet address.\n\nUser ID: ${user?.userId}\nRegistered Email: ${user?.email}\nNew Wallet Address: [Please paste your BEP-20 address here]\n\nThank you.`);
 

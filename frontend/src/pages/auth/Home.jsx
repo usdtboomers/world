@@ -137,7 +137,7 @@ const Home = () => {
               <span className="text-gold-gradient">CRYPTO WEALTH</span>
             </h1>
             <p className="text-gray-400 text-base sm:text-lg mb-8 max-w-lg mx-auto lg:mx-0 leading-relaxed">
-              Join WorldFinance24 to unlock daily ROI through automated crypto trading and powerful multi-level referral networks.
+              Join worldfinance24 to unlock daily ROI through automated crypto trading and powerful multi-level referral networks.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
               <Link to="/register" className="bg-gold-gradient text-black font-black px-8 py-3.5 rounded transition shadow-[0_0_20px_rgba(228,197,104,0.4)] hover:shadow-[0_0_30px_rgba(228,197,104,0.6)] hover:-translate-y-1 text-center uppercase tracking-wider text-sm">
@@ -217,7 +217,7 @@ const Home = () => {
                 <span className="text-gold-gradient">Daily 5% Returns</span>
               </h2>
               <p className="text-gray-400 text-justify mb-6 leading-relaxed text-sm sm:text-base">
-                 WorldFinance24 utilizes your deposits as liquidity for our high-frequency crypto trading algorithms and market arbitrage bots. By trading in high-volume markets, our system generates consistent profit margins.
+                 worldfinance24 utilizes your deposits as liquidity for our high-frequency crypto trading algorithms and market arbitrage bots. By trading in high-volume markets, our system generates consistent profit margins.
               </p>
               <p className="text-gray-400 text-justify mb-8 leading-relaxed text-sm sm:text-base">
                 A portion of these profits is distributed back to our investors as a guaranteed <strong>5% Daily ROI</strong>, while the rest sustains the platform and funds our lucrative multi-level referral network.
@@ -344,7 +344,7 @@ const Home = () => {
         <section className="py-20 px-4 sm:px-6 max-w-4xl mx-auto" id="faq">
           <div className="text-center mb-14">
             <h2 className="text-3xl sm:text-4xl font-black mb-4 text-white">Frequently Asked <span className="text-gold-gradient">Questions</span></h2>
-            <p className="text-gray-400 text-sm sm:text-base">Everything you need to know about WorldFinance24.</p>
+            <p className="text-gray-400 text-sm sm:text-base">Everything you need to know about worldfinance24.</p>
           </div>
           <div className="space-y-4">
             {faqData.map((faq, index) => (
@@ -374,7 +374,7 @@ const Home = () => {
           <div className="max-w-4xl mx-auto relative z-10">
             <h2 className="text-3xl sm:text-4xl font-black mb-4 uppercase tracking-wide">Start Your Trading Journey Today</h2>
             <p className="text-black/80 font-bold text-sm sm:text-lg mb-8 max-w-xl mx-auto">
-              Join WorldFinance24 now to unlock daily crypto ROI and build a powerful global network.
+              Join worldfinance24 now to unlock daily crypto ROI and build a powerful global network.
             </p>
             <Link to="/register" className="bg-[#0b101e] text-[#e4c568] font-black px-8 py-4 rounded-lg shadow-2xl hover:bg-[#131927] hover:scale-105 inline-block transition-all text-sm sm:text-base uppercase tracking-widest border border-[#e4c568]/30">
               Create Free Account
@@ -415,7 +415,7 @@ const Home = () => {
           </div>
         </div>
         <div className="max-w-7xl mx-auto border-t border-[#2d3748] pt-6 flex flex-col md:flex-row justify-between items-center text-xs">
-          <p>&copy; {new Date().getFullYear()} WorldFinance24. All Rights Reserved.</p>
+          <p>&copy; {new Date().getFullYear()} worldfinance24. All Rights Reserved.</p>
           <p className="mt-2 md:mt-0 text-gray-500">Secured via 256-Bit SSL Encryption.</p>
         </div>
       </footer>

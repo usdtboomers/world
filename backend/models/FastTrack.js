@@ -1,4 +1,4 @@
-// C:\Users\HP\Desktop\WorldFinance24\backend\models\FastTrack.js
+// C:\Users\HP\Desktop\worldfinance24\backend\models\FastTrack.js
 const mongoose = require('mongoose');
 
 const fastTrackSchema = new mongoose.Schema({

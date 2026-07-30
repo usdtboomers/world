@@ -70,7 +70,7 @@
 //           reply_markup: {
 //             inline_keyboard: [
 //               [
-//                 { text: "🌐 Go to Website / Login", url: "https://WorldFinance24.online/login" }
+//                 { text: "🌐 Go to Website / Login", url: "https://worldfinance24.online/login" }
 //               ]
 //             ]
 //           }

@@ -1,4 +1,4 @@
-// C:\Users\HP\Desktop\WorldFinance24\frontend\src\pages\user\Support.jsx
+// C:\Users\HP\Desktop\worldfinance24\frontend\src\pages\user\Support.jsx
 import React, { useState, useEffect, useCallback } from "react";
 import api from "../../api/axios";
 import { useAuth } from "../../context/AuthContext";

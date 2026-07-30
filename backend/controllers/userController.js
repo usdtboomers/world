@@ -1,4 +1,4 @@
-// C:\Users\HP\Desktop\WorldFinance24\backend\controllers\userController.js
+// C:\Users\HP\Desktop\worldfinance24\backend\controllers\userController.js
 const User = require('../models/User');
 const sanitizeUser = require('../utils/sanitizeUser');
 const SystemStat = require('../models/SystemStat'); 

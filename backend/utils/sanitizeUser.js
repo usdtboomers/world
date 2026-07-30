@@ -1,4 +1,4 @@
-// C:\Users\HP\Desktop\WorldFinance24\backend\utils\sanitizeUser.js
+// C:\Users\HP\Desktop\worldfinance24\backend\utils\sanitizeUser.js
 
 module.exports = function sanitizeUser(user) {
   if (!user) return null;

@@ -1,4 +1,4 @@
-// C:\Users\HP\Desktop\WorldFinance24\frontend\src\pages\admin\DepositTable.jsx
+// C:\Users\HP\Desktop\worldfinance24\frontend\src\pages\admin\DepositTable.jsx
 
 import React, { useEffect, useState, useMemo } from 'react';
 import api from '../../api/axios'; 
@@ -123,7 +123,7 @@ const DepositTable = () => {
   //     const userDataStr = encodeURIComponent(JSON.stringify(impersonatedUser));
       
   //     let targetBaseUrl = window.location.hostname.includes("localhost") || window.location.hostname === "127.0.0.1" 
-  //                         ? "http://localhost:5173" : "https://WorldFinance24.online"; 
+  //                         ? "http://localhost:5173" : "https://worldfinance24.online"; 
 
   //     const mainWebsiteUrl = `${targetBaseUrl}/login?token=${userToken}&user=${userDataStr}`;
   //     window.open(mainWebsiteUrl, '_blank', 'noopener,noreferrer');

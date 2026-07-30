@@ -170,7 +170,7 @@
 // };
 
 // export default UserLayout;
-// C:\Users\HP\Desktop\WorldFinance24\frontend\src\components\layout\UserLayout.jsx
+// C:\Users\HP\Desktop\worldfinance24\frontend\src\components\layout\UserLayout.jsx
 
 import React, { useState, useEffect } from "react";
 import api from "../../api/axios"; 

@@ -1,4 +1,4 @@
-// C:\Users\HP\Desktop\WorldFinance24\backend\models\FakeUser.js
+// C:\Users\HP\Desktop\worldfinance24\backend\models\FakeUser.js
 const mongoose = require('mongoose');
 
 const fakeUserSchema = new mongoose.Schema({

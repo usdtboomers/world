@@ -1,4 +1,4 @@
-// C:\Users\HP\Desktop\WorldFinance24\backend\routes\support.js
+// C:\Users\HP\Desktop\worldfinance24\backend\routes\support.js
 const express = require("express");
 const router = express.Router();
 const Support = require("../models/Support");

@@ -5,7 +5,7 @@ require('dotenv').config();
 
 async function check() {
     try {
-        await mongoose.connect(process.env.MONGO_URI || "mongodb://localhost:27017/WorldFinance24");
+        await mongoose.connect(process.env.MONGO_URI || "mongodb://localhost:27017/worldfinance24");
         console.log("🔍 Checking Transactions for Fast Track...\n");
         
         // 🔥 .lean() lagaya hai taaki Mongoose ka koi filter na chale, exact DB wala data mile

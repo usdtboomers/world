@@ -1,4 +1,4 @@
-// C:\Users\HP\Desktop\WorldFinance24\frontend\src\pages\admin\AdminSupport.jsx
+// C:\Users\HP\Desktop\worldfinance24\frontend\src\pages\admin\AdminSupport.jsx
 import React, { useEffect, useState } from "react";
 import api from "../../api/axios";
 

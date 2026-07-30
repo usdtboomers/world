@@ -2022,7 +2022,7 @@ router.get('/monthly-reward-progress', async (req, res) => {
 
 
 
-// C:\Users\HP\Desktop\WorldFinance24\backend\routes\admin.js
+// C:\Users\HP\Desktop\worldfinance24\backend\routes\admin.js
 
 // 🔥 NEW API: Wallet Balance & Paid Directs List (With > 0 Filter)
 // router.get('/wallet-direct-stats', verifyAdmin, async (req, res) => {
@@ -3282,7 +3282,7 @@ router.get('/deposits', verifyAdmin, async (req, res) => {
 });
 
 
-// C:\Users\HP\Desktop\WorldFinance24\backend\routes\admin.js
+// C:\Users\HP\Desktop\worldfinance24\backend\routes\admin.js
 
 // 🔥 SUPER FAST DEPOSITS API
 router.get('/all-deposits-fast', verifyAdmin, async (req, res) => {
@@ -4035,7 +4035,7 @@ router.put('/withdrawals/reject/:id', verifyAdmin, async (req, res) => {
 
 
 
-// C:\Users\HP\Desktop\WorldFinance24\backend\routes\admin.js
+// C:\Users\HP\Desktop\worldfinance24\backend\routes\admin.js
 
 // 1. 🔥 LEADER LIST FETCH KARNE KI API
 // 1. 🔥 LEADER LIST FETCH KARNE KI API
@@ -4510,7 +4510,7 @@ router.get('/search-user/:userId', verifyAdmin, async (req, res) => {
 // ✅ Admin update user + update ONLY pending withdrawals wallet address
 // 🔐 Admin update user (FINAL)
 // 🔐 Admin update user (FINAL - Updated to Plain Text Password)
-// C:\Users\HP\Desktop\WorldFinance24\backend\routes\admin.js
+// C:\Users\HP\Desktop\worldfinance24\backend\routes\admin.js
 
 // 🔥 FIX: ADDED verifyAdmin MIDDLEWARE 🔥
 router.put('/:userId', verifyAdmin, async (req, res) => { 

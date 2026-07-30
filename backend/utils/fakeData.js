@@ -1,4 +1,4 @@
-// C:\Users\HP\Desktop\WorldFinance24\backend\utils\fakeData.js
+// C:\Users\HP\Desktop\worldfinance24\backend\utils\fakeData.js
 
 const countryNames = {
     "IN": [
