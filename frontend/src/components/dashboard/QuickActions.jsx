@@ -1,87 +1,128 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { DollarSign, CreditCard, Users, Headset, Ticket, Building, Send } from "lucide-react"; 
+import { DollarSign, CreditCard, Users, Headset, Ticket, Building, Send, ArrowLeftRight, Wallet } from "lucide-react"; 
 
-// 🔥 onDepositClick prop yahan receive kiya hai
+// 🔥 Modals import kiye hain
+import WithdrawalModal from "../modals/WithdrawalModal";
+import WalletTransferModal from "../modals/WalletTransferModal";
+import CreditToWalletModal from "../modals/CreditToWalletModal";
+
 const QuickActions = ({ onDepositClick }) => {
   const navigate = useNavigate();
+  
+  // 🔥 Modals ke states
+  const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [isCreditModalOpen, setIsCreditModalOpen] = useState(false);
+
+  const iconBoxStyle = "w-[50px] h-[50px] bg-[#0a0f1c] border border-[#d4af37]/40 text-[#d4af37] flex items-center justify-center shadow-[0_0_10px_rgba(0,0,0,0.5)] group-hover:border-[#d4af37] group-hover:shadow-[0_0_12px_rgba(212,175,55,0.5)] group-hover:scale-105 transition-all duration-300";
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-      {/* Upar ki orange line */}
-      <div className="h-1 w-full bg-[#ff8c00]"></div>
-      
-      <div className="p-6">
-        <div className="grid grid-cols-4 gap-y-8 gap-x-2">
-          
-          {/* Recharge -> Ab yeh navigate ki jagah modal open karega */}
-          <div 
-            onClick={() => {
-              if (onDepositClick) {
-                onDepositClick();
-              } else {
-                navigate('/recharge'); // Fallback agar prop na mile
-              }
-            }} 
-            className="flex flex-col items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
-          >
-            <div className="w-[50px] h-[50px] bg-[#1565c0] rounded text-white flex items-center justify-center shadow-md">
-              <DollarSign size={32} strokeWidth={2.5} />
+    <>
+      <div className="bg-[#111827] rounded-xl shadow-lg shadow-black/40 border border-[#1f2937] overflow-hidden">
+        <div className="h-1.5 w-full bg-gradient-to-r from-[#d4af37] to-[#f3e5ab]"></div>
+        
+        <div className="p-5 md:p-6">
+          <div className="grid grid-cols-4 gap-y-7 gap-x-2">
+            
+            {/* Recharge */}
+            <div 
+              onClick={() => {
+                if (onDepositClick) {
+                  onDepositClick();
+                } else {
+                  navigate('/recharge'); 
+                }
+              }} 
+              className="flex flex-col items-center gap-2 cursor-pointer group"
+            >
+              <div className={`${iconBoxStyle} rounded-2xl`}>
+                <DollarSign size={26} strokeWidth={2.5} />
+              </div>
+              <span className="text-[12px] md:text-[13px] font-semibold text-white group-hover:text-[#d4af37] transition-colors">Recharge</span>
             </div>
-            <span className="text-[13px] font-medium text-gray-800">Recharge</span>
-          </div>
 
-          {/* Withdrawal */}
-          <div onClick={() => navigate('/withdrawal')} className="flex flex-col items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
-            <div className="w-[50px] h-[50px] bg-gradient-to-br from-[#ffb476] to-[#ff8c42] rounded-[18px] text-white flex items-center justify-center shadow-md">
-              <CreditCard size={28} strokeWidth={2} />
+            {/* Withdrawal */}
+            <div onClick={() => setIsWithdrawModalOpen(true)} className="flex flex-col items-center gap-2 cursor-pointer group">
+              <div className={`${iconBoxStyle} rounded-[18px]`}>
+                <CreditCard size={24} strokeWidth={2.5} />
+              </div>
+              <span className="text-[12px] md:text-[13px] font-semibold text-white group-hover:text-[#d4af37] transition-colors">Withdrawal</span>
             </div>
-            <span className="text-[13px] font-medium text-gray-800">Withdrawal</span>
-          </div>
 
-          {/* Team */}
-          <div onClick={() => navigate('/team')} className="flex flex-col items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
-            <div className="w-[50px] h-[50px] bg-gradient-to-br from-[#6cb0ff] to-[#3a8dff] rounded-full text-white flex items-center justify-center shadow-md">
-              <Users size={26} strokeWidth={2} />
+            {/* 🔥 Fund Transfer Button */}
+            <div onClick={() => setIsTransferModalOpen(true)} className="flex flex-col items-center gap-2 cursor-pointer group">
+              <div className={`${iconBoxStyle} rounded-full`}>
+                <ArrowLeftRight size={24} strokeWidth={2.5} />
+              </div>
+              <span className="text-[11px] md:text-[12px] font-semibold text-white group-hover:text-[#d4af37] transition-colors text-center leading-tight">Fund<br/>Transfer</span>
             </div>
-            <span className="text-[13px] font-medium text-gray-800">Team</span>
-          </div>
 
-          {/* Support */}
-          <div onClick={() => navigate('/support')} className="flex flex-col items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
-            <div className="w-[50px] h-[50px] bg-gradient-to-br from-[#6cb0ff] to-[#3a8dff] rounded-full text-white flex items-center justify-center shadow-md">
-              <Headset size={26} strokeWidth={2} />
+            {/* 🔥 Credit To Wallet Button */}
+            <div onClick={() => setIsCreditModalOpen(true)} className="flex flex-col items-center gap-2 cursor-pointer group">
+              <div className={`${iconBoxStyle} rounded-[18px]`}>
+                <Wallet size={24} strokeWidth={2.5} />
+              </div>
+              <span className="text-[11px] md:text-[12px] font-semibold text-white group-hover:text-[#d4af37] transition-colors text-center leading-tight">Credit<br/>To Wallet</span>
             </div>
-            <span className="text-[13px] font-medium text-gray-800">Support</span>
-          </div>
 
-          {/* Ticket Reply */}
-          <div onClick={() => navigate('/ticket-reply')} className="flex flex-col items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
-            <div className="w-[50px] h-[50px] bg-gradient-to-br from-[#ffb476] to-[#ff8c42] rounded-[18px] text-white flex items-center justify-center shadow-md">
-              <Ticket size={28} strokeWidth={2} />
+            {/* Team */}
+            <div onClick={() => navigate('/team')} className="flex flex-col items-center gap-2 cursor-pointer group">
+              <div className={`${iconBoxStyle} rounded-full`}>
+                <Users size={24} strokeWidth={2.5} />
+              </div>
+              <span className="text-[12px] md:text-[13px] font-semibold text-white group-hover:text-[#d4af37] transition-colors">Team</span>
             </div>
-            <span className="text-[13px] font-medium text-gray-800 text-center leading-tight">Ticket<br/>Reply</span>
-          </div>
 
-          {/* Plan */}
-          <div onClick={() => navigate('/plan')} className="flex flex-col items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
-            <div className="w-[50px] h-[50px] bg-[#5c6e7a] rounded-xl text-yellow-400 flex items-center justify-center shadow-md border-2 border-yellow-500/30">
-              <Building size={26} strokeWidth={2} />
+            {/* Support */}
+            <div onClick={() => navigate('/support')} className="flex flex-col items-center gap-2 cursor-pointer group">
+              <div className={`${iconBoxStyle} rounded-full`}>
+                <Headset size={24} strokeWidth={2.5} />
+              </div>
+              <span className="text-[12px] md:text-[13px] font-semibold text-white group-hover:text-[#d4af37] transition-colors">Support</span>
             </div>
-            <span className="text-[13px] font-medium text-gray-800">Plan</span>
-          </div>
 
-          {/* Telegram */}
-          <div onClick={() => window.open('https://t.me/your_telegram_link', '_blank')} className="flex flex-col items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
-            <div className="w-[50px] h-[50px] bg-[#229ED9] rounded-full text-white flex items-center justify-center shadow-md">
-              <Send size={24} strokeWidth={2} className="-ml-1" />
+            {/* Ticket Reply */}
+            <div onClick={() => navigate('/ticket-reply')} className="flex flex-col items-center gap-2 cursor-pointer group">
+              <div className={`${iconBoxStyle} rounded-[18px]`}>
+                <Ticket size={24} strokeWidth={2.5} />
+              </div>
+              <span className="text-[11px] md:text-[12px] font-semibold text-white group-hover:text-[#d4af37] transition-colors text-center leading-tight">Ticket<br/>Reply</span>
             </div>
-            <span className="text-[13px] font-medium text-gray-800">Telegram</span>
-          </div>
 
+            {/* Plan */}
+            <div onClick={() => navigate('/plan')} className="flex flex-col items-center gap-2 cursor-pointer group">
+              <div className={`${iconBoxStyle} rounded-xl`}>
+                <Building size={24} strokeWidth={2.5} />
+              </div>
+              <span className="text-[12px] md:text-[13px] font-semibold text-white group-hover:text-[#d4af37] transition-colors">Plan</span>
+            </div>
+
+            {/* Telegram */}
+            <div onClick={() => window.open('https://t.me/your_telegram_link', '_blank')} className="flex flex-col items-center gap-2 cursor-pointer group col-span-4 justify-center">
+              <div className="flex items-center gap-2 bg-[#0a0f1c] border border-[#229ED9]/50 hover:border-[#229ED9] px-6 py-2 rounded-full transition-all group-hover:shadow-[0_0_12px_rgba(34,158,217,0.5)]">
+                <Send size={20} strokeWidth={2.5} className="text-[#229ED9]" />
+                <span className="text-[13px] font-semibold text-white group-hover:text-[#229ED9] transition-colors">Join Telegram Channel</span>
+              </div>
+            </div>
+
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* 🔥 Modals Rendering */}
+      {isWithdrawModalOpen && (
+        <WithdrawalModal onClose={() => setIsWithdrawModalOpen(false)} />
+      )}
+
+      {isTransferModalOpen && (
+        <WalletTransferModal onClose={() => setIsTransferModalOpen(false)} />
+      )}
+
+      {isCreditModalOpen && (
+        <CreditToWalletModal onClose={() => setIsCreditModalOpen(false)} />
+      )}
+    </>
   );
 };
 

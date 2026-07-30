@@ -214,11 +214,11 @@
 //     try {
 //         await sendEmail({
 //             email: user.email,
-//             subject: '🎉 Welcome to Financial Saarthi!',
+//             subject: '🎉 Welcome to World Finance 24!',
 //             html: `
 //             <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 1px solid #eaeaea;">
 //                 <div style="background-color: #2b4450; padding: 40px 20px; text-align: center; color: #ffffff;">
-//                     <h1 style="margin: 0; font-size: 28px; font-weight: bold;">🚀 Welcome to Financial Saarthi</h1>
+//                     <h1 style="margin: 0; font-size: 28px; font-weight: bold;">🚀 Welcome to World Finance 24</h1>
 //                     <p style="margin: 10px 0 0 0; font-size: 15px; color: #cccccc;">Your journey to financial growth starts here</p>
 //                 </div>
 //                 <div style="padding: 40px 30px; color: #333333;">
@@ -248,7 +248,7 @@
 //                     </p>
 //                 </div>
 //                 <div style="background-color: #1a1a1a; padding: 20px; text-align: center; color: #888888; font-size: 13px;">
-//                     © 2026 Financial Saarthi. All rights reserved.<br>
+//                     © 2026 World Finance 24. All rights reserved.<br>
 //                     <span style="font-size: 11px;">This is an automated message, please do not reply to this email.</span>
 //                 </div>
 //             </div>
@@ -545,21 +545,132 @@ const generateUserId = async () => {
   return id;
 };
 
-// 🔥 UPDATE 2: Generate 6-Digit Transaction Password
 const generateTransactionPassword = () => {
     return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
+// router.post('/register', checkFeature('allowRegistrations'), async (req, res) => {
+//   try {
+//     // Wallet aur Country nikal diya idhar se
+//     let { name, mobile, email, sponsorId, deviceId, upi, password } = req.body;
+//     const userIP = getClientIP(req);
+
+//     name = name ? name.trim() : '';
+//     mobile = mobile ? mobile.trim() : '';
+//     email = email ? email.trim().toLowerCase() : '';
+
+//     const nameRegex = /^[A-Za-z\s]{3,50}$/;
+//     if (!name || !nameRegex.test(name)) {
+//         return res.status(400).json({ message: 'Invalid Name. Only alphabets are allowed.' });
+//     }
+
+//     const mobileRegex = /^[0-9]{10,15}$/;
+//     if (!mobile || !mobileRegex.test(mobile)) {
+//         return res.status(400).json({ message: 'Invalid Mobile Number.' });
+//     }
+
+//     if (!email || !email.endsWith('@gmail.com')) {
+//         return res.status(400).json({ message: 'Registration failed: Only @gmail.com emails are accepted.' });
+//     }
+
+//     if (!password || password.length < 6) {
+//         return res.status(400).json({ message: 'Password must be at least 6 characters long.' });
+//     }
+
+//     // --- Anti-Bot Security ---
+//     const isLocalIP = userIP === '127.0.0.1' || userIP === '::1';
+//     if (!isLocalIP) {
+//         const rule = await IpRule.findOne({ ipAddress: userIP });
+//         if (rule && rule.isBlocked) return res.status(403).json({ message: "Access Denied." });
+
+//         const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+//         const recentRegistrationIP = await User.findOne({ ipAddress: userIP, createdAt: { $gte: tenMinutesAgo } });
+//         if (recentRegistrationIP) return res.status(429).json({ message: "Please wait before creating another account." });
+//     }
+
+//     if (deviceId) {
+//         const isDeviceBlocked = await BlockedDevice.findOne({ deviceId });
+//         if (isDeviceBlocked) return res.status(403).json({ message: "Device blocked." });
+//     }
+//     // -------------------------
+
+//     if (!sponsorId) return res.status(400).json({ message: 'Sponsor ID is compulsory.' });
+
+//     let actualSponsorId = sponsorId; 
+//     let sponsorExists = await User.findOne({ userId: actualSponsorId });
+
+//     if (!sponsorExists) return res.status(400).json({ message: 'Invalid Sponsor ID.' });
+
+//     const newUserId = await generateUserId(); 
+    
+//     // System generated 6-digit transaction password
+//     const txPassword = generateTransactionPassword();
+
+//     // User Object me se walletAddress hat gaya
+//     const user = new User({
+//       userId: newUserId, 
+//       name, 
+//       mobile, 
+//       email, 
+//       upi,
+//       password: password, 
+//       transactionPassword: txPassword, 
+//       sponsorId: actualSponsorId, 
+//       role: 'user',
+//       ipAddress: userIP,
+//       deviceId: deviceId || null 
+//     });
+
+//     await user.save();
+
+//     try {
+//         await sendEmail({
+//             email: user.email,
+//             subject: '🎉 Welcome to World Finance 24!',
+//             html: `
+//             <div style="font-family: Arial; padding: 20px;">
+//                 <h2 style="color: #03a9f4;">🚀 Welcome to World Finance 24</h2>
+//                 <p>Hello <strong>${user.name}</strong>,</p>
+//                 <p>Your account has been successfully created.</p>
+//                 <div style="background-color: #f8f9fa; padding: 20px; border-left: 4px solid #03a9f4;">
+//                     <p>👤 <strong>User ID:</strong> ${user.userId}</p>
+//                     <p>🔑 <strong>Login Password:</strong> ${user.password}</p>
+//                     <p>🛡️ <strong>Transaction Password:</strong> <span style="color:red;">${user.transactionPassword}</span> (Keep this safe!)</p>
+//                 </div>
+//                 <br/>
+//                 <a href="${process.env.FRONTEND_URL}/login" style="background-color: #03a9f4; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Login Now</a>
+//             </div>
+//             ` 
+//         });
+//     } catch (emailErr) { 
+//         console.error("Email failed:", emailErr); 
+//     }
+
+//     // YAHAN PAR TRANSACTION PASSWORD ADD KIYA HAI 👇
+//     res.status(201).json({ 
+//         message: 'User registered successfully.', 
+//         userId: user.userId, 
+//         name: user.name,
+//         transactionPassword: txPassword 
+//     });
+
+//   } catch (err) {
+//     console.error('Register error:', err);
+//     res.status(500).json({ message: 'Server error.' });
+//   }
+// });
+
+
+
 router.post('/register', checkFeature('allowRegistrations'), async (req, res) => {
   try {
-    // User se ab 'password' bhi le rahe hain req.body se
-    let { name, mobile, email, country, sponsorId, deviceId, walletAddress, upi, password } = req.body;
+    // Wallet aur Country nikal diya idhar se
+    let { name, mobile, email, sponsorId, deviceId, upi, password } = req.body;
     const userIP = getClientIP(req);
 
     name = name ? name.trim() : '';
     mobile = mobile ? mobile.trim() : '';
     email = email ? email.trim().toLowerCase() : '';
-    walletAddress = walletAddress ? walletAddress.trim() : ''; 
 
     const nameRegex = /^[A-Za-z\s]{3,50}$/;
     if (!name || !nameRegex.test(name)) {
@@ -573,10 +684,6 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
 
     if (!email || !email.endsWith('@gmail.com')) {
         return res.status(400).json({ message: 'Registration failed: Only @gmail.com emails are accepted.' });
-    }
-
-    if (!walletAddress || !/^0x[a-fA-F0-9]{28,48}$/.test(walletAddress)) {
-        return res.status(400).json({ message: 'Invalid USDT BEP20 Address format.' });
     }
 
     if (!password || password.length < 6) {
@@ -600,25 +707,40 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
     }
     // -------------------------
 
-    if (!sponsorId) return res.status(400).json({ message: 'Sponsor ID is compulsory.' });
+    // 🔥 YAHAN CHANGE KIYA HAI: Top ID / Genesis ID Logic
+    const userCount = await User.countDocuments();
+    let actualSponsorId = null;
 
-    let actualSponsorId = sponsorId; // Ab ID string me ho sakti hai (e.g., WF1234567)
-    let sponsorExists = await User.findOne({ userId: actualSponsorId });
+    if (userCount === 0) {
+        // Agar database khali hai, toh ye system ki 1st ID hai. Sponsor optional hai.
+        // Agar sponsorId frontend se nahi aayi toh default 'ROOT' set ho jayegi
+        actualSponsorId = sponsorId || 'ROOT'; 
+    } else {
+        // Agar pehle se log registered hain, toh Sponsor ID strict aur compulsory hai
+        if (!sponsorId) return res.status(400).json({ message: 'Sponsor ID is compulsory.' });
 
-  //  if (!sponsorExists) return res.status(400).json({ message: 'Invalid Sponsor ID.' });
+        actualSponsorId = sponsorId; 
+        let sponsorExists = await User.findOne({ userId: actualSponsorId });
+
+        if (!sponsorExists) return res.status(400).json({ message: 'Invalid Sponsor ID.' });
+    }
+    // ----------------------------------------------------
 
     const newUserId = await generateUserId(); 
     
     // System generated 6-digit transaction password
     const txPassword = generateTransactionPassword();
 
+    // User Object me se walletAddress hat gaya
     const user = new User({
       userId: newUserId, 
-      name, mobile, email, country, upi,
-      password: password, // User ka dala hua password
-      transactionPassword: txPassword, // System generated password
+      name, 
+      mobile, 
+      email, 
+      upi,
+      password: password, 
+      transactionPassword: txPassword, 
       sponsorId: actualSponsorId, 
-      walletAddress: walletAddress,
       role: 'user',
       ipAddress: userIP,
       deviceId: deviceId || null 
@@ -629,19 +751,19 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
     try {
         await sendEmail({
             email: user.email,
-            subject: '🎉 Welcome to WorldFinance24!',
+            subject: '🎉 Welcome to World Finance 24!',
             html: `
             <div style="font-family: Arial; padding: 20px;">
-                <h2 style="color: #2b4450;">🚀 Welcome to WorldFinance24</h2>
+                <h2 style="color: #03a9f4;">🚀 Welcome to World Finance 24</h2>
                 <p>Hello <strong>${user.name}</strong>,</p>
                 <p>Your account has been successfully created.</p>
-                <div style="background-color: #f8f9fa; padding: 20px; border-left: 4px solid #1e88e5;">
+                <div style="background-color: #f8f9fa; padding: 20px; border-left: 4px solid #03a9f4;">
                     <p>👤 <strong>User ID:</strong> ${user.userId}</p>
                     <p>🔑 <strong>Login Password:</strong> ${user.password}</p>
                     <p>🛡️ <strong>Transaction Password:</strong> <span style="color:red;">${user.transactionPassword}</span> (Keep this safe!)</p>
                 </div>
                 <br/>
-                <a href="${FRONTEND_URL}/login" style="background-color: #1e88e5; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Login Now</a>
+                <a href="${process.env.FRONTEND_URL}/login" style="background-color: #03a9f4; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Login Now</a>
             </div>
             ` 
         });
@@ -649,10 +771,12 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
         console.error("Email failed:", emailErr); 
     }
 
+    // YAHAN PAR TRANSACTION PASSWORD ADD KIYA HAI 👇
     res.status(201).json({ 
         message: 'User registered successfully.', 
         userId: user.userId, 
-        name: user.name 
+        name: user.name,
+        transactionPassword: txPassword 
     });
 
   } catch (err) {
@@ -682,6 +806,7 @@ router.post('/login', async (req, res) => {
 });
 
  // ====================== FORGOT PASSWORD ======================
+// ====================== FORGOT PASSWORD ======================
 router.post('/forgot-password', checkFeature(), async (req, res) => {
   const { userId } = req.body;
 
@@ -693,12 +818,10 @@ router.post('/forgot-password', checkFeature(), async (req, res) => {
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-    // Agar last request aaj se pehle ki hai (kal ki ya purani), toh count 0 kardo (Reset)
     if (!user.lastPasswordResetDate || user.lastPasswordResetDate < startOfToday) {
         user.passwordResetCount = 0; 
     }
 
-    // Limit Check: Agar count 3 ya usse zyada hai, toh error de do
     if (user.passwordResetCount >= 3) {
         return res.status(429).json({ 
             message: "Daily limit exceeded. You can only request a password reset 3 times a day." 
@@ -718,20 +841,26 @@ router.post('/forgot-password', checkFeature(), async (req, res) => {
 
     const resetLink = `https://WorldFinance24.online/reset-password/${resetToken}`;
     
-    // 📧 SEND EMAIL
+    // 📧 SEND EMAIL (PREMIUM FORMAT)
     await sendEmail({
       email: user.email,
-      subject: '🔐 Password Reset Request',
-      message: `Reset Link: ${resetLink}`,
+      subject: '🔐 WorldFinance24 - Password Reset Request',
       html: `
-        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-          <h2 style="color: #2E86C1;">Password Reset Request</h2>
-          <p>Hello <strong>${user.name}</strong>,</p>
-          <p>We received a request to reset your password. Click below:</p>
-          <p style="text-align:center;">
-            <a href="${resetLink}" style="padding:12px 24px;background:#2E86C1;color:white;text-decoration:none;border-radius:5px;">Reset Password</a>
-          </p>
-          <p>This link expires in 1 hour.</p>
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: auto; background: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 1px solid #eaeaea;">
+          <div style="background: linear-gradient(135deg, #03a9f4 0%, #0083b0 100%); padding: 25px; text-align: center;">
+            <h2 style="color: #ffffff; margin: 0; font-size: 24px; letter-spacing: 1px;">Password Reset Request</h2>
+          </div>
+          <div style="padding: 30px; color: #444;">
+            <p style="font-size: 16px;">Hello <strong style="color: #0083b0;">${user.name}</strong>,</p>
+            <p style="font-size: 15px; line-height: 1.6;">We received a request to reset the password for your WorldFinance24 account associated with User ID: <b>${user.userId}</b>.</p>
+            <div style="text-align: center; margin: 35px 0;">
+              <a href="${resetLink}" style="background: #03a9f4; color: #ffffff; padding: 14px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 4px 10px rgba(3,169,244,0.3);">Reset My Password</a>
+            </div>
+            <p style="font-size: 14px; color: #888;"><i>Note: This secure link will expire in exactly 1 hour. If you did not request this, please ignore this email.</i></p>
+          </div>
+          <div style="background: #f9f9f9; padding: 15px; text-align: center; font-size: 12px; color: #999; border-top: 1px solid #eaeaea;">
+            &copy; ${new Date().getFullYear()} WorldFinance24. All rights reserved.
+          </div>
         </div>
       `,
     });
@@ -767,29 +896,33 @@ router.post('/reset-password/:token', async (req, res) => {
 
     await user.save();
 
-    // ✅ EMAIL SEND (UPDATED)
+    // ✅ EMAIL SEND (PREMIUM FORMAT)
     try {
       await sendEmail({
         email: user.email,
-        subject: '🔐 Password Reset Successful',
+        subject: '✅ WorldFinance24 - Password Reset Successful',
         html: `
-        <div style="font-family: Arial; padding:20px;">
-          <h2>✅ Password Reset Successful</h2>
-          <p>Hello <b>${user.name}</b>,</p>
-
-          <p>Your password has been updated successfully.</p>
-
-          <div style="background:#f5f5f5; padding:15px; border-radius:8px;">
-            <p><b>User ID:</b> ${user.userId}</p>
-            <p><b>Password:</b> ${newPassword}</p>
-            <p><b>Transaction Password:</b> ${newPassword}</p>
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: auto; background: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 1px solid #eaeaea;">
+          <div style="background: linear-gradient(135deg, #28a745 0%, #218838 100%); padding: 25px; text-align: center;">
+            <h2 style="color: #ffffff; margin: 0; font-size: 24px; letter-spacing: 1px;">Password Reset Successful</h2>
           </div>
+          <div style="padding: 30px; color: #444;">
+            <p style="font-size: 16px;">Hello <strong style="color: #218838;">${user.name}</strong>,</p>
+            <p style="font-size: 15px; line-height: 1.6;">Your account passwords have been successfully updated. Please find your new credentials below:</p>
+            
+            <div style="background: #f4f8f4; border-left: 4px solid #28a745; padding: 15px 20px; border-radius: 0 6px 6px 0; margin: 25px 0;">
+              <p style="margin: 5px 0; font-size: 15px;"><b>User ID:</b> ${user.userId}</p>
+              <p style="margin: 5px 0; font-size: 15px;"><b>Login Password:</b> ${newPassword}</p>
+              <p style="margin: 5px 0; font-size: 15px;"><b>Transaction Password:</b> ${newPassword}</p>
+            </div>
 
-          <br/>
-          <a href="https://WorldFinance24.online/login"
-          style="background:#1e88e5; color:#fff; padding:12px 25px; text-decoration:none; border-radius:6px;">
-          🔐 Login Now
-          </a>
+            <div style="text-align: center; margin: 35px 0;">
+              <a href="https://WorldFinance24.online/login" style="background: #03a9f4; color: #ffffff; padding: 14px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 4px 10px rgba(3,169,244,0.3);">Login to Dashboard</a>
+            </div>
+          </div>
+          <div style="background: #f9f9f9; padding: 15px; text-align: center; font-size: 12px; color: #999; border-top: 1px solid #eaeaea;">
+            &copy; ${new Date().getFullYear()} WorldFinance24. All rights reserved.
+          </div>
         </div>
         `,
       });
@@ -797,7 +930,6 @@ router.post('/reset-password/:token', async (req, res) => {
       console.log("Email failed:", e.message);
     }
 
-    // ✅ RESPONSE ME DATA BHEJO
     res.json({
       message: 'Password reset successful',
       userId: user.userId,

@@ -1,374 +1,97 @@
  
-// import React, { useEffect, useState, useRef } from "react";
+
+// import React, { useEffect, useState } from "react";
 // import api from "../../api/axios"; 
-// import { useNavigate } from "react-router-dom"; 
 // import { useAuth } from "../../context/AuthContext";
-// import { Globe, ChevronRight, CalendarDays } from "lucide-react"; 
 
 // // Components Imports
-// import TotalSystemUsers from "../../components/dashboard/TotalSystemUsers"; 
-// import IncomeSummary from "../../components/dashboard/IncomeSummary";
-// import ReferralLink from "../../components/dashboard/ReferralLink";
-// import WalletBalance from "../../components/dashboard/WalletBalance";
-// import DailyROIPlan from "../../components/dashboard/DailyROI";
+// import ReferralLink from "../../components/dashboard/ReferralLink"; 
+// import QuickActions from "../../components/dashboard/QuickActions"; 
 // import SpinnerOverlay from "../../components/common/SpinnerOverlay";
-// import SuccessModal from "../../components/modals/SuccessModal";
-// import TelegramPopup from "../../components/TelegramPopup";
-// import PromoVideoBox from "../../components/dashboard/PromoVideoBox"; 
 
-// import FastTrackTimerBanner from "../../components/dashboard/FastTrackTimerBanner"; 
-// //import UpcomingFeaturesBanner from "../../components/dashboard/UpcomingFeaturesBanner";
-// //import StakingPopup from "../../components/StakingPopup";
-// // 🔥 MONTHLY REWARD BOX IMPORT
-// import MonthlyRewardBox from "../../components/MonthlyRewardBox";
+// // 🔥 Packages component ko yahan import kar liya hai
+// import Packages from "../../components/Packages"; 
 
-// // 🔥 WALLET POPUP IMPORT
-// // import WalletPopup from "../../components/WalletPopup";
-
-// // 🔥 STAKING PROGRAM IMPORT (Naya Add Kiya)
-// import StakingProgram from "./StakingProgram";
-
-// const Dashboard = ({ setModalState }) => {
+// // 🔥 props me { modalState, setModalState } add kar diya hai
+// const Dashboard = ({ modalState, setModalState }) => {
 //   const { user, token, setUser, logout } = useAuth();
-//   const navigate = useNavigate(); 
-
-//   const [walletRefreshKey, setWalletRefreshKey] = useState(0);
 //   const [loading, setLoading] = useState(false);
-  
-//   const [totalRealUsers, setTotalRealUsers] = useState(0);
-//   const [globalFakeCount, setGlobalFakeCount] = useState(0);
-//   const [activeDownlineCount, setActiveDownlineCount] = useState(0);
-  
-//   const [latestGlobalUsers, setLatestGlobalUsers] = useState([]);
-  
-//   const [income, setIncome] = useState({
-//     directIncome: 0,
-//     levelIncome: 0,
-//     dailyIncome: 0,
-//     spinIncome: 0,
-//     availableSpins: 0,
-//   });
-
-//   const [successModal, setSuccessModal] = useState({
-//     isOpen: false,
-//     userId: "",
-//     amount: 0,
-//   });
-
-//   // 🔥 WALLET POPUP STATE
-//   const [showWallet, setShowWallet] = useState(false);
-//   const [showStakingPopup, setShowStakingPopup] = useState(true);
-//   const hasFetched = useRef(false);
 
 //   const fetchUserData = async () => {
 //     if (!token || !user?.userId) return;
-
-//     // 🔥 SPEED UP FIX: LOCAL STORAGE CACHE CHECK 🔥
-//     const cacheKey = `dash_cache_${user.userId}`;
-//     const cachedData = localStorage.getItem(cacheKey);
-
-//     if (cachedData) {
-//         try {
-//             const parsedData = JSON.parse(cachedData);
-//             setTotalRealUsers(parsedData.totalRealUsers || 0);
-//             setGlobalFakeCount(parsedData.globalFakeCount || 0);
-//             setActiveDownlineCount(parsedData.activeDownlineCount || 0);
-//             setIncome(parsedData.income || income);
-//             setLatestGlobalUsers(parsedData.latestGlobalUsers || []);
-//             // Agar Cache mil gaya, toh loading spinner on nahi karenge, seedha UI dikhayenge!
-//         } catch (error) {
-//             console.error("Cache parse error", error);
-//         }
-//     } else {
-//         // Agar pehli baar load ho raha hai (koi cache nahi), tabhi spinner dikhao
-//         setLoading(true);
-//     }
-
 //     try {
-//         // 🔥 1. MAIN DATA (Background me fetch hoga agar UI load ho chuka hai)
-//         const [userRes, incomeRes] = await Promise.all([
-//             api.get(`/user/${user.userId}?t=${new Date().getTime()}`, { headers: { Authorization: `Bearer ${token}` } }),
-//             api.get(`/wallet/${user.userId}?t=${new Date().getTime()}`, { headers: { Authorization: `Bearer ${token}` } })
-//         ]);
-        
-//         setUser(userRes.data.user); 
-//         setTotalRealUsers(userRes.data.totalRealUsers || 0);
-//         setGlobalFakeCount(userRes.data.globalFakeCount || 0);
-//         setActiveDownlineCount(incomeRes.data.activeDownlineCount || 0);
-
-//         const newIncome = {
-//           directIncome: incomeRes.data.directIncome || 0,
-//           levelIncome: incomeRes.data.levelIncome || 0,
-//           dailyIncome: incomeRes.data.planIncome || 0,
-//           spinIncome: incomeRes.data.spinIncome || 0,
-//           rewardIncome: incomeRes.data.rewardIncome || 0,
-//           totalDirectIncome: incomeRes.data.income?.totalDirectIncome || 0,
-//           totalLevelIncome: incomeRes.data.income?.totalLevelIncome || 0,
-//           totalRewardIncome: incomeRes.data.income?.totalRewardIncome || 0,
-//           totalSpinIncome: incomeRes.data.income?.totalSpinIncome || 0,
-//           fastTrackIncome: incomeRes.data.fastTrackIncome || incomeRes.data.income?.fastTrackIncome || 0,
-//           totalFastTrackIncome: incomeRes.data.totalFastTrackIncome || incomeRes.data.income?.totalFastTrackIncome || 0,
-//         };
-        
-//         setIncome(newIncome);
-
-//         // 🔥 2. SILENT BACKGROUND FETCH 
-//         let newGlobalUsers = latestGlobalUsers;
-//         try {
-//             const globalRes = await api.get('/community/global-list');
-//             if(globalRes.data.success) {
-//                 newGlobalUsers = globalRes.data.data.slice(0, 5);
-//                 setLatestGlobalUsers(newGlobalUsers);
-//             }
-//         } catch(globalErr) {
-//             console.error("Failed to fetch top 5 global users", globalErr);
-//         }
-
-//         // 🔥 SAVE FRESH DATA TO CACHE FOR NEXT VISIT 🔥
-//         localStorage.setItem(cacheKey, JSON.stringify({
-//             totalRealUsers: userRes.data.totalRealUsers || 0,
-//             globalFakeCount: userRes.data.globalFakeCount || 0,
-//             activeDownlineCount: incomeRes.data.activeDownlineCount || 0,
-//             income: newIncome,
-//             latestGlobalUsers: newGlobalUsers
-//         }));
-
+//       const userRes = await api.get(`/user/${user.userId}`, { 
+//         headers: { Authorization: `Bearer ${token}` } 
+//       });
+//       setUser(userRes.data.user); 
 //     } catch (err) {
-//         console.error("Failed to fetch user data:", err);
-//         if (err?.response?.status === 401) logout();
-//     } finally {
-//         setLoading(false);
+//       console.error("Failed to fetch user data:", err);
+//       if (err?.response?.status === 401) logout();
 //     }
 //   };
 
 //   useEffect(() => {
-//     if (user?.userId) {
-//         hasFetched.current = false;
-//     }
-//   }, [user?.userId]);
-
-//   useEffect(() => {
-//     if (!hasFetched.current && token && user?.userId) {
-//       hasFetched.current = true;
+//     if (token && user?.userId) {
 //       fetchUserData();
 //     }
 //     // eslint-disable-next-line react-hooks/exhaustive-deps
 //   }, [user?.userId, token]); 
-
-//   // 🔥 DIRECT WALLET POPUP LOGIC
-//   useEffect(() => {
-//     if (user && user.userId) {
-//       const hasWallet = user.walletAddress && user.walletAddress.trim() !== "";
-      
-//       if (!hasWallet) {
-//         const timer = setTimeout(() => {
-//           setShowWallet(true);
-//         }, 800); 
-
-//         return () => clearTimeout(timer);
-//       }
-//     }
-//   }, [user?.userId, user?.walletAddress]); 
-
-//   const handleCloseWallet = () => {
-//     setShowWallet(false);
-//   };
-
-//   const handleTopUpSuccess = async (amount = 0, userId = "") => {
-//     await fetchUserData();
-//     setWalletRefreshKey((prev) => prev + 1);
-//     if (amount > 0) {
-//       setSuccessModal({ isOpen: true, userId, amount });
-//     }
-//   };
-
-//   const claimDailyROI = async (dayIndex) => {
-//     try {
-//       setLoading(true);
-//       await api.put(
-//         `/user/claim-daily/${user.userId}`,
-//         { dayIndex },
-//         { headers: { Authorization: `Bearer ${token}` } }
-//       );
-//       await handleTopUpSuccess();
-//     } catch (err) {
-//       console.error("Failed to claim Daily ROI:", err);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
 
 //   if (!user || !token) return <SpinnerOverlay />;
 
 //   const referralLink = `${window.location.origin}/register?ref=${user.userId}`;
 
 //   return (
-//     <div className="w-full relative animate-fadeIn pb-28 md:pb-8">
-      
-//       {/* 
-//         🔥 NOTE: Yahan sirf tabhi full-screen spinner dikhega jab user first time login kare (yani cache khali ho).
-//         Agli baar se ye false rahega aur PEECHE data fetch hota rahega UI block kiye bina!
-//       */}
+//     <div className="w-full relative animate-fadeIn pb-28 md:pb-8 pt-4">
 //       {loading && <SpinnerOverlay />}
 
-//       {/* 🔥 WALLET POPUP */}
-//     {/* {showWallet && <WalletPopup onClose={handleCloseWallet} />} */}
-//       {/* {showStakingPopup && (
-//   <StakingPopup onClose={() => setShowStakingPopup(false)} />
-// )} */}
-
-//       <div className="space-y-6 md:space-y-8 relative z-10">
+//       <div className="space-y-6 max-w-4xl mx-auto px-2 sm:px-0">
         
-//         <section>
-//           <WalletBalance userId={user.userId} refreshKey={walletRefreshKey} income={income} />
-//         </section>
-         
-//        <section>
-//         <TotalSystemUsers 
-//             user={user} 
-//             totalRealUsersFromDB={totalRealUsers} 
-//             globalFakeCount={globalFakeCount} 
-//             activeDownlineCount={activeDownlineCount}
+//         {/* 1. REFERRAL LINK BOX */}
+//         <ReferralLink link={referralLink} />
+
+//         {/* 2. QUICK ACTIONS MENU */}
+//         <QuickActions 
+//           onDepositClick={() => {
+//             if (setModalState) {
+//               setModalState(prev => ({ ...prev, showDeposit: true }));
+//             }
+//           }} 
 //         />
-//     </section>
-//          <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200">
-//              <ReferralLink link={referralLink} />
+
+//         {/* 3. PACKAGES SECTION 🔥 Yahan dashboard me packages render honge */}
+//         <div className="mt-8">
+//             <h2 className="text-2xl font-bold text-gray-800 mb-4 px-2">Investment Packages</h2>
+//             <Packages />
 //         </div>
 
-//         {/* 🔥 STAKING PROGRAM SECTION (Promo Video ke theek upar) */}
-//         <section className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200">
-//             <StakingProgram />
-//         </section>
-
-//  {/* 🔥 SMART TIMER BANNER: Yeh sirf valid users ko dikhega */}
-//        <FastTrackTimerBanner user={user} /> 
-//       {/* <UpcomingFeaturesBanner /> */}
-
-//         <div>
-//             <PromoVideoBox />
-//         </div>
-
-       
-        
-//         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-//             {/* 1. Income Summary Box */}
-//             <div className="bg-white p-2 rounded-2xl shadow-sm border border-slate-200">
-//                 <IncomeSummary income={income} user={user} />
-//             </div>
-
-//             {/* 🔥 2. Monthly Reward Box */}
-//             <div>
-//                 <MonthlyRewardBox />
-//             </div>
-//         </div>
-
-//         <section className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200">
-//             <DailyROIPlan dailyROI={user.dailyROI || []} onClaim={claimDailyROI} />
-//         </section>
-
-//         {latestGlobalUsers.length > 0 && (
-//        <section 
-//              onClick={() => navigate('/global-community')}
-//              className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200 cursor-pointer hover:shadow-md hover:border-blue-200 transition-all group p-4 md:p-5"
-//           >
-//              <div className="flex justify-between items-center mb-4">
-//                  <h3 className="font-black text-slate-800 flex items-center gap-2 text-sm md:text-base uppercase tracking-tight">
-//                     <Globe className="text-blue-500 animate-pulse" size={20}/> Live All Community
-//                  </h3>
-//                  <span className="text-[10px] md:text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-md flex items-center gap-1 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-//                     View All <ChevronRight size={14}/>
-//                  </span>
-//              </div>
-
-//              <div className="space-y-2">
-//                  {latestGlobalUsers.map((u, idx) => (
-//                      <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between bg-slate-50 hover:bg-slate-100 transition-colors p-3 rounded-xl border border-slate-100 gap-2 sm:gap-0">
-                         
-//                          <div className="flex items-center justify-between sm:justify-start gap-3 w-full sm:w-auto">
-//                              <div className="flex items-center gap-3">
-//                                  <img 
-//                                     src={`https://flagcdn.com/w40/${(u.country || 'in').toLowerCase()}.png`} 
-//                                     alt={u.country}
-//                                     className="w-6 sm:w-7 h-auto rounded-[2px] shadow-[0_0_2px_rgba(0,0,0,0.2)]"
-//                                     onError={(e) => { e.target.src = 'https://flagcdn.com/w40/in.png'; }}
-//                                  />
-//                                  <div>
-//                                     <span className="text-[10px] font-bold text-slate-400 tracking-wider">
-//   #{(() => {
-//     const id = String(u.userId);
-//     if (id.length <= 4) {
-//       // Agar ID 4 ya usse choti hai toh sabhi ko star bana do
-//       return '****';
-//     } else {
-//       // Shuru ke 2 '*' + Beech ka part + Last ke 2 '*'
-//       const middlePart = id.substring(2, id.length - 2);
-//       return `**${middlePart}**`;
-//     }
-//   })()}
-// </span>
-//                                  </div>
-//                              </div>
-                             
-//                              <div className="sm:hidden flex items-center gap-1 bg-green-50 border border-green-100 text-green-600 px-2 py-1 rounded-md">
-//                                  <span className="font-black text-[10px]">${u.amount || 30}</span>
-//                                  <span className="w-1 h-1 bg-green-500 rounded-full animate-pulse"></span>
-//                              </div>
-//                          </div>
-
-//                          <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto border-t sm:border-t-0 border-slate-200 sm:border-transparent pt-2 sm:pt-0">
-//                              <div className="flex items-center gap-1.5 text-slate-500">
-//                                 <CalendarDays size={12} className="opacity-70" />
-//                                 <span className="font-bold text-[10px] sm:text-xs">
-//                                    {new Date(u.date || new Date()).toLocaleDateString("en-GB", { day: '2-digit', month: 'short', year: 'numeric' })}
-//                                 </span>
-//                              </div>
-                             
-//                              <div className="hidden sm:flex items-center gap-1.5 bg-green-50 border border-green-100 text-green-600 px-2.5 py-1 rounded-lg">
-//                                  <span className="font-black text-xs">${u.amount || 30}</span>
-//                                  <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
-//                                  <span className="text-[9px] font-black uppercase">Active</span>
-//                              </div>
-//                          </div>
-                         
-//                      </div>
-//                  ))}
-//              </div>
-//           </section>
-//         )}
-        
 //       </div>
-
-//       <SuccessModal
-//         isOpen={successModal.isOpen}
-//         userId={successModal.userId}
-//         amount={successModal.amount}
-//         onClose={() => setSuccessModal((prev) => ({ ...prev, isOpen: false }))}
-//       />
-
-//       {!loading && user && <TelegramPopup currentUser={user} />}
-      
 //     </div>
 //   );
 // };
 
 // export default Dashboard;
 
+
+
 import React, { useEffect, useState } from "react";
 import api from "../../api/axios"; 
 import { useAuth } from "../../context/AuthContext";
+import { LogOut, Rocket } from "lucide-react"; 
 
 // Components Imports
 import ReferralLink from "../../components/dashboard/ReferralLink"; 
 import QuickActions from "../../components/dashboard/QuickActions"; 
 import SpinnerOverlay from "../../components/common/SpinnerOverlay";
-
-// 🔥 Packages component ko yahan import kar liya hai
 import Packages from "../../components/Packages"; 
 
-// 🔥 props me { modalState, setModalState } add kar diya hai
 const Dashboard = ({ modalState, setModalState }) => {
   const { user, token, setUser, logout } = useAuth();
   const [loading, setLoading] = useState(false);
+  
+  // 🔥 Countdown Timer States
+  const [isLaunched, setIsLaunched] = useState(false);
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
   const fetchUserData = async () => {
     if (!token || !user?.userId) return;
@@ -383,6 +106,33 @@ const Dashboard = ({ modalState, setModalState }) => {
     }
   };
 
+  // 🔥 Timer Logic Effect
+  useEffect(() => {
+    // Target Date Set to 1st August 2026
+    const targetDate = new Date("August 1, 2026 00:00:00").getTime();
+
+    const updateTimer = () => {
+      const now = new Date().getTime();
+      const distance = targetDate - now;
+
+      if (distance <= 0) {
+        setIsLaunched(true);
+      } else {
+        setTimeLeft({
+          days: Math.floor(distance / (1000 * 60 * 60 * 24)),
+          hours: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+          minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
+          seconds: Math.floor((distance % (1000 * 60)) / 1000)
+        });
+      }
+    };
+
+    const timerInterval = setInterval(updateTimer, 1000);
+    updateTimer(); // Initial call to avoid 1-second delay
+
+    return () => clearInterval(timerInterval);
+  }, []);
+
   useEffect(() => {
     if (token && user?.userId) {
       fetchUserData();
@@ -392,8 +142,112 @@ const Dashboard = ({ modalState, setModalState }) => {
 
   if (!user || !token) return <SpinnerOverlay />;
 
+  // 🔥 Referral Link pehle generate kar liya taaki dono jagah use ho sake
   const referralLink = `${window.location.origin}/register?ref=${user.userId}`;
 
+  // ==========================================
+  // 🔥 FULL SCREEN GRAND LAUNCH TIMER BLOCKER
+  // ==========================================
+  if (!isLaunched) {
+    return (
+      <div 
+        className="flex flex-col items-center justify-center p-4 overflow-hidden selection:bg-[#e4c568]/30"
+        style={{ 
+          position: 'fixed', 
+          top: 0, 
+          left: 0, 
+          right: 0, 
+          bottom: 0, 
+          width: '100vw', 
+          height: '100vh', 
+          backgroundColor: '#0b101e', 
+          zIndex: 2147483647, 
+          margin: 0, 
+          padding: 0,
+          overflowY: 'auto' // Agar choti screen ho toh scroll ho sake
+        }} 
+      >
+        {/* Glow Effects */}
+        <div className="absolute top-[10%] left-[10%] w-[50vw] h-[50vw] bg-[#e4c568]/10 blur-[120px] rounded-full pointer-events-none fixed"></div>
+        <div className="absolute bottom-[10%] right-[10%] w-[40vw] h-[40vw] bg-blue-500/10 blur-[120px] rounded-full pointer-events-none fixed"></div>
+
+        <div className="relative z-10 flex flex-col items-center w-full max-w-4xl mx-auto mt-16 sm:mt-10 pb-10">
+          
+          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-[#131927] border border-[#e4c568]/30 rounded-full flex items-center justify-center mb-4 sm:mb-6 shadow-[0_0_20px_rgba(228,197,104,0.3)]">
+             <Rocket className="text-[#e4c568] w-8 h-8 sm:w-10 sm:h-10 animate-bounce" />
+          </div>
+
+          <h1 className="text-4xl sm:text-5xl md:text-7xl font-black text-center text-white mb-2 tracking-tight">
+            GRAND <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#e4c568] to-[#d4af37]">LAUNCH</span>
+          </h1>
+          <p className="text-gray-400 text-base sm:text-lg md:text-2xl font-bold tracking-[0.2em] uppercase mb-8 text-center">
+            1st August 2026
+          </p>
+
+          {/* Countdown Boxes */}
+          <div className="flex justify-center gap-3 sm:gap-6 mb-8 w-full px-2">
+            
+            {/* Days */}
+            <div className="flex flex-col items-center bg-[#131927] border border-[#2d3748] rounded-xl w-20 sm:w-28 py-4 sm:py-6 shadow-xl relative overflow-hidden">
+              <div className="absolute top-0 w-full h-1 bg-gradient-to-r from-[#e4c568] to-[#d4af37]"></div>
+              <span className="text-3xl sm:text-5xl font-black text-white">{timeLeft.days.toString().padStart(2, '0')}</span>
+              <span className="text-[#e4c568] text-[10px] sm:text-sm font-bold uppercase tracking-wider mt-2">Days</span>
+            </div>
+
+            {/* Hours */}
+            <div className="flex flex-col items-center bg-[#131927] border border-[#2d3748] rounded-xl w-20 sm:w-28 py-4 sm:py-6 shadow-xl relative overflow-hidden">
+              <div className="absolute top-0 w-full h-1 bg-gradient-to-r from-[#e4c568] to-[#d4af37]"></div>
+              <span className="text-3xl sm:text-5xl font-black text-white">{timeLeft.hours.toString().padStart(2, '0')}</span>
+              <span className="text-[#e4c568] text-[10px] sm:text-sm font-bold uppercase tracking-wider mt-2">Hours</span>
+            </div>
+
+            {/* Minutes */}
+            <div className="flex flex-col items-center bg-[#131927] border border-[#2d3748] rounded-xl w-20 sm:w-28 py-4 sm:py-6 shadow-xl relative overflow-hidden">
+              <div className="absolute top-0 w-full h-1 bg-gradient-to-r from-[#e4c568] to-[#d4af37]"></div>
+              <span className="text-3xl sm:text-5xl font-black text-white">{timeLeft.minutes.toString().padStart(2, '0')}</span>
+              <span className="text-[#e4c568] text-[10px] sm:text-sm font-bold uppercase tracking-wider mt-2">Mins</span>
+            </div>
+
+            {/* Seconds */}
+            <div className="flex flex-col items-center bg-[#131927] border border-[#2d3748] rounded-xl w-20 sm:w-28 py-4 sm:py-6 shadow-xl relative overflow-hidden">
+              <div className="absolute top-0 w-full h-1 bg-gradient-to-r from-[#e4c568] to-[#d4af37]"></div>
+              <span className="text-3xl sm:text-5xl font-black text-[#00ff88]">{timeLeft.seconds.toString().padStart(2, '0')}</span>
+              <span className="text-gray-400 text-[10px] sm:text-sm font-bold uppercase tracking-wider mt-2">Secs</span>
+            </div>
+
+          </div>
+
+          {/* 👇 YAHAN ADD KIYA HAI REFERRAL LINK: Taaki user abhi se team bana sake */}
+          <div className="w-full max-w-lg mb-8 px-4">
+            <div className="text-center mb-3">
+              <span className="inline-block px-3 py-1 bg-[#00ff88]/10 text-[#00ff88] text-xs font-bold rounded-full border border-[#00ff88]/30">
+                Registration is LIVE! Start building your team.
+              </span>
+            </div>
+            <ReferralLink link={referralLink} />
+          </div>
+
+          <div className="text-center bg-[#1e2536] border border-[#2d3748] p-4 sm:p-6 rounded-xl max-w-lg w-full mb-8 shadow-lg mx-4">
+            <h3 className="text-white font-bold text-sm sm:text-lg mb-2">Platform is undergoing final updates!</h3>
+            <p className="text-gray-400 text-xs sm:text-sm">Please wait until the countdown finishes to access your member dashboard, deposit funds, and activate your packages.</p>
+          </div>
+
+          {/* Logout Button */}
+          <button 
+            onClick={logout} 
+            className="flex items-center justify-center gap-2 px-8 py-3.5 bg-[#ef4444]/10 hover:bg-[#ef4444] border border-[#ef4444]/50 hover:border-[#ef4444] text-[#ef4444] hover:text-white rounded-lg font-bold transition-all shadow-[0_0_15px_rgba(239,68,68,0.2)] w-[80%] sm:w-auto"
+          >
+            <LogOut size={20} /> Secure Logout
+          </button>
+
+        </div>
+      </div>
+    );
+  }
+
+  // ==========================================
+  // NORMAL DASHBOARD CONTENT (Post-Launch)
+  // ==========================================
   return (
     <div className="w-full relative animate-fadeIn pb-28 md:pb-8 pt-4">
       {loading && <SpinnerOverlay />}
@@ -412,7 +266,7 @@ const Dashboard = ({ modalState, setModalState }) => {
           }} 
         />
 
-        {/* 3. PACKAGES SECTION 🔥 Yahan dashboard me packages render honge */}
+        {/* 3. PACKAGES SECTION */}
         <div className="mt-8">
             <h2 className="text-2xl font-bold text-gray-800 mb-4 px-2">Investment Packages</h2>
             <Packages />

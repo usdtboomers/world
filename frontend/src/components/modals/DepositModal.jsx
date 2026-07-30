@@ -166,11 +166,10 @@
 //     </div>
 //   );
 // }
-
 import React, { useEffect, useState } from "react";
 import api from "../../api/axios"; 
 import { QRCodeCanvas } from "qrcode.react";
-import { ChevronLeft } from "lucide-react"; // Image me back arrow '<' hai, uske liye
+import { ChevronLeft } from "lucide-react"; 
 import Swal from 'sweetalert2';
 import SuccessModal from "./SuccessModal"; 
 
@@ -180,7 +179,7 @@ export default function DepositModal({ onClose, user, userId }) {
   const [copied, setCopied] = useState(false);
   const [submitting, setSubmitting] = useState(false); 
 
-  // 🔥 FORM STATES (Naye image ke hisaab se)
+  // 🔥 FORM STATES
   const [amount, setAmount] = useState("");
   const [txnHash, setTxnHash] = useState("");
 
@@ -188,7 +187,7 @@ export default function DepositModal({ onClose, user, userId }) {
   const [isSuccessMode, setIsSuccessMode] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
 
-  // Exchange rate assumption (1 USDT = 90 INR) - Aap isko apne hisaab se change kar sakte hain
+  // Exchange rate assumption (1 USDT = 90 INR)
   const exchangeRate = 90; 
 
   useEffect(() => {
@@ -249,6 +248,8 @@ export default function DepositModal({ onClose, user, userId }) {
         icon: 'warning',
         title: 'Incomplete',
         text: 'Please enter both Amount and Transaction Hash!',
+        background: '#111827',
+        color: '#d4af37'
       });
       return;
     }
@@ -257,7 +258,6 @@ export default function DepositModal({ onClose, user, userId }) {
       setSubmitting(true);
       const token = localStorage.getItem('token');
 
-      // Note: Backend me amount aur hash bhejna zaroori hai is naye form ke sath
       const response = await api.post('/deposit/verify-deposit', {
         amount: Number(amount),
         transactionHash: txnHash
@@ -274,14 +274,15 @@ export default function DepositModal({ onClose, user, userId }) {
         icon: 'info',
         title: 'Pending...',
         text: error.response?.data?.message || "Deposit not found or pending. Please wait.",
-        confirmButtonColor: '#ff8c00'
+        confirmButtonColor: '#d4af37',
+        background: '#111827',
+        color: '#fff'
       });
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Agar Success ho gaya toh apna Naya Wala Modal dikhao
   if (isSuccessMode) {
     return (
       <SuccessModal 
@@ -298,105 +299,104 @@ export default function DepositModal({ onClose, user, userId }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-[1000] flex justify-center items-center p-0 sm:p-4">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[1000] flex justify-center items-center p-0 sm:p-4">
       
-      {/* 🔶 MAIN MODAL CONTAINER (Orange Background) */}
-      <div className="bg-[#ff8c00] w-full h-full sm:h-auto sm:max-h-[95vh] sm:max-w-xl sm:rounded-md flex flex-col relative overflow-y-auto custom-scroll shadow-2xl">
+      {/* 🔶 MAIN MODAL CONTAINER (Premium Dark & Gold Background) */}
+      <div className="bg-[#0a0f1c] border border-[#d4af37]/30 w-full h-full sm:h-auto sm:max-h-[95vh] sm:max-w-xl sm:rounded-2xl flex flex-col relative overflow-y-auto custom-scroll shadow-[0_0_20px_rgba(212,175,55,0.15)]">
         
         {/* Header with Back Button */}
-        <div className="p-4 flex items-center gap-2">
-          <button onClick={onClose} className="text-gray-800 hover:text-black transition-colors cursor-pointer">
+        <div className="p-4 md:p-5 flex items-center gap-3 border-b border-[#1f2937]">
+          <button onClick={onClose} className="text-gray-400 hover:text-[#d4af37] transition-colors cursor-pointer p-1">
             <ChevronLeft size={28} strokeWidth={2.5} />
           </button>
-          <h2 className="text-[22px] font-bold text-gray-800">
-            Instant Deposite Fund
+          <h2 className="text-[20px] md:text-[22px] font-black text-transparent bg-clip-text bg-gradient-to-r from-[#d4af37] to-[#f3e5ab] uppercase tracking-wide">
+            Instant Deposit Fund
           </h2>
         </div>
 
         {/* Body Content */}
-        <div className="p-4 sm:p-6 flex-1 flex flex-col">
+        <div className="p-5 md:p-6 flex-1 flex flex-col">
           
           {/* Form Fields */}
-          <div className="space-y-4 mb-6">
+          <div className="space-y-5 mb-6">
             
             {/* USDT Amount */}
             <div>
-              <label className="block text-gray-800 text-[15px] mb-1.5">Fund Amount (USDT)</label>
+              <label className="block text-gray-300 text-[14px] font-medium mb-2">Fund Amount (USDT)</label>
               <input 
                 type="number" 
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="Enter USDT Amount" 
-                className="w-full p-2.5 bg-white text-gray-800 rounded-sm border-none outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full p-3 bg-[#111827] text-white rounded-lg border border-gray-700 outline-none focus:border-[#d4af37] focus:ring-1 focus:ring-[#d4af37] transition-all placeholder-gray-600"
               />
             </div>
 
-          
             {/* Transaction Hash */}
             <div>
-              <label className="block text-gray-800 text-[15px] mb-1.5">Transaction Hash</label>
+              <label className="block text-gray-300 text-[14px] font-medium mb-2">Transaction Hash</label>
               <input 
                 type="text" 
                 value={txnHash}
                 onChange={(e) => setTxnHash(e.target.value)}
                 placeholder="Paste Transaction Hash" 
-                className="w-full p-2.5 bg-white text-gray-800 rounded-sm border-none outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full p-3 bg-[#111827] text-white rounded-lg border border-gray-700 outline-none focus:border-[#d4af37] focus:ring-1 focus:ring-[#d4af37] transition-all placeholder-gray-600"
               />
-              <p className="text-gray-700 text-xs mt-1">Example : 0x123456789abcdef....</p>
+              <p className="text-[#d4af37]/70 text-xs mt-2">Example : 0x123456789abcdef....</p>
             </div>
 
           </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-3 mb-8">
+          <div className="flex gap-4 mb-8">
             <button 
               onClick={handleSubmit} 
               disabled={submitting || loading}
-              className="bg-[#007bff] hover:bg-blue-600 text-white font-medium px-6 py-2 rounded-sm transition-colors shadow-sm disabled:opacity-70"
+              className="flex-1 bg-gradient-to-r from-[#d4af37] to-[#f3e5ab] text-black font-extrabold px-6 py-3 rounded-lg transition-all shadow-[0_0_10px_rgba(212,175,55,0.3)] hover:shadow-[0_0_15px_rgba(212,175,55,0.6)] hover:scale-[1.02] disabled:opacity-70 disabled:hover:scale-100"
             >
-              {submitting ? "Wait..." : "Submit"}
+              {submitting ? "Wait..." : "SUBMIT"}
             </button>
             <button 
               onClick={handleReset}
-              className="bg-[#f8f9fa] hover:bg-gray-200 text-gray-800 font-medium px-6 py-2 rounded-sm transition-colors shadow-sm"
+              className="px-6 py-3 bg-transparent border-2 border-gray-600 text-gray-300 hover:text-white hover:border-gray-400 font-bold rounded-lg transition-colors"
             >
-              Reset
+              RESET
             </button>
           </div>
 
           {/* QR Code Section */}
-          <div className="flex flex-col items-center">
-            <h3 className="text-xl font-bold text-gray-800 mb-3">
+          <div className="flex flex-col items-center bg-[#111827] p-5 rounded-xl border border-[#1f2937]">
+            <h3 className="text-lg font-bold text-[#d4af37] mb-4 text-center">
               USDT (BEP-20) Wallet Address
             </h3>
 
             {loading ? (
-              <div className="w-[180px] h-[180px] bg-white/50 animate-pulse rounded-md flex items-center justify-center mb-4">
-                <span className="text-gray-700 text-sm font-bold">Loading QR...</span>
+              <div className="w-[180px] h-[180px] bg-gray-800 animate-pulse rounded-xl flex items-center justify-center mb-5 border border-gray-700">
+                <span className="text-[#d4af37] text-sm font-bold">Loading QR...</span>
               </div>
             ) : (
-              <div className="bg-white p-3 rounded-sm shadow-md mb-6 inline-block">
-                <QRCodeCanvas value={address} size={200} level="H" />
+              <div className="bg-white p-2.5 rounded-xl shadow-[0_0_15px_rgba(212,175,55,0.2)] mb-6 border-4 border-[#d4af37] inline-block">
+                <QRCodeCanvas value={address} size={180} level="H" />
               </div>
             )}
 
             {/* Readonly Address Field */}
-            <div className="w-full mb-3">
+            <div className="w-full mb-4">
               <input 
                 type="text" 
                 value={address || "Loading address..."}
                 readOnly
-                className="w-full p-2.5 bg-[#e9ecef] text-gray-600 text-sm md:text-base rounded-sm border-none outline-none text-center sm:text-left shadow-inner"
+                className="w-full p-3 bg-black/40 text-[#d4af37] text-sm md:text-sm rounded-lg border border-[#d4af37]/30 outline-none text-center font-mono tracking-wide"
               />
             </div>
 
             {/* Copy Button */}
-            <div className="w-full flex justify-start">
+            <div className="w-full flex justify-center">
               <button 
                 onClick={copyText}
-                className="bg-[#007bff] hover:bg-blue-600 text-white font-medium px-6 py-2 rounded-sm transition-colors shadow-sm"
+                className="w-full sm:w-auto bg-gradient-to-r from-[#d4af37] to-[#f3e5ab] text-black font-extrabold px-10 py-2.5 rounded-lg transition-all shadow-[0_0_10px_rgba(212,175,55,0.3)] hover:shadow-[0_0_15px_rgba(212,175,55,0.6)] hover:scale-[1.02]"
               >
-                {copied ? "Copied!" : "Copy"}
+                {copied ? "COPIED!" : "COPY ADDRESS"}
               </button>
             </div>
 

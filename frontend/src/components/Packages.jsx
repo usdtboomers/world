@@ -9,7 +9,7 @@ const Packages = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState({ amount: 0, name: '' });
 
-  // USD Packages List
+  // USD Packages List (Data same as before)
   const packagesList = [
     { id: 1, name: 'SAVING 1', price: 2, roi: 0.10, days: 25, profit: 2.50 },
     { id: 2, name: 'SAVING 2', price: 10, roi: 0.50, days: 25, profit: 12.50 },
@@ -33,19 +33,35 @@ const Packages = () => {
   return (
     <div className="w-full pb-28 md:pb-8 pt-4">
       {/* --- USD PACKAGE GRID --- */}
-      <div className="max-w-6xl mx-auto px-2 sm:px-0 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
+      {/* 🔥 UPDATE: Mobile ke liye grid-cols-2 set kiya hai aur baaki screens ke liye 3 aur 4 */}
+      <div className="max-w-6xl mx-auto px-2 sm:px-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-5">
         {packagesList.map((pkg) => (
-          <div key={pkg.id} className="bg-white border-2 border-orange-500 p-6 flex flex-col justify-between shadow-md rounded-xl">
+          // 🔥 UPDATE: Dark Theme, Gold Borders & Responsive Padding
+          <div key={pkg.id} className="bg-[#111827] border border-[#d4af37]/40 p-4 md:p-6 flex flex-col justify-between shadow-lg shadow-black/50 rounded-xl hover:border-[#d4af37] transition-all">
             <div>
-              <h3 className="text-xl font-bold text-gray-800 mb-4">{pkg.name}</h3>
-              <p className="text-gray-700 text-sm font-semibold">Price : <span className="text-green-700">${pkg.price}</span></p>
-              <p className="text-gray-700 text-sm font-semibold">Daily ROI : <span className="text-green-700">${pkg.roi.toFixed(2)}</span></p>
-              <p className="text-gray-700 text-sm font-semibold">Days : <span className="text-green-700">{pkg.days} Days</span></p>
-              <p className="text-gray-700 text-sm font-semibold">Total Profit : <span className="text-green-700">${pkg.profit.toFixed(2)}</span></p>
+              <h3 className="text-sm md:text-xl font-black text-[#d4af37] mb-3 md:mb-4 tracking-wide">{pkg.name}</h3>
+              
+              {/* Data list with Flexbox for clean alignment */}
+              <div className="space-y-1.5 md:space-y-2">
+                <p className="text-gray-400 text-xs md:text-sm font-semibold flex justify-between">
+                  <span>Price:</span> <span className="text-[#22c55e]">${pkg.price}</span>
+                </p>
+                <p className="text-gray-400 text-xs md:text-sm font-semibold flex justify-between">
+                  <span>Daily ROI:</span> <span className="text-[#22c55e]">${pkg.roi.toFixed(2)}</span>
+                </p>
+                <p className="text-gray-400 text-xs md:text-sm font-semibold flex justify-between">
+                  <span>Days:</span> <span className="text-white">{pkg.days}</span>
+                </p>
+                <p className="text-gray-400 text-xs md:text-sm font-semibold flex justify-between border-t border-gray-700 pt-1.5 md:pt-2 mt-1.5 md:mt-2">
+                  <span>Total Profit:</span> <span className="text-[#d4af37]">${pkg.profit.toFixed(2)}</span>
+                </p>
+              </div>
             </div>
+
+            {/* Premium Gold Button */}
             <button 
               onClick={() => handleBuyClick(pkg)}
-              className="mt-4 bg-orange-600 text-white font-bold py-2 px-6 rounded-lg shadow hover:bg-orange-700 w-32 transition-colors"
+              className="mt-4 md:mt-6 w-full bg-gradient-to-r from-[#d4af37] to-[#f3e5ab] text-black font-extrabold py-1.5 md:py-2 px-4 rounded-lg shadow-[0_0_10px_rgba(212,175,55,0.4)] hover:shadow-[0_0_15px_rgba(212,175,55,0.6)] hover:scale-[1.02] transition-all text-xs md:text-sm"
             >
               BUY NOW
             </button>
