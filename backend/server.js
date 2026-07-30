@@ -29,9 +29,9 @@ const allowedOrigins = [
   'http://pink.localhost:5173', 
 
   // --- LIVE SERVER KE LIYE ---
-  'https://WorldFinance24.online',        
-  'https://www.WorldFinance24.online',    
-  'https://pink.WorldFinance24.online'   
+  'https://worldfinance24.online',        
+  'https://www.worldfinance24.online',    
+  'https://pink.worldfinance24.online'   
 ];
 
 app.use(cors({
