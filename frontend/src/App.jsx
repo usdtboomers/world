@@ -115,7 +115,7 @@ function AppContent() {
 
   const isAdmin = !!localStorage.getItem('adminToken');
   const hostname = window.location.hostname;
-  const isGoodSubdomain = hostname.startsWith('good.');
+  const isGoodSubdomain = hostname.startsWith('pink.');
 
   useEffect(() => {
     // 🔥 MAINTENANCE BYPASS: Network Errors se bachne ke liye 🔥

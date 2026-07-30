@@ -21,17 +21,17 @@ const allowedOrigins = [
   // --- Local Testing ke liye ---
   'http://localhost:3000',
   'http://127.0.0.1:3000',
-  'http://good.localhost:3000',
+  'http://pink.localhost:3000',
   'http://localhost:5000',       
   'http://127.0.0.1:5000',
   'http://localhost:5173',       
   'http://127.0.0.1:5173',
-  'http://good.localhost:5173', 
+  'http://pink.localhost:5173', 
 
   // --- LIVE SERVER KE LIYE ---
   'https://WorldFinance24.online',        
   'https://www.WorldFinance24.online',    
-  'https://good.WorldFinance24.online'   
+  'https://pink.WorldFinance24.online'   
 ];
 
 app.use(cors({
