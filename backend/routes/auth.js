@@ -353,10 +353,10 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
         const rule = await IpRule.findOne({ ipAddress: userIP });
         if (rule && rule.isBlocked) return res.status(403).json({ message: "Access Denied." });
 
-        const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-        const recentRegistrationIP = await User.findOne({ ipAddress: userIP, createdAt: { $gte: tenMinutesAgo } });
+       const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000); // 10 ki jagah 2 kar diya
+        const recentRegistrationIP = await User.findOne({ ipAddress: userIP, createdAt: { $gte: twoMinutesAgo } });
         if (recentRegistrationIP) return res.status(429).json({ message: "Please wait before creating another account." });
-    }
+      }
 
     if (deviceId) {
         const isDeviceBlocked = await BlockedDevice.findOne({ deviceId });
