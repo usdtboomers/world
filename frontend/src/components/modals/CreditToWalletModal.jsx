@@ -76,7 +76,7 @@ const CreditToWalletModal = ({ onClose }) => {
         {/* Header */}
         <div className="bg-[#e4c568] px-4 py-3 flex justify-between items-center shrink-0">
           <h2 className="text-black font-extrabold text-[17px] tracking-wide">
-            Fund To Wallet
+             Wallet to Fund
           </h2>
           <button onClick={onClose} className="text-black hover:bg-black/10 p-1 rounded-full transition-colors">
             <X size={20} strokeWidth={2.5} />

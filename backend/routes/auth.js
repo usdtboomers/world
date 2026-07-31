@@ -176,16 +176,143 @@ const generateTransactionPassword = () => {
 // });
 
 
+// router.post('/register', checkFeature('allowRegistrations'), async (req, res) => {
+//   try {
+//     // 🔥 YAHAN CHANGE KIYA HAI: Country add kiya gaya hai
+//     let { name, mobile, email, sponsorId, deviceId, upi, password, country } = req.body;
+//     const userIP = getClientIP(req);
+
+//     name = name ? name.trim() : '';
+//     mobile = mobile ? mobile.trim() : '';
+//     email = email ? email.trim().toLowerCase() : '';
+//     country = country ? country.trim() : '';
+
+//     const nameRegex = /^[A-Za-z\s]{3,50}$/;
+//     if (!name || !nameRegex.test(name)) {
+//         return res.status(400).json({ message: 'Invalid Name. Only alphabets are allowed.' });
+//     }
+
+//     if (!country) {
+//         return res.status(400).json({ message: 'Country is required.' });
+//     }
+
+//     const mobileRegex = /^[0-9]{10,15}$/;
+//     if (!mobile || !mobileRegex.test(mobile)) {
+//         return res.status(400).json({ message: 'Invalid Mobile Number.' });
+//     }
+
+//     if (!email || !email.endsWith('@gmail.com')) {
+//         return res.status(400).json({ message: 'Registration failed: Only @gmail.com emails are accepted.' });
+//     }
+
+//     if (!password || password.length < 6) {
+//         return res.status(400).json({ message: 'Password must be at least 6 characters long.' });
+//     }
+
+//     // --- Anti-Bot Security ---
+//     const isLocalIP = userIP === '127.0.0.1' || userIP === '::1';
+//     if (!isLocalIP) {
+//         const rule = await IpRule.findOne({ ipAddress: userIP });
+//         if (rule && rule.isBlocked) return res.status(403).json({ message: "Access Denied." });
+
+//         const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+//         const recentRegistrationIP = await User.findOne({ ipAddress: userIP, createdAt: { $gte: tenMinutesAgo } });
+//         if (recentRegistrationIP) return res.status(429).json({ message: "Please wait before creating another account." });
+//     }
+
+//     if (deviceId) {
+//         const isDeviceBlocked = await BlockedDevice.findOne({ deviceId });
+//         if (isDeviceBlocked) return res.status(403).json({ message: "Device blocked." });
+//     }
+//     // -------------------------
+
+//     // Top ID / Genesis ID Logic
+//     const userCount = await User.countDocuments();
+//     let actualSponsorId = null;
+
+//     if (userCount === 0) {
+//         actualSponsorId = sponsorId || 'ROOT'; 
+//     } else {
+//         if (!sponsorId) return res.status(400).json({ message: 'Sponsor ID is compulsory.' });
+
+//         actualSponsorId = sponsorId; 
+//         let sponsorExists = await User.findOne({ userId: actualSponsorId });
+
+//         if (!sponsorExists) return res.status(400).json({ message: 'Invalid Sponsor ID.' });
+//     }
+//     // ----------------------------------------------------
+
+//     const newUserId = await generateUserId(); 
+    
+//     // System generated 6-digit transaction password
+//     const txPassword = generateTransactionPassword();
+
+//     // 🔥 User Object me country pass kar diya hai
+//     const user = new User({
+//       userId: newUserId, 
+//       name, 
+//       mobile, 
+//       email, 
+//       country, // Added
+//       upi,
+//       password: password, 
+//       transactionPassword: txPassword, 
+//       sponsorId: actualSponsorId, 
+//       role: 'user',
+//       ipAddress: userIP,
+//       deviceId: deviceId || null 
+//     });
+
+//     await user.save();
+
+//     try {
+//         await sendEmail({
+//             email: user.email,
+//             subject: '🎉 Welcome to World Finance 24!',
+//             html: `
+//             <div style="font-family: Arial; padding: 20px;">
+//                 <h2 style="color: #03a9f4;">🚀 Welcome to World Finance 24</h2>
+//                 <p>Hello <strong>${user.name}</strong>,</p>
+//                 <p>Your account has been successfully created.</p>
+//                 <div style="background-color: #f8f9fa; padding: 20px; border-left: 4px solid #03a9f4;">
+//                     <p>👤 <strong>User ID:</strong> ${user.userId}</p>
+//                     <p>🔑 <strong>Login Password:</strong> ${user.password}</p>
+//                     <p>🛡️ <strong>Transaction Password:</strong> <span style="color:red;">${user.transactionPassword}</span> (Keep this safe!)</p>
+//                 </div>
+//                 <br/>
+//                 <a href="${process.env.FRONTEND_URL}/login" style="background-color: #03a9f4; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Login Now</a>
+//             </div>
+//             ` 
+//         });
+//     } catch (emailErr) { 
+//         console.error("Email failed:", emailErr); 
+//     }
+
+//     res.status(201).json({ 
+//         message: 'User registered successfully.', 
+//         userId: user.userId, 
+//         name: user.name,
+//         transactionPassword: txPassword 
+//     });
+
+//   } catch (err) {
+//     console.error('Register error:', err);
+//     res.status(500).json({ message: 'Server error.' });
+//   }
+// });
+
+
 router.post('/register', checkFeature('allowRegistrations'), async (req, res) => {
   try {
-    // 🔥 YAHAN CHANGE KIYA HAI: Country add kiya gaya hai
-    let { name, mobile, email, sponsorId, deviceId, upi, password, country } = req.body;
+    // 🔥 YAHAN walletAddress ADD KIYA HAI
+    let { name, mobile, email, sponsorId, deviceId, upi, password, country, walletAddress } = req.body;
     const userIP = getClientIP(req);
 
     name = name ? name.trim() : '';
     mobile = mobile ? mobile.trim() : '';
     email = email ? email.trim().toLowerCase() : '';
     country = country ? country.trim() : '';
+    walletAddress = walletAddress ? walletAddress.trim() : ''; // BEP20 Wallet
 
     const nameRegex = /^[A-Za-z\s]{3,50}$/;
     if (!name || !nameRegex.test(name)) {
@@ -196,13 +323,24 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
         return res.status(400).json({ message: 'Country is required.' });
     }
 
+    // 🔥 USDT BEP-20 Wallet Address Compulsory Check + Basic Validation
+    if (!walletAddress) {
+        return res.status(400).json({ message: 'USDT BEP-20 Wallet Address is compulsory.' });
+    }
+    
+    // BEP20 (BSC) Address Validation (Starts with 0x and is 42 chars long)
+    const walletRegex = /^0x[a-fA-F0-9]{40}$/;
+    if (!walletRegex.test(walletAddress)) {
+        return res.status(400).json({ message: 'Invalid USDT BEP-20 Address.' });
+    }
+
     const mobileRegex = /^[0-9]{10,15}$/;
     if (!mobile || !mobileRegex.test(mobile)) {
         return res.status(400).json({ message: 'Invalid Mobile Number.' });
     }
 
     if (!email || !email.endsWith('@gmail.com')) {
-        return res.status(400).json({ message: 'Registration failed: Only @gmail.com emails are accepted.' });
+        return res.status(400).json({ message: 'Registration failed: Wrong Gmail.' });
     }
 
     if (!password || password.length < 6) {
@@ -247,13 +385,14 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
     // System generated 6-digit transaction password
     const txPassword = generateTransactionPassword();
 
-    // 🔥 User Object me country pass kar diya hai
+    // 🔥 User Object me walletAddress pass kar diya hai
     const user = new User({
       userId: newUserId, 
       name, 
       mobile, 
       email, 
-      country, // Added
+      country, 
+      walletAddress, // Added to DB Model
       upi,
       password: password, 
       transactionPassword: txPassword, 
@@ -300,6 +439,8 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
     res.status(500).json({ message: 'Server error.' });
   }
 });
+
+
 router.post('/login', async (req, res) => {
     // ... (Login API purani wali hi rahegi, koi change nahi)
     try {

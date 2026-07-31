@@ -351,7 +351,6 @@
 // };
 
 // export default Register;
-
 import React, { useState, useEffect } from 'react';
 import api from '../../api/axios';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
@@ -383,7 +382,8 @@ const Register = () => {
         name: '',
         email: '',
         mobile: '',
-        country: '', // 🔥 Country add kar di hai
+        country: '',
+        walletAddress: '', // 🔥 USDT BEP20 Wallet Address add kiya gaya hai
         password: '',
         agreeTerms: false
     });
@@ -429,6 +429,10 @@ const Register = () => {
         e.preventDefault();
         if (!formData.country) {
             setError("Please select your country.");
+            return;
+        }
+        if (!formData.walletAddress) {
+            setError("USDT BEP-20 Wallet Address is required.");
             return;
         }
         if (!formData.agreeTerms) {
@@ -625,7 +629,7 @@ const Register = () => {
                             <input type="text" name="name" value={formData.name} onChange={handleChange} placeholder="Full Name *" required style={inputStyle} />
                         </div>
 
-                        {/* 🔥 COUNTRY DROPDOWN (SEARCHABLE) */}
+                        {/* COUNTRY DROPDOWN (SEARCHABLE) */}
                         <div style={{...inputGroupStyle, zIndex: 10}}>
                             <i className="fa fa-globe" style={iconStyle}></i>
                             <div 
@@ -687,6 +691,12 @@ const Register = () => {
                         <div style={inputGroupStyle}>
                             <i className="fa fa-phone" style={iconStyle}></i>
                             <input type="text" name="mobile" value={formData.mobile} onChange={handleChange} placeholder="Mobile No. *" required style={inputStyle} />
+                        </div>
+
+                        {/* 🔥 USDT BEP20 WALLET ADDRESS INPUT */}
+                        <div style={inputGroupStyle}>
+                            <i className="fa fa-wallet" style={iconStyle}></i>
+                            <input type="text" name="walletAddress" value={formData.walletAddress} onChange={handleChange} placeholder="USDT (BEP-20) Wallet Address *" required style={inputStyle} />
                         </div>
 
                         <div style={inputGroupStyle}>

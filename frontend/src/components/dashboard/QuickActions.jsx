@@ -63,7 +63,7 @@ const QuickActions = ({ onDepositClick }) => {
               <div className={`${iconBoxStyle} rounded-[18px]`}>
                 <Wallet size={24} strokeWidth={2.5} />
               </div>
-              <span className="text-[11px] md:text-[12px] font-semibold text-white group-hover:text-[#d4af37] transition-colors text-center leading-tight">Credit<br/>To Wallet</span>
+              <span className="text-[11px] md:text-[12px] font-semibold text-white group-hover:text-[#d4af37] transition-colors text-center leading-tight">Wallet<br/>to Fund</span>
             </div>
 
             {/* Team */}
