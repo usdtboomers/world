@@ -64,9 +64,9 @@ exports.withdrawFunds = async (req, res) => {
         });
 
         // Uncomment this line to enforce 1 withdrawal per day
-        // if (alreadyWithdrawn) {
-        //     return res.status(400).json({ success: false, message: 'You can apply for withdrawal only once a day.' });
-        // }
+        if (alreadyWithdrawn) {
+            return res.status(400).json({ success: false, message: 'You can apply for withdrawal only once a day.' });
+        }
 
         // 7. ACTUAL BALANCE DEDUCTION
         if (directReq > 0) user.directIncome -= directReq;

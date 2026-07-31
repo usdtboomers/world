@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../api/axios";
-import { Search, ChevronLeft, ChevronRight, ArrowUpRight, ArrowDownLeft, RefreshCcw, CheckCircle2, User } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, ArrowUpRight, ArrowDownLeft, RefreshCcw, CheckCircle2, User, Calendar } from "lucide-react";
 
 const TopupDetails = () => {
   const { user } = useAuth();
@@ -13,6 +13,13 @@ const TopupDetails = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+
+  // 🔥 HELPER: Decimal128 ko normal number me convert karne ke liye taaki NaN na aaye
+  const getSafeAmount = (val) => {
+    if (!val) return 0;
+    if (val.$numberDecimal) return parseFloat(val.$numberDecimal);
+    return parseFloat(val) || 0;
+  };
 
   useEffect(() => {
     const fetchTopups = async () => {
@@ -32,7 +39,12 @@ const TopupDetails = () => {
             const sourceStr = (t.source || "").toLowerCase();
             const descStr = (t.description || "").toUpperCase();
             
-            const isTopupRelated = typeStr.includes("topup") || sourceStr.includes("topup") || typeStr === "activation";
+            const isTopupRelated = 
+              typeStr.includes("topup") || 
+              sourceStr.includes("topup") || 
+              typeStr.includes("activation") || 
+              typeStr.includes("package");
+              
             const isNotPromo = !descStr.includes("PROMOTION");
             
             return isTopupRelated && isNotPromo;
@@ -69,7 +81,7 @@ const TopupDetails = () => {
     const senderIdStr = (t.fromUserId || t.userId || "").toString().toLowerCase();
     const receiverIdStr = (t.toUserId || t.userId || "").toString().toLowerCase();
     const descStr = (t.description || "").toLowerCase();
-    const amountStr = (t.amount || t.grossAmount || "").toString().toLowerCase();
+    const amountStr = getSafeAmount(t.amount || t.grossAmount).toString().toLowerCase();
 
     return (
       senderIdStr.includes(searchLower) ||
@@ -103,9 +115,7 @@ const TopupDetails = () => {
           <h2 className="text-2xl sm:text-3xl text-[#eab308] font-bold tracking-wide flex items-center gap-3">
              <RefreshCcw className="text-[#eab308]" size={28} /> Package Details
           </h2>
-          <p className="text-gray-400 text-xs md:text-sm mt-2">
-            Track all self, sent, and received activations
-          </p>
+         
         </div>
 
         {/* Filters (Search & Entries) */}
@@ -148,7 +158,7 @@ const TopupDetails = () => {
             <thead className="text-[#eab308] bg-[#1a253e] text-sm border-b border-gray-700">
               <tr>
                 <th className="p-4 border-r border-gray-700/50 font-bold text-center">Sr.</th>
-                <th className="p-4 border-r border-gray-700/50 font-bold">Date</th>
+                <th className="p-4 border-r border-gray-700/50 font-bold text-center">Date & Time</th>
                 <th className="p-4 border-r border-gray-700/50 font-bold">Action Type</th>
                 <th className="p-4 border-r border-gray-700/50 font-bold">Sender</th>
                 <th className="p-4 border-r border-gray-700/50 font-bold">Receiver</th>
@@ -182,16 +192,13 @@ const TopupDetails = () => {
               ) : (
                 currentRows.map((t, idx) => {
                   
-                  // SMART SENDER / RECEIVER IDENTIFICATION LOGIC
                   const currentUserId = String(user?.userId || "");
                   let senderId = t.fromUserId ? String(t.fromUserId) : String(t.userId);
                   let receiverId = t.toUserId ? String(t.toUserId) : String(t.userId);
-
-                  const isDebitTransaction = t.type?.toLowerCase().includes("debit") || Number(t.amount) < 0;
+                  const isDebitTransaction = t.type?.toLowerCase().includes("debit") || Number(getSafeAmount(t.amount)) < 0;
 
                   if (isDebitTransaction && !t.toUserId) {
                       senderId = currentUserId; 
-                      
                       const descMatch = t.description?.match(/(?:for|user|to|#|-)\s*([0-9]{4,10})/i);
                       if (descMatch && descMatch[1]) {
                           receiverId = descMatch[1];
@@ -202,7 +209,6 @@ const TopupDetails = () => {
 
                   let tagDetails = { icon: null, text: "", style: "" };
 
-                  // Relation aur Action Type - Dark Theme Colors
                   if (senderId === currentUserId && receiverId === currentUserId) {
                     tagDetails = { icon: <CheckCircle2 size={12}/>, text: "SELF ACTIVATION", style: "bg-green-500/10 text-green-400 border-green-500/20" };
                   } else if (senderId === currentUserId && receiverId !== currentUserId) {
@@ -213,6 +219,9 @@ const TopupDetails = () => {
                     tagDetails = { icon: <CheckCircle2 size={12}/>, text: "ACTIVATED", style: "bg-gray-500/10 text-gray-400 border-gray-500/20" };
                   }
 
+                  const recordDate = t.createdAt || t.date;
+                  const finalAmount = getSafeAmount(t.amount || t.grossAmount);
+
                   return (
                     <tr
                       key={`${t._id}-${t.createdAt}-${idx}`}
@@ -222,8 +231,16 @@ const TopupDetails = () => {
                         {indexOfFirstRow + idx + 1}
                       </td>
                       
-                      <td className="p-4 border-r border-gray-700/50 font-medium">
-                         {t.createdAt || t.date ? format(new Date(t.createdAt || t.date), "dd MMM yyyy") : "N/A"}
+                      {/* 🔥 TIME AND DATE ADDED */}
+                      <td className="p-4 border-r border-gray-700/50 text-center">
+                         <div className="flex flex-col items-center justify-center">
+                           <span className="font-medium text-gray-200">
+                             {recordDate ? format(new Date(recordDate), "dd MMM yyyy") : "N/A"}
+                           </span>
+                           <span className="text-[11px] text-gray-500">
+                             {recordDate ? format(new Date(recordDate), "hh:mm a") : ""}
+                           </span>
+                         </div>
                       </td>
 
                       <td className="p-4 border-r border-gray-700/50">
@@ -232,7 +249,6 @@ const TopupDetails = () => {
                         </span>
                       </td>
 
-                      {/* SENDER COLUMN */}
                       <td className="p-4 border-r border-gray-700/50 font-medium text-white">
                         <div className="flex items-center gap-2">
                            <div className="p-1 bg-[#0b1221] rounded-full text-gray-500 border border-gray-700"><User size={12}/></div>
@@ -244,7 +260,6 @@ const TopupDetails = () => {
                         </div>
                       </td>
 
-                      {/* RECEIVER COLUMN */}
                       <td className="p-4 border-r border-gray-700/50 font-medium text-white">
                         <div className="flex items-center gap-2">
                            <div className="p-1 bg-[#0b1221] rounded-full text-gray-500 border border-gray-700"><User size={12}/></div>
@@ -256,8 +271,9 @@ const TopupDetails = () => {
                         </div>
                       </td>
 
+                      {/* 🔥 AMOUNT FIX APPLIED */}
                       <td className="p-4 border-r border-gray-700/50 font-bold text-center text-[#eab308]">
-                         ${Math.abs(t.amount || t.grossAmount)}
+                         ${Math.abs(finalAmount).toFixed(2)}
                       </td>
 
                       <td className="p-4 text-gray-400 text-xs truncate max-w-[200px]" title={t.description || "Top-up package"}>

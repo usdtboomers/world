@@ -34,6 +34,46 @@ const DirectTeamPage = () => {
     fetchDirectTeam();
   }, [user?.userId]);
 
+
+  // useEffect(() => {
+  //   const fetchDirectTeam = async () => {
+  //     // Dhyan dena: check karna AuthContext mein 'userId' hai ya '_id'
+  //     if (!user?.userId) return; 
+
+  //     try {
+  //       setLoading(true);
+  //       const res = await api.get(
+  //         `/user/direct-team/${user.userId}?t=${new Date().getTime()}`
+  //       );
+        
+  //       // 🚨 CHROME CONSOLE MEIN YE LINE CHECK KARNA (F12 dabake)
+  //       console.log("Direct Team API Response:", res.data); 
+
+  //       // Backend kis format mein array bhej raha hai usko auto-handle karne ke liye:
+  //       let teamData = [];
+  //       if (Array.isArray(res.data)) {
+  //         teamData = res.data; // Agar direct array aa raha hai
+  //       } else if (Array.isArray(res.data.team)) {
+  //         teamData = res.data.team; // Agar res.data.team mein hai
+  //       } else if (Array.isArray(res.data.data)) {
+  //         teamData = res.data.data; // Agar res.data.data mein hai
+  //       } else if (Array.isArray(res.data.directs)) {
+  //         teamData = res.data.directs; 
+  //       }
+
+  //       setTeam(teamData);
+
+  //     } catch (err) {
+  //       console.error("Error fetching direct team:", err);
+  //       setTeam([]);
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
+
+  //   fetchDirectTeam();
+  // }, [user?.userId]);
+
   // Search Logic
   const filtered = useMemo(() => {
     const s = search.toLowerCase();

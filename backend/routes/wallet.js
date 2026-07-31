@@ -1518,26 +1518,30 @@ router.get('/withdrawals/:userId', async (req, res) => {
 
 
  
-router.get('/history/:userId', async (req, res) => {
+ router.get('/history/:userId', async (req, res) => {
   try {
-    const rawUserId = req.params.userId;
-    const userIdNum = Number(rawUserId);
+    const rawUserId = req.params.userId; // Example: "WF8489157"
+    
+    // 🔥 FIX 1: 'WF' ya koi bhi alphabets ko hata kar sirf number nikalo
+    const numericIdString = String(rawUserId).replace(/\D/g, ''); 
+    const userIdNum = Number(numericIdString);
 
-    // Agar ID galat hai, toh safe format mein khali array bhejo taaki frontend crash na ho
-    if (isNaN(userIdNum)) {
+    // Agar ID bilkul galat hai toh 400 bhejo, warna aage badho
+    if (!numericIdString || isNaN(userIdNum)) {
       return res.status(400).json({ success: false, history: [], balances: null });
     }
 
-    // 🌟 NAYA LOGIC: User ka Live Balance seedha DB se nikal lo (Taaki frontend pe $0 na dikhe)
-    const userData = await User.findOne({ userId: userIdNum }).select('walletBalance usdtBep20Balance').lean();
+    // 🌟 NAYA LOGIC: Bulletproof Database Query (String aur Number dono match karega)
+    const userData = await User.findOne({ 
+        $or: [{ userId: userIdNum }, { userId: rawUserId }] 
+    }).select('walletBalance usdtBep20Balance').lean();
 
-    // 🔥 1. YAHAN SABKUCH ADD KAR DIYA (CCT aur USDT transfers dono)
     const allowedTypes = [
       "deposit",
       "credit_to_wallet",
       "credit",        
       "transfer",
-      "usdt_bep20_transfer", // ✅ Naya USDT Transfer yahan hai
+      "usdt_bep20_transfer", 
       "topup",         
       "debit_topup",
       "withdrawal",
@@ -1546,48 +1550,46 @@ router.get('/history/:userId', async (req, res) => {
       "fast_track",
       "convert_to_cct", 
       "cct_stake_send",  
-      "cct_transfer"         // ✅ CCT transfers yahan hai
+      "cct_transfer"        
     ];
 
-    // ✨ 2. FAST DATABASE QUERY 
+    // ✨ 2. FAST DATABASE QUERY (Ab "WF" aur number dono format ke transactions catch karega)
     let txs = await Transaction.find({
       $and: [
         {
           $or: [
             { userId: userIdNum },       
+            { userId: rawUserId },
             { fromUserId: userIdNum },   
-            { toUserId: userIdNum }      
+            { fromUserId: rawUserId },
+            { toUserId: userIdNum },      
+            { toUserId: rawUserId }
           ]
         },
         { type: { $in: allowedTypes } },
         { description: { $not: /PROMOTION/i } },
-        { description: { $not: /auto-pool/i } } // Auto-pool ka kachra bhi saaf
+        { description: { $not: /auto-pool/i } } 
       ]
     }).sort({ date: -1, createdAt: -1 }).lean();
 
-    // 🛡️ 3. CLEANUP & DECIMAL128 FIX (SABSE ZAROORI)
+    // 🛡️ 3. CLEANUP & DECIMAL128 FIX 
     const cleanHistory = txs
       .filter(t => {
-        // Fast track sirf asli owner (jisko mila hai) ko dikhe
         if (t.type === 'fast_track') {
-            return String(t.userId) === String(rawUserId);
+            return String(t.userId) === String(rawUserId) || String(t.userId) === String(userIdNum);
         }
         return true;
       })
       .map(t => {
-        // 💰 DECIMAL 128 FIX: Backend se hi amount ko pure Number bana kar bhejo
-        // Isse frontend par kabhi Object wala error nahi aayega!
         let safeAmount = 0;
         let safeGross = 0;
 
-        // Extract Amount Safely
         if (t.amount && t.amount.$numberDecimal) {
             safeAmount = parseFloat(t.amount.$numberDecimal);
         } else {
             safeAmount = parseFloat(t.amount) || 0;
         }
 
-        // Extract Gross Amount Safely
         if (t.grossAmount && t.grossAmount.$numberDecimal) {
             safeGross = parseFloat(t.grossAmount.$numberDecimal);
         } else {
@@ -1601,7 +1603,7 @@ router.get('/history/:userId', async (req, res) => {
         };
       });
 
-    // 🌟 4. FINAL RESPONSE: History ke sath Live Balances bhi bhejein
+    // 🌟 4. FINAL RESPONSE
     res.json({ 
         success: true, 
         history: cleanHistory,
@@ -1613,7 +1615,6 @@ router.get('/history/:userId', async (req, res) => {
 
   } catch (err) {
     console.error("Wallet history error:", err);
-    // Crash hone par bhi khali array bhejo taaki frontend white screen na ho
     res.status(500).json({ success: false, history: [], balances: null });
   }
 });
@@ -1621,41 +1622,137 @@ router.get('/history/:userId', async (req, res) => {
 
 // GET /api/wallet/topup-history/:userId
 // GET /api/wallet/topup-history/:userId
+// router.get("/topup-history/:userId", async (req, res) => {
+//   try {
+//     const userId = Number(req.params.userId); // ensure numeric
+
+//     // 🔥 SUPER SCANNER: Yeh har top-up transaction ko dhoondh nikalega
+//     const topups = await Transaction.find({ 
+//       $and: [
+//         // 1. User chahe sender ho, receiver ho ya main userId ho
+//         {
+//           $or: [
+//             { userId: userId },
+//             { fromUserId: userId },
+//             { toUserId: userId }
+//           ]
+//         },
+//         // 2. Transaction ka type "topup", "debit_topup", "activation" jaisa kuch bhi ho
+//         {
+//           $or: [
+//             { type: { $regex: /topup|activation/i } },
+//             { source: { $regex: /topup/i } }
+//           ]
+//         }
+//       ]
+//     }).sort({ createdAt: -1 }); // latest first
+
+//     res.json(topups); 
+//   } catch (err) {
+//     console.error("Top-up history error:", err);
+//     res.status(500).json({ message: "Failed to fetch top-up history" });
+//   }
+// });
+
+
+// router.get("/topup-history/:userId", async (req, res) => {
+//   try {
+//     const rawUserId = req.params.userId; // Example: "WF8489157"
+    
+//     // 🔥 FIX 1: String me se sirf numbers nikalo
+//     const numericIdString = String(rawUserId).replace(/\D/g, ''); 
+//     const userIdNum = Number(numericIdString);
+
+//     // Array of all possible ID formats
+//     const possibleIds = [rawUserId];
+//     if (numericIdString && !isNaN(userIdNum)) {
+//       possibleIds.push(userIdNum);
+//       possibleIds.push(numericIdString);
+//     }
+
+//     // 🔥 SUPER SCANNER: Package activation, topups, debit_topup, activation sab catch karega
+//     const topups = await Transaction.find({ 
+//       $and: [
+//         {
+//           $or: [
+//             { userId: { $in: possibleIds } },
+//             { fromUserId: { $in: possibleIds } },
+//             { toUserId: { $in: possibleIds } }
+//           ]
+//         },
+//         {
+//           $or: [
+//             { type: { $regex: /topup|activation|package/i } },
+//             { source: { $regex: /topup|activation|package/i } }
+//           ]
+//         }
+//       ]
+//     }).sort({ createdAt: -1, date: -1 }).lean();
+
+//     res.json(topups); 
+//   } catch (err) {
+//     console.error("Top-up history error:", err);
+//     res.status(500).json({ message: "Failed to fetch top-up history" });
+//   }
+// });
+
+ 
 router.get("/topup-history/:userId", async (req, res) => {
   try {
-    const userId = Number(req.params.userId); // ensure numeric
+    const rawUserId = req.params.userId; 
+    
+    // 🔥 FIX 1: String me se sirf numbers nikalo
+    const numericIdString = String(rawUserId).replace(/\D/g, ''); 
+    const userIdNum = Number(numericIdString);
 
-    // 🔥 SUPER SCANNER: Yeh har top-up transaction ko dhoondh nikalega
-    const topups = await Transaction.find({ 
+    const possibleIds = [rawUserId];
+    if (numericIdString && !isNaN(userIdNum)) {
+      possibleIds.push(userIdNum);
+      possibleIds.push(numericIdString);
+    }
+
+    let topups = await Transaction.find({ 
       $and: [
-        // 1. User chahe sender ho, receiver ho ya main userId ho
         {
           $or: [
-            { userId: userId },
-            { fromUserId: userId },
-            { toUserId: userId }
+            { userId: { $in: possibleIds } },
+            { fromUserId: { $in: possibleIds } },
+            { toUserId: { $in: possibleIds } }
           ]
         },
-        // 2. Transaction ka type "topup", "debit_topup", "activation" jaisa kuch bhi ho
         {
           $or: [
-            { type: { $regex: /topup|activation/i } },
-            { source: { $regex: /topup/i } }
+            { type: { $regex: /topup|activation|package/i } },
+            { source: { $regex: /topup|activation|package/i } }
           ]
         }
       ]
-    }).sort({ createdAt: -1 }); // latest first
+    }).sort({ createdAt: -1, date: -1 }).lean();
 
-    res.json(topups); 
+    // 🔥 FIX 2: amount object ($numberDecimal) ko safe number mein convert karke frontend bhejo
+    const safeTopups = topups.map(t => {
+        let safeAmount = 0;
+        let safeGross = 0;
+        
+        if (t.amount && t.amount.$numberDecimal) safeAmount = parseFloat(t.amount.$numberDecimal);
+        else safeAmount = parseFloat(t.amount) || 0;
+
+        if (t.grossAmount && t.grossAmount.$numberDecimal) safeGross = parseFloat(t.grossAmount.$numberDecimal);
+        else safeGross = parseFloat(t.grossAmount) || 0;
+
+        return {
+            ...t,
+            amount: safeAmount,
+            grossAmount: safeGross
+        };
+    });
+
+    res.json(safeTopups); 
   } catch (err) {
     console.error("Top-up history error:", err);
     res.status(500).json({ message: "Failed to fetch top-up history" });
   }
 });
-
-
-
- 
 
 
 router.get("/:userId", authMiddleware, async (req, res) => {
