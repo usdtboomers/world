@@ -4,7 +4,7 @@ require("dotenv").config();
 
 // 1. Apna Mnemonic aur wo User ID yahan daalein jiska address check karna hai
 const MNEMONIC = process.env.MNEMONIC; 
-const TARGET_USER_ID = "6a05a568574d84433b6c45e4"; // Example: "6584abcd..."
+const TARGET_USER_ID = "6a6c7d6b7536c4e0f9789468"; // Example: "6584abcd..."
 
 async function showKey() {
     try {

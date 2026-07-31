@@ -237,92 +237,6 @@ router.get('/:userId', getUserById);
 
 
  
-router.post('/send-edit-otp', authMiddleware, async (req, res) => {
-    try {
-        const user = await User.findOne({ userId: req.user.userId }); // 🔥 ALWAYS use req.user.userId
-        if (!user) return res.status(404).json({ message: "User not found" });
-
-        // 🕒 RATE LIMITING LOGIC: Din mein sirf 3 OTP
-        const now = new Date();
-        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()); // Aaj raat 12:00 AM ka time
-
-        // Agar last OTP request aaj se pehle ki hai (kal ki ya purani), toh count 0 kardo (Reset)
-        if (!user.lastOtpRequestDate || user.lastOtpRequestDate < startOfToday) {
-            user.otpRequestCount = 0; 
-        }
-
-        // Limit Check: Agar count 3 ya usse zyada hai, toh error de do
-        if (user.otpRequestCount >= 3) {
-            return res.status(429).json({ 
-                success: false, 
-                message: "Daily limit exceeded. You can only request OTP 3 times a day." 
-            });
-        }
-
-        // 🔐 Generate 6 digit OTP
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        user.editProfileOtp = otp;
-        user.editProfileOtpExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes expiry
-
-        // Update limit count aur date
-        user.otpRequestCount += 1; 
-        user.lastOtpRequestDate = now;
-
-        await user.save();
-
-        // 📧 SEND REAL EMAIL (Ab bypass hٹا diya gaya hai)
-        const mailOptions = {
-            from: `"${process.env.APP_NAME}" <${process.env.EMAIL_USER}>`,
-            to: user.email,
-            subject: 'OTP for Profile Update',
-            html: `<h3>Your Profile Edit OTP</h3>
-                   <p>Your OTP to unlock profile editing is: <b style="font-size:20px; color:green;">${otp}</b></p>
-                   <p>This OTP is valid for 10 minutes. Do not share it with anyone.</p>`
-        };
-
-        // Note: Assumes transporter is defined elsewhere in your file
-        await transporter.sendMail(mailOptions);
-        
-        // Success response (Clean)
-        res.json({ success: true, message: "OTP sent to your registered email." });
-        
-    } catch (error) {
-        console.error("OTP Error:", error);
-        res.status(500).json({ success: false, message: "Failed to send OTP." });
-    }
-});
-
-// 2. Verify OTP (SECURED)
-// Isme bhi authMiddleware add kiya gaya hai
-router.post('/verify-edit-otp', authMiddleware, async (req, res) => {
-    try {
-        const { otp } = req.body; // userId body se nahi lena!
-        const user = await User.findOne({ userId: req.user.userId }); // 🔥 Secure check
-
-        if (!user) {
-            return res.status(400).json({ success: false, message: "User not found." });
-        }
-
-        if (!user.editProfileOtp || user.editProfileOtpExpiry < Date.now()) {
-            return res.status(400).json({ success: false, message: "OTP has expired or was not requested." });
-        }
-
-        if (String(user.editProfileOtp) !== String(otp)) {
-            return res.status(400).json({ success: false, message: "Invalid OTP." });
-        }
-
-        // OTP Sahi hai! Clear OTP and give 15 mins access window
-        user.editProfileOtp = undefined;
-        user.editProfileOtpExpiry = undefined;
-        user.profileEditAccessExpiry = Date.now() + 15 * 60 * 1000; // 15 mins window to edit
-        await user.save();
-
-        res.json({ success: true, message: "OTP Verified. Profile unlocked for 15 minutes." });
-    } catch (error) {
-        console.error("OTP Verify Error:", error);
-        res.status(500).json({ success: false, message: "Verification failed." });
-    }
-});
 
 // 3. Update Profile & Wallet (SECURED)
 // Bina auth token ke ab update nahi hoga
@@ -623,635 +537,6 @@ router.get('/wallet-history/:userId', async (req, res) => {
  
    
  
-router.put(
-  '/topup/:userId',
-  authMiddleware, 
-  async (req, res) => {
-    try {
-      const targetUserId = Number(req.params.userId);
-      const { amount, transactionPassword, isPromoFree } = req.body;
-
-
-      const safeAmount = Number(amount);
-      if (!safeAmount || isNaN(safeAmount) || safeAmount <= 0) {
-          return res.status(400).json({ message: 'Security Alert: Invalid Top-up Amount.' });
-      }
-
-      const validPackages = [30]; // Apne actual packages list yahan daalein
-      if (!validPackages.includes(safeAmount)) {
-          return res.status(400).json({ message: 'Security Alert: This package amount is not allowed.' });
-      }
-
-      // 🔹 1. User & Password Check 
-      const currentUser = await User.findOne({ userId: req.user.userId }).lean();
-      if (!currentUser) return res.status(404).json({ message: "Current user not found" });
-
-      if (!transactionPassword) return res.status(400).json({ message: "Transaction password is required" });
-      
-      if (transactionPassword.toLowerCase() !== currentUser.transactionPassword.toLowerCase()) {
-         return res.status(403).json({ message: "Invalid transaction password" });
-      }
-
-      if (!amount) return res.status(400).json({ message: 'Missing amount.' });
-
-      // 🔥 REAL vs FAKE USER CHECK
-      let targetUser = await User.findOne({ userId: targetUserId });
-      let isFakeUser = false;
-      let FakeUser;
-
-      if (!targetUser) {
-          FakeUser = require('../models/FakeUser');
-          targetUser = await FakeUser.findOne({ userId: targetUserId });
-          if (targetUser) {
-              isFakeUser = true; 
-          } else {
-              return res.status(404).json({ message: 'Target user not found' });
-          }
-      }
-
-      // 🚫 DOUBLE TOP-UP RESTRICTION 
-      if (!isFakeUser) {
-          const isAlreadyBought = targetUser.packages?.some(p => p.amount === amount);
-          if (isAlreadyBought) {
-              return res.status(400).json({ message: `❌ This ID is already active with a $${amount} package. Double top-up is not allowed.` });
-          }
-      } else {
-          if (targetUser.topUpAmount === amount) {
-              return res.status(400).json({ message: `❌ This ID is already active with a $${amount} package. Double top-up is not allowed.` });
-          }
-      }
-
-      // 🔥 DOWNLINE & SELF CHECK ONLY (Optimized depth to 50 for speed)
-      if (!isFakeUser && currentUser.userId !== targetUserId && currentUser.role !== 'admin') {
-          let isDownline = false;
-          let currentTraceId = targetUser.sponsorId;
-          let depthLimit = 50; 
-
-          while (currentTraceId && depthLimit > 0) {
-              if (currentTraceId === currentUser.userId) {
-                  isDownline = true; 
-                  break;
-              }
-              const upline = await User.findOne({ userId: currentTraceId }).select('sponsorId').lean();
-              currentTraceId = upline ? upline.sponsorId : null;
-              depthLimit--;
-          }
-
-          if (!isDownline) {
-              return res.status(403).json({ message: 'Access Denied: You can only activate your own node or your downline team members.' });
-          }
-      }
-
-      const isPromo = currentUser.role === 'promo';
-
-      // 🔹 2. 50/50 WALLET CHECK & DEDUCTION 🔥 (NEW LOGIC)
-     if (!(isPromoFree && amount === 10) && !isPromo) {
-        
-        let maxWalletDeduction = amount * 0.50; // Max 50% from Top-up wallet
-        let actualWalletDeduction = Math.min(currentUser.walletBalance || 0, maxWalletDeduction);
-        let actualUsdtDeduction = amount - actualWalletDeduction;
-
-        if ((currentUser.usdtBep20Balance || 0) < actualUsdtDeduction) {
-            return res.status(400).json({ 
-                message: `Insufficient balance! You need at least $${actualUsdtDeduction} in USDT BEP20 Wallet to activate this ID. (Max 50% can be used from Top-up Wallet).` 
-            });
-        }
-
-    // 🔹 2. SMART WALLET DEDUCTION 🔥 (Prioritize USDT, fallback to Top-up Wallet)
-         
-        // let availableUsdt = currentUser.usdtBep20Balance || 0;
-        // let availableWallet = currentUser.walletBalance || 0;
-
-        // // Check karo ki dono wallet milakar required amount ban raha hai ya nahi
-        // if ((availableUsdt + availableWallet) < amount) {
-        //     return res.status(400).json({ 
-        //         message: `Insufficient total balance! You need $${amount} combined across both wallets to activate this ID.` 
-        //     });
-        // }
-
-        // 1. Pehle pura USDT use karne ki koshish karo
-        // let actualUsdtDeduction = Math.min(availableUsdt, amount);
-        
-        // // 2. Jo bach gaya (agar USDT kam pad gaya), wo Top-up Wallet se le lo
-        // let actualWalletDeduction = amount - actualUsdtDeduction;
-
-        // Deduct from both wallets
-        await User.updateOne(
-            { userId: currentUser.userId }, 
-            { $inc: { 
-                walletBalance: -actualWalletDeduction,
-                usdtBep20Balance: -actualUsdtDeduction
-            }}
-        );
-      }
-
-       
-
-      const createTransaction = async (data) => {
-         const Transaction = require('../models/Transaction'); 
-         return Transaction.create({ ...data, date: new Date() });
-      };
-
-      // 🔥 FAKE USER TOP-UP (Show Success, Bypass MLM)
-      if (isFakeUser) {
-          await createTransaction({
-            userId: targetUser.userId,
-            type: "topup",
-            amount,
-            fromUserId: currentUser.userId,
-            toUserId: targetUser.userId,
-            description: `Node Activated with $${amount}`,
-            status: 'success'
-          });
-
-          await FakeUser.updateOne(
-             { userId: targetUser.userId }, 
-             { $set: { isToppedUp: true, topUpAmount: Math.max(targetUser.topUpAmount || 0, amount), updatedAt: new Date() } }
-          );
-
-          return res.json({ success: true, message: `Top-up successful! $${amount} Node Activated.` });
-      }
-
-      // =======================================================
-      // 🔹 3. CORE UPDATE & INSTANT RESPONSE (MAGIC SPEED)
-      // =======================================================
-      let isFirstTopup = !targetUser.isToppedUp;
-      
-      if (!targetUser.packages) targetUser.packages = [];
-      targetUser.packages.push({ plan: "Global Auto-Pool", amount: amount, startDate: new Date(), withdrawn: 0 });
-      targetUser.topUpAmount = Math.max(targetUser.topUpAmount || 0, amount);
-      targetUser.updatedAt = new Date(); 
-      if (isFirstTopup) {
-          targetUser.isToppedUp = true;
-          targetUser.topUpDate = new Date(); // 🔥 Ye date Monthly cron check karega
-      }
-      await targetUser.save();
-
-      let txDescription = isFirstTopup ? `Node Activated with $${amount}` : `Node Upgrade with $${amount}`;
-      await createTransaction({
-            userId: targetUser.userId,
-            type: "topup",
-            amount,
-            fromUserId: currentUser.userId,
-            toUserId: targetUser.userId,
-            description: txDescription,
-            status: 'success'
-      });
-
-      res.json({ success: true, message: `Top-up successful! $${amount} Node Activated.` });
-
-
-      // =======================================================
-      // 🔹 4. BACKGROUND MLM ENGINE (Runs behind the scenes)
-      // =======================================================
-      (async () => {
-          try {
-              if (isFirstTopup) {
-                  // 🌟 GLOBAL TEAM COUNT
-                  await processGlobalTeamGrowth(targetUser.userId);
-
-                  if (targetUser.sponsorId) {
-                      const sponsor = await User.findOne({ userId: targetUser.sponsorId });
-                      
-                      // ✅ SPONSOR INCOME (ONLY IF SPONSOR IS ACTIVE/TOPPED-UP)
-                      if (sponsor && sponsor.isToppedUp) {
-                          sponsor.directCount = (sponsor.directCount || 0) + 1;
-                          
-                          // DIRECT INCOME (10%)
-                          const DIRECT_PERCENT = 10; 
-                          const directBonusAmount = (amount * DIRECT_PERCENT) / 100; 
-
-                          sponsor.directIncome = (sponsor.directIncome || 0) + directBonusAmount;
-                          sponsor.totalDirectIncome = (sponsor.totalDirectIncome || 0) + directBonusAmount;
-                          
-                          await createTransaction({
-                              userId: sponsor.userId, type: "direct_income", source: "direct",
-                              amount: directBonusAmount, fromUserId: targetUser.userId,
-                              description: `Direct Bonus (10%) from ${targetUser.name}'s Node Activation`, status: 'success'
-                          });
-
-                          // 🔥 FAST TRACK
-                          if (sponsor.createdAt) {
-                              const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
-                              if ((new Date().getTime() - new Date(sponsor.createdAt).getTime()) <= thirtyDaysInMs) {
-                                  const FastTrack = require('../models/FastTrack');
-                                  await FastTrack.create({
-                                      sponsorId: sponsor.userId, directUserId: targetUser.userId,
-                                      dailyAmount: 1, daysPaid: 0, maxDays: 10, status: 'active'
-                                  }).catch(e => console.log("Fast Track Error", e));
-                              }
-                          }
-                          await sponsor.save();
-                      } else if (sponsor && !sponsor.isToppedUp) {
-                          console.log(`[BLOCKED] Direct Income of $${(amount * 10) / 100} stopped for Sponsor ${sponsor.userId} because ID is Inactive.`);
-                      }
-                  }
-
-                  // 🌟 UNIFIED 100-LEVEL ENGINE (SUPERLEADER BYPASS SYSTEM)
-                  const LEVEL_PERCENTAGES = [0, 5, 3, 1, 1, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25];
-                  let currentUplineId = targetUser.sponsorId; 
-                  let currentLevel = 1;
-                  
-                  // 🔥 NAYA FLAG: Ye batayega ki breakaway wall hit hui ya nahi
-                  let isBreakawayHit = false;
-
-                  while (currentUplineId && currentLevel <= 100) {
-                      const upline = await User.findOne({ userId: currentUplineId }).select('userId isToppedUp sponsorId role');
-                      if (!upline) break;
-
-                      // 🛑 RULE 1: INACTIVE BLOCKER (Agar banda inactive hai, toh seedha skip karo)
-                      if (!upline.isToppedUp) {
-                          console.log(`[BLOCKED] Income stopped for Upline ${upline.userId} at Level ${currentLevel} because ID is Inactive.`);
-                          currentUplineId = upline.sponsorId;
-                          currentLevel++;
-                          continue; 
-                      }
-
-                      const isCurrentUplineLeader = (upline.role === 'leader');
-                      const isCurrentUplineSuperLeader = (upline.role === 'superleader');
-
-                      // 🛑 BREAKAWAY RULE: Agar Leader aa chuka hai, toh normal user block honge, par SUPERLEADER bypass kar jayega!
-                      if (isBreakawayHit && !isCurrentUplineSuperLeader) {
-                          currentUplineId = upline.sponsorId;
-                          currentLevel++;
-                          continue; 
-                      }
-
-                      // 1. LEVEL INCOME LOGIC (Level 2 se 20 tak)
-                      if (currentLevel >= 2 && currentLevel <= 20) {
-                          const percentage = LEVEL_PERCENTAGES[currentLevel - 1];
-                          const levelAmount = (amount * percentage) / 100;
-
-                          if (levelAmount > 0) {
-                              await User.updateOne({ _id: upline._id }, { $inc: { levelIncome: levelAmount, totalLevelIncome: levelAmount } });
-                              await createTransaction({
-                                  userId: upline.userId, type: "level_income", source: "level", amount: levelAmount,
-                                  fromUserId: targetUser.userId, description: `Level ${currentLevel} Income (${percentage}%) from ${targetUser.name}'s Activation`, status: 'success'
-                              });
-                          }
-                      }
-
-                      // 2. INSTANT LEADER 10% LOGIC & BREAKAWAY 🔥 (NEW: goes to usdtBep20Balance)
-                      if (currentLevel >= 2 && isCurrentUplineLeader && !isBreakawayHit) {
-                        const instantBonusAmount = (amount * 5) / 100;
-                          
-await User.updateOne(
-    { _id: upline._id }, 
-    { $inc: { usdtBep20Balance: instantBonusAmount } } // 🌟 CREDIT TO USDT BEP20 WALLET
-);
-
-await createTransaction({
-    userId: upline.userId, type: "credit_to_wallet", source: "instant_leader_bonus", amount: instantBonusAmount,
-    fromUserId: targetUser.userId, 
-    description: `5% Instant Leader Bonus from Downline Activation (Level ${currentLevel}) credited to usdt bep20 Wallet`,
-    status: "success"
-});
-
-                          console.log(`✅ [NORMAL ROUTE -> LEADER BONUS] Paid $${instantBonusAmount} to wallet of Leader ${upline.userId}`);
-
-                          // 🔥 THE ULTIMATE LEADER BREAKAWAY WALL 🔥
-                          console.log(`[MLM ENGINE] Breakaway hit at Leader ${upline.userId} (Level ${currentLevel}). Normal users above are blocked, but Superleaders will bypass.`);
-                          isBreakawayHit = true; 
-                      }
-
-                      currentUplineId = upline.sponsorId;
-                      currentLevel++;
-                  }
-              }
-          } catch (bgError) {
-              console.error("Background MLM Engine Error:", bgError);
-          }
-      })();
-
-    } catch (err) {
-      console.error('Top-up Error:', err);
-      if (!res.headersSent) {
-          res.status(500).json({ message: 'Server error during top-up' });
-      }
-    }
-  }
-);
-
-
-// ==========================================
-// 🚀 LEADER SPECIAL: TOPUP ROUTE
-// ==========================================
-router.put(
-  '/leader-topup/:userId',
-  authMiddleware,
-  async (req, res) => {
-    try {
-      const targetUserId = req.params.userId;
-      const { amount, transactionPassword } = req.body;
-
-      const safeAmount = Number(amount);
-      if (!safeAmount || isNaN(safeAmount) || safeAmount <= 0) {
-          return res.status(400).json({ message: 'Security Alert: Invalid Top-up Amount.' });
-      }
-
-      const validPackages = [30]; // Apne actual packages
-      if (!validPackages.includes(safeAmount)) {
-          return res.status(400).json({ message: 'Security Alert: This package amount is not allowed.' });
-      }
-      // ==========================================
-
- 
-      const currentUser = await User.findOne({ userId: req.user.userId });
-      if (!currentUser) return res.status(404).json({ message: "Current user not found" });
-      
-      // 🔥 ALLOW BOTH LEADER & SUPERLEADER
-      if (currentUser.role !== 'leader' && currentUser.role !== 'superleader') {
-          return res.status(403).json({ message: "Access denied. Only leaders and superleaders can use this route." });
-      }
-
-      if (!transactionPassword) return res.status(400).json({ message: "Transaction password is required" });
-      
-      const isValidPassword = (transactionPassword.toLowerCase() === currentUser.transactionPassword.toLowerCase());
-      if (!isValidPassword) return res.status(403).json({ message: "Invalid transaction password" });
-
-      if (!amount) return res.status(400).json({ message: 'Missing amount.' });
-
-      const targetUser = await User.findOne({ userId: targetUserId });
-      if (!targetUser) return res.status(404).json({ message: 'Target user not found' });
-
-      if (targetUser.isToppedUp) {
-          return res.status(400).json({ message: "Action Denied! This ID is already activated (Topped Up)." });
-      }
-
-      const isDirectReferral = Number(targetUser.sponsorId) === Number(currentUser.userId);
-      const isSelfTopup = Number(targetUser.userId) === Number(currentUser.userId);
-      
-      let isDownline = false;
-      if (isDirectReferral || isSelfTopup) {
-          isDownline = true;
-      } else {
-          let checkUplineId = targetUser.sponsorId;
-          let depth = 1;
-          while (checkUplineId && depth <= 50) {
-              if (Number(checkUplineId) === Number(currentUser.userId)) {
-                  isDownline = true;
-                  break;
-              }
-              const nextNode = await User.findOne({ userId: checkUplineId }).select('sponsorId');
-              if (!nextNode) break;
-              checkUplineId = nextNode.sponsorId;
-              depth++;
-          }
-      }
-
-      if (!isDownline) {
-          return res.status(403).json({ 
-              message: "Action Denied! You can only activate IDs in your own Downline. Upline or Crossline top-up is restricted." 
-          });
-      }
-
-      const isDummyTopup = isDirectReferral || isSelfTopup;
-
-      // 🔹 2. 50/50 WALLET CHECK & DEDUCTION FOR LEADER 🔥 (NEW LOGIC)
-      let maxWalletDeduction = amount * 0.50; 
-      let usableWallet = currentUser.walletBalance || 0; // Normal wallet se limit hata di
-      
-      let actualWalletDeduction = Math.min(usableWallet, maxWalletDeduction);
-      let actualUsdtDeduction = amount - actualWalletDeduction;
-
-      if (isDummyTopup) {
-          // 🔥 Direct/Self Activation: USDT deduct NAHI hoga, bas basic check
-          if ((currentUser.usdtBep20Balance || 0) < actualUsdtDeduction) {
-              return res.status(400).json({ message: `Insufficient balance! You need at least $${actualUsdtDeduction} in USDT BEP20 Wallet to activate this ID.` });
-          }
-      } else {
-          // 🔥 Downline Activation: USDT deduct hoga, $30 reserve maintain karna zaroori hai
-          let requiredUsdtBalance = actualUsdtDeduction + 30;
-          if ((currentUser.usdtBep20Balance || 0) < requiredUsdtBalance) {
-              return res.status(400).json({ message: `Action Denied! You must maintain a mandatory $30 reserve in your USDT BEP20 Wallet. You need at least $${requiredUsdtBalance} total USDT to activate this downline.` });
-          }
-      }
-      
-
-      if (isDummyTopup) {
-        console.log(`[DUMMY TOPUP] Leader ${currentUser.userId} activated ${targetUser.userId}. Leader balance NOT deducted.`);
-      } else {
-        currentUser.walletBalance -= actualWalletDeduction;
-        currentUser.usdtBep20Balance -= actualUsdtDeduction;
-      }
-
-    
-    // 🔹 2. SMART WALLET DEDUCTION FOR LEADER 🔥 (Prioritize USDT, fallback to Wallet)
-    //   let availableUsdt = currentUser.usdtBep20Balance || 0;
-    //   let availableWallet = currentUser.walletBalance || 0;
-      
-    //   let actualUsdtDeduction = 0;
-    //   let actualWalletDeduction = 0;
-
-    //   if (isDummyTopup) {
-    //       // 🔥 Direct/Self Activation: USDT deduct nahi hoga practically, but validation ke liye check
-    //       if ((availableUsdt + availableWallet) < amount) {
-    //           return res.status(400).json({ message: `Insufficient total balance! You need $${amount} combined to activate this ID.` });
-    //       }
-    //       actualUsdtDeduction = Math.min(availableUsdt, amount);
-    //       actualWalletDeduction = amount - actualUsdtDeduction;
-    //   } else {
-    //       // 🔥 Downline Activation: Maintain mandatory $30 reserve in USDT BEP20
-    //       let usableUsdtForDownline = Math.max(0, availableUsdt - 30); // 30 dollar reserve ke baad bacha hua USDT
-          
-    //       if ((usableUsdtForDownline + availableWallet) < amount) {
-    //           return res.status(400).json({ 
-    //               message: `Action Denied! You must maintain a mandatory $30 reserve in your USDT Wallet. Besides that, you don't have enough combined balance to activate this downline.` 
-    //           });
-    //       }
-          
-    //       // Pehle reserve chhod kar baaki USDT use karo, phir bacha hua Top-up Wallet se lo
-    //       actualUsdtDeduction = Math.min(usableUsdtForDownline, amount);
-    //       actualWalletDeduction = amount - actualUsdtDeduction;
-    //   }
-
-    // if (isDummyTopup) {
-    //     console.log(`[DUMMY TOPUP] Leader ${currentUser.userId} activated ${targetUser.userId}. Leader balance NOT deducted.`);
-    //   } else {
-    //     // 🔥 SAFE DEDUCTION (PREVENTS RACE CONDITION BOTS)
-    //     await User.updateOne(
-    //         { userId: currentUser.userId },
-    //         { $inc: { 
-    //             walletBalance: -actualWalletDeduction,
-    //             usdtBep20Balance: -actualUsdtDeduction
-    //         }}
-    //     );
-    //   }
-
-      // Note: Purana 'await currentUser.save();' hata diya gaya hai kyunki updateOne directly database me safe save kar deta hai.
-      
-      await currentUser.save();
-
-      const createTransaction = async (data) => {
-         const Transaction = require('../models/Transaction'); 
-         return Transaction.create({ ...data, date: new Date() });
-      };
-
-      let isFirstTopup = !targetUser.isToppedUp;
-      
-      if (!targetUser.packages) targetUser.packages = [];
-      targetUser.packages.push({
-        plan: "Global Auto-Pool",
-        amount: amount,
-        startDate: new Date(),
-        withdrawn: 0,
-        isDummy: isDummyTopup 
-      });
-      targetUser.topUpAmount = Math.max(targetUser.topUpAmount || 0, amount);
-      targetUser.updatedAt = new Date();
-
-      if (isFirstTopup) {
-        targetUser.isToppedUp = true;
-        targetUser.topUpDate = new Date();
-        if (isDummyTopup) {
-            targetUser.isDummyActivated = true; 
-        }
-      }
-      await targetUser.save();
-
-      let txDescription = isFirstTopup ? `Node Activated with $${amount}` : `Node Upgrade with $${amount}`;
-      await createTransaction({
-        userId: targetUser.userId, type: "topup", amount, fromUserId: currentUser.userId, toUserId: targetUser.userId,
-        description: txDescription, status: 'success'
-      });
-
-      let successMsg = isDummyTopup 
-          ? `Success! Dummy ID Activated. Incomes sent to dashboard only.` 
-          : `Success! Used Real + USDT BEP20 balance to activate Downline member. Real incomes distributed.`;
-          
-      res.json({ success: true, message: successMsg });
-
-
-      // =======================================================
-      // 🔹 5. BACKGROUND MLM ENGINE (SUPERLEADER BYPASS SYSTEM)
-      // =======================================================
-      (async () => {
-          try {
-              if (isFirstTopup) {
-                  await processGlobalTeamGrowth(targetUser.userId);
-
-                  if (targetUser.sponsorId) {
-                      const sponsor = await User.findOne({ userId: targetUser.sponsorId });
-                      if (sponsor) {
-                          sponsor.directCount = (sponsor.directCount || 0) + 1;
-                          const DIRECT_BONUS_PERCENTAGE = 10; 
-                          const directBonusAmount = (amount * DIRECT_BONUS_PERCENTAGE) / 100; 
-
-                          sponsor.directIncome = (sponsor.directIncome || 0) + directBonusAmount;
-                          sponsor.totalDirectIncome = (sponsor.totalDirectIncome || 0) + directBonusAmount;
-
-                          await createTransaction({
-                              userId: sponsor.userId, type: "direct_income", source: "direct",
-                              amount: directBonusAmount, fromUserId: targetUser.userId,
-                              description: `Direct Bonus (10%) from ${targetUser.name}'s Node Activation${isDummyTopup ? " (Leader)" : ""}`,
-                              status: 'success'
-                          });
-
-                          if (!isDummyTopup && sponsor.createdAt) {
-                              const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
-                              if ((new Date().getTime() - new Date(sponsor.createdAt).getTime()) <= thirtyDaysInMs) {
-                                  const FastTrack = require('../models/FastTrack');
-                                  await FastTrack.create({
-                                      sponsorId: sponsor.userId, directUserId: targetUser.userId,
-                                      dailyAmount: 1, daysPaid: 0, maxDays: 10, status: 'active'
-                                  }).catch(e => console.log("Fast Track Error", e));
-                              }
-                          }
-                          await sponsor.save();
-                      }
-                  }
-
-                  const LEVEL_PERCENTAGES = [0, 5, 3, 1, 1, 0.5, 0.5, 0.5, 0.5, 0.5, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25];
-                  let currentUplineId = targetUser.sponsorId; 
-                  let currentLevel = 1;
-                  
-                  // 🔥 NAYA FLAG (Leader Bypass)
-                  let isBreakawayHit = false;
-
-                  while (currentUplineId && currentLevel <= 100) {
-                      const upline = await User.findOne({ userId: currentUplineId }).select('userId isToppedUp sponsorId role');
-                      if (!upline) break; 
-
-                      const isCurrentUplineLeader = (upline.role === 'leader');
-                      const isCurrentUplineSuperLeader = (upline.role === 'superleader');
-
-                      // 🛑 BREAKAWAY RULE
-                      if (isBreakawayHit && !isCurrentUplineSuperLeader) {
-                          currentUplineId = upline.sponsorId;
-                          currentLevel++;
-                          continue; 
-                      }
-
-                     // 2. BREAKAWAY WALL DETECTION — leader milte hi wall lagni chahiye,
-                      //    chahe topup dummy ho ya real. Sirf instant 10% USDT bonus
-                      //    payment REAL topup tak limited hai, wall nahi.
-                      if (currentLevel >= 2 && isCurrentUplineLeader && !isBreakawayHit) {
-
-                          if (!isDummyTopup) {
-                             const instantBonusAmount = (amount * 5) / 100;
-
-     await User.updateOne(
-    { _id: upline._id }, 
-    { $inc: { usdtBep20Balance: instantBonusAmount } } // 🌟 Sirf USDT BEP20 me add hoga
-);
-
-      // Niche createTransaction mein description bhi update kar dena
-      await createTransaction({
-          userId: upline.userId, 
-          type: "credit_to_wallet", 
-          source: "instant_leader_bonus", 
-          amount: instantBonusAmount,
-          fromUserId: targetUser.userId, 
-          // 🔥 Message mein bhi "Fund Wallet" likh diya
-          description: `5% Instant Leader Bonus from Downline Activation (Level ${currentLevel}) credited to  usdtbep20 wallet`,
-          status: "success"
-      });
-                          }
-
-                          // 🔥 BREAKAWAY WALL HIT (dummy ya real, dono me lagegi) 🔥
-                          console.log(`[MLM ENGINE] Breakaway hit at Leader ${upline.userId} (Level ${currentLevel}). Superleaders will bypass.`);
-                          isBreakawayHit = true; 
-                      }
-
-                      // 2. INSTANT LEADER 10% LOGIC & BREAKAWAY 🔥 (NEW: goes to usdtBep20Balance)
-                      if (!isDummyTopup && currentLevel >= 2 && isCurrentUplineLeader && !isBreakawayHit) {
-                          const instantBonusAmount = (amount * 5) / 100;
-                          
-                          await User.updateOne(
-                              { _id: upline._id }, 
-                              { $inc: { usdtBep20Balance: instantBonusAmount } } // 🔥 CREDIT TO USDT BEP20 WALLET
-                          );
-                          
-                          await createTransaction({
-                              userId: upline.userId, type: "credit_to_wallet", source: "instant_leader_bonus", amount: instantBonusAmount,
-                              fromUserId: targetUser.userId, 
-                              description: `5% Instant Bonus from Downline Activation (Level ${currentLevel}) credited to wallet balance`,
-                              status: "success"
-                          });
-
-                          // 🔥 BREAKAWAY WALL HIT 🔥
-                          console.log(`[MLM ENGINE] Breakaway hit at Leader ${upline.userId} (Level ${currentLevel}). Superleaders will bypass.`);
-                          isBreakawayHit = true; 
-                      }
-
-                      currentUplineId = upline.sponsorId;
-                      currentLevel++;
-                  }
-              }
-          } catch (bgError) {
-              console.error("Background MLM Engine Error:", bgError);
-          }
-      })();
-
-    } catch (err) {
-      console.error('Leader Top-up Error:', err);
-      if (!res.headersSent) {
-          res.status(500).json({ message: 'Server error during leader top-up' });
-      }
-    }
-  }
-);
-
 
 
 // Backend Route: promo-dummy-topup
@@ -1554,40 +839,7 @@ router.post('/promo-dummy-topup', authMiddleware, async (req, res) => {
 
 
 
- // Downline Team Business Details
-router.get("/binary-summary/:userId", async (req, res) => {  
-  try {
-    const user = await User.findOne({ userId: Number(req.params.userId) });
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    const strong = user.strongLegBusiness || 0;
-    const weak   = user.weakLegBusiness || 0;
-
-    const totalMatching = Math.min(strong, weak);
-    const carryForward  = Math.abs(strong - weak);
-
-    res.json({
-      strongLegBusiness: strong,
-      weakLegBusiness: weak,
-      totalMatching,
-      carryForward,
-
-      // 🔷 current unreleased / available binary
-      binaryIncome: user.binaryIncome || 0,
-
-      // 🔥 VERY IMPORTANT FOR UI (eligibility)
-      hasWithdrawn100: user.hasWithdrawn100 === true,
-
-      // 🔥 optional (agar future me total released track karna ho)
-      totalEarnedSoFar: user.totalBinaryEarned || user.binaryIncome || 0,
-    });
-  } catch (err) {
-    console.error("Binary summary error:", err);
-    res.status(500).json({ message: "Server error" });
-  }
-});
+ 
 
 
 
@@ -1879,10 +1131,171 @@ router.get('/reward-stats/:userId', async (req, res) => {
 const mongoose = require('mongoose');
 const sanitizeUser = require('../utils/sanitizeUser');
 
+// router.get('/:userId', authMiddleware, async (req, res) => {
+//   try {
+//     const rawUserId = req.params.userId;
+//     const loggedInUserId = Number(req.user.userId);
+
+//     // 🛡️ 1. Validation
+//     if (!rawUserId || rawUserId === "undefined") {
+//       return res.status(400).json({ success: false, message: 'User ID is missing' });
+//     }
+
+//     let query = {};
+//     let targetUserId = null;
+    
+//     // 💡 2. Smart Detection
+//     if (mongoose.Types.ObjectId.isValid(rawUserId) && rawUserId.length === 24) {
+//       query = { _id: rawUserId };
+//     } else if (!isNaN(Number(rawUserId))) {
+//       targetUserId = Number(rawUserId);
+//       query = { userId: targetUserId };
+//     } else {
+//       return res.status(400).json({ success: false, message: 'Invalid ID format' });
+//     }
+
+//     // 🔥 SECURITY LOCK: Sirf Admin ya wahi user apna data dekh sake
+//     if (req.user.role !== 'admin' && targetUserId && targetUserId !== loggedInUserId) {
+//         return res.status(403).json({ success: false, message: "Unauthorized: You can only view your own profile." });
+//     }
+
+//     // 3. Search Real User
+//     let user = await User.findOne(query).select('-password -transactionPassword -resetToken -__v');
+//     let isFake = false;
+    
+//     // 🔥 4. Search Fake User if Real not found
+//     if (!user) {
+//         const FakeUser = require('../models/FakeUser');
+//         user = await FakeUser.findOne(query).select('-__v');
+        
+//         if (!user && typeof DummyUser !== 'undefined') {
+//             user = await DummyUser.findOne(query).select('-__v');
+//         }
+
+//         if (user) {
+//             isFake = true;
+//             user = user.toObject ? user.toObject() : user;
+//             if (user.isToppedUp && (!user.packages || user.packages.length === 0)) {
+//                 user.packages = [{ amount: user.topUpAmount || 30 }];
+//             }
+//         }
+//     }
+
+//     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+//     // 🏆 5. Sync Logic
+//     if (!isFake && user.totalRewardIncome === 0 && user.rewardIncome > 0) {
+//         user.totalRewardIncome = user.rewardIncome;
+//         await user.save();
+//     }
+
+//     // 💰 6. Response
+//     // res.json({ 
+//     //     success: true,
+//     //     user: user, 
+//     //     income: {
+//     //         totalDirectIncome: user.totalDirectIncome || user.directIncome || 0,
+//     //         totalLevelIncome: user.levelIncome || 0,
+//     //         totalRewardIncome: user.totalRewardIncome || user.rewardIncome || 0,
+//     //         totalIncome: (user.totalDirectIncome || 0) + (user.levelIncome || 0) + (user.totalRewardIncome || 0)
+//     //     }
+//     // });
+//     // 💰 6. Response
+//     res.json({ 
+//         success: true,
+//         user: user, 
+//         income: {
+//             totalDirectIncome: user.totalDirectIncome || user.directIncome || 0,
+            
+//             // 🔥 FIX: Yahan user.totalLevelIncome add kar diya hai
+//             totalLevelIncome: user.totalLevelIncome || user.levelIncome || 0, 
+            
+//             totalRewardIncome: user.totalRewardIncome || user.rewardIncome || 0,
+            
+//             // 🔥 FIX: Total income mein bhi totalLevelIncome add kar diya
+//             totalIncome: (user.totalDirectIncome || 0) + (user.totalLevelIncome || user.levelIncome || 0) + (user.totalRewardIncome || 0)
+//         }
+//     });
+
+//   } catch (err) {
+//     console.error("Error fetching user profile:", err.message);
+//     res.status(500).json({ success: false, message: 'Server error' });
+//   }
+// });
+
+
+// ---------------------------
+// 2. UPDATE PROFILE ROUTE - 🔥 SECURED
+// ---------------------------
+
+// ---------------------------
+// WALLET & ACCOUNT DETAILS UPDATE
+// ---------------------------
+router.put('/update-wallet/:userId', authMiddleware, async (req, res) => {
+  try {
+    const rawUserId = req.params.userId;
+    // Logged in user id ko string mein le rahe hain taaki 'WF...' format safely match ho
+    const loggedInUserId = req.user.userId;
+
+    // 🔥 SECURITY LOCK: Sirf Admin ya wahi user update kar sake (Case insensitive)
+    if (req.user.role !== 'admin' && String(rawUserId).toLowerCase() !== String(loggedInUserId).toLowerCase()) {
+        return res.status(403).json({ success: false, message: "Unauthorized: You can only update your own profile." });
+    }
+
+    const { walletAddress, upiId } = req.body;
+
+    // 🔥 Alphanumeric (WF...) ID ke liye RegExp use kiya taaki match fail na ho
+    const user = await User.findOne({ userId: new RegExp(`^${rawUserId}$`, 'i') });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // 🔒 PERMANENT WALLET LOCK & HISTORY LOGIC
+    if (walletAddress && walletAddress.trim() !== '') {
+      
+      // Agar pehle se address hai aur wo change karne ki koshish kar raha hai, toh block karo
+      if (user.walletAddress && user.walletAddress.trim() !== '' && walletAddress.trim() !== user.walletAddress) {
+        return res.status(403).json({ message: 'Wallet Locked: Wallet address cannot be changed once it is set.' });
+      }
+      
+      // Agar address khali tha, toh usko update karne do aur History mein daal do
+      if (walletAddress.trim() !== user.walletAddress) {
+        
+        // 🔥 NAYA LOGIC: History array banaiye aur First-time entry daaliye
+        if (!user.walletAddressHistory) {
+            user.walletAddressHistory = [];
+        }
+        
+        user.walletAddressHistory.push({
+            address: walletAddress.trim(), 
+            changedAt: new Date(),
+            updatedBy: "User" 
+        });
+
+        // Final address database mein save ho raha hai
+        user.walletAddress = walletAddress.trim();
+        user.walletAddressChangeCount = (user.walletAddressChangeCount || 0) + 1;
+        user.walletAddressChangeWindowStart = new Date();
+      }
+    }
+
+    // 🔥 UPI ID Update (Kyunki naye design me UPI ID bhi hai)
+    if (upiId !== undefined) {
+        user.upiId = upiId.trim();
+    }
+
+    await user.save();
+    res.json({ success: true, message: 'Account Details updated successfully', user: user });
+  } catch (err) {
+    console.error('Profile Update Error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
 router.get('/:userId', authMiddleware, async (req, res) => {
   try {
     const rawUserId = req.params.userId;
-    const loggedInUserId = Number(req.user.userId);
+    // 🔥 FIX 1: Yahan se Number() hata diya taaki 'WF...' string format mein hi rahe
+    const loggedInUserId = req.user.userId; 
 
     // 🛡️ 1. Validation
     if (!rawUserId || rawUserId === "undefined") {
@@ -1890,20 +1303,19 @@ router.get('/:userId', authMiddleware, async (req, res) => {
     }
 
     let query = {};
-    let targetUserId = null;
     
-    // 💡 2. Smart Detection
+    // 💡 2. Smart Detection (Alphanumeric IDs ke liye fix kiya)
     if (mongoose.Types.ObjectId.isValid(rawUserId) && rawUserId.length === 24) {
       query = { _id: rawUserId };
-    } else if (!isNaN(Number(rawUserId))) {
-      targetUserId = Number(rawUserId);
-      query = { userId: targetUserId };
+    } else if (typeof rawUserId === 'string' && rawUserId.trim() !== '') {
+      // 🔥 FIX 2: isNaN() check hata diya, seedha string as userId pass kiya (case-insensitive search ke sath)
+      query = { userId: new RegExp(`^${rawUserId}$`, 'i') }; 
     } else {
       return res.status(400).json({ success: false, message: 'Invalid ID format' });
     }
 
     // 🔥 SECURITY LOCK: Sirf Admin ya wahi user apna data dekh sake
-    if (req.user.role !== 'admin' && targetUserId && targetUserId !== loggedInUserId) {
+    if (req.user.role !== 'admin' && rawUserId.toLowerCase() !== loggedInUserId.toLowerCase()) {
         return res.status(403).json({ success: false, message: "Unauthorized: You can only view your own profile." });
     }
 
@@ -1938,29 +1350,13 @@ router.get('/:userId', authMiddleware, async (req, res) => {
     }
 
     // 💰 6. Response
-    // res.json({ 
-    //     success: true,
-    //     user: user, 
-    //     income: {
-    //         totalDirectIncome: user.totalDirectIncome || user.directIncome || 0,
-    //         totalLevelIncome: user.levelIncome || 0,
-    //         totalRewardIncome: user.totalRewardIncome || user.rewardIncome || 0,
-    //         totalIncome: (user.totalDirectIncome || 0) + (user.levelIncome || 0) + (user.totalRewardIncome || 0)
-    //     }
-    // });
-    // 💰 6. Response
     res.json({ 
         success: true,
         user: user, 
         income: {
             totalDirectIncome: user.totalDirectIncome || user.directIncome || 0,
-            
-            // 🔥 FIX: Yahan user.totalLevelIncome add kar diya hai
             totalLevelIncome: user.totalLevelIncome || user.levelIncome || 0, 
-            
             totalRewardIncome: user.totalRewardIncome || user.rewardIncome || 0,
-            
-            // 🔥 FIX: Total income mein bhi totalLevelIncome add kar diya
             totalIncome: (user.totalDirectIncome || 0) + (user.totalLevelIncome || user.levelIncome || 0) + (user.totalRewardIncome || 0)
         }
     });
@@ -1972,9 +1368,6 @@ router.get('/:userId', authMiddleware, async (req, res) => {
 });
 
 
-// ---------------------------
-// 2. UPDATE PROFILE ROUTE - 🔥 SECURED
-// ---------------------------
 router.put('/:userId', authMiddleware, async (req, res) => {
   try {
     const targetUserId = Number(req.params.userId);

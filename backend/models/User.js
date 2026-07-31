@@ -44,6 +44,10 @@ const userSchema = new mongoose.Schema({
   // 🔹 WALLETS (DEPOSIT & ACTIVATION)
   // ==========================================
    walletBalance: { type: Number, default: 0 }, // Activation/Top-up wallet
+
+   depositAddress: { type: String, default: null }, // User ka unique crypto address
+
+   
   isToppedUp: { type: Boolean, default: false },
   topUpAmount: { type: Number, default: 0 }, // Upgrade check ke liye (e.g. 30 ka topup)
   topUpDate: { type: Date },

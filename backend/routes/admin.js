@@ -988,17 +988,43 @@ router.post('/execute-sponsor-change', verifyAdmin, async (req, res) => {
 
 
 // 1. 🔍 USER SEARCH (ID daalo, Details aur IP paao)
-router.post('/search-user', async (req, res) => {
+// router.post('/search-user/:userId', async (req, res) => {
+//     try {
+//         // 1. req.body ki jagah req.params use kiya kyunki ID URL se aa rahi hai
+//         const { userId } = req.params; 
+        
+//         // 2. String (jaise WF2343434) ke liye case-insensitive search (wf ya WF dono par kaam karega)
+//         const user = await User.findOne({ userId: new RegExp(`^${userId}$`, 'i') }); 
+        
+//         if (!user) return res.status(404).json({ message: "User not found!" });
+
+//         // Is user ke IP par aur kitne log hain? (Baki code same to same)
+//         const usersOnSameIp = await User.find({ ipAddress: user.ipAddress }).select('userId name email');
+        
+//         res.json({ user, usersOnSameIp });
+//     } catch (err) { 
+//         res.status(500).json({ message: "Server error" }); 
+//     }
+// });
+
+// Dhyan do: Yahan router.post ki jagah router.get karna hai!
+router.get('/search-user/:userId', async (req, res) => {
     try {
-        const { userId } = req.body;
-        const user = await User.findOne({ userId });
+        const { userId } = req.params; // ID ab URL se aayegi (req.params)
+        
+        // Database me search karne ka logic (case-insensitive)
+        const user = await User.findOne({ userId: new RegExp(`^${userId}$`, 'i') }); 
+        
         if (!user) return res.status(404).json({ message: "User not found!" });
 
         // Is user ke IP par aur kitne log hain?
         const usersOnSameIp = await User.find({ ipAddress: user.ipAddress }).select('userId name email');
         
         res.json({ user, usersOnSameIp });
-    } catch (err) { res.status(500).json({ message: "Server error" }); }
+    } catch (err) { 
+        console.error(err);
+        res.status(500).json({ message: "Server error" }); 
+    }
 });
 
 // 2. 🔍 IP SEARCH (IP daalo, uski limit aur logged users paao)
@@ -3319,25 +3345,33 @@ router.get('/all-deposits-fast', verifyAdmin, async (req, res) => {
 
 
 
-
-
 const { sweepFunds } = require('../controllers/depositController'); // Jahan aapka sweep logic rakha hai
-
+ 
+// ==========================================
+// 🚀 FORCE SWEEP DEPOSIT
+// ==========================================
 router.post('/force-sweep-deposit/:userId', verifyAdmin, async (req, res) => {
     try {
-        const userId = Number(req.params.userId);
-        const user = await User.findOne({ userId: userId });
+        const rawUserId = req.params.userId;
+        
+        // "WF" ke sath ya bina "WF" ke dhoondhne ka smart logic
+        let user = await User.findOne({ userId: String(rawUserId) });
+        if (!user) {
+            const onlyNumbers = rawUserId.replace(/\D/g, ''); // Extraction of only numbers (8489157)
+            if(onlyNumbers) user = await User.findOne({ userId: onlyNumbers });
+        }
         
         if (!user) {
             return res.status(404).json({ success: false, message: "User not found." });
         }
 
-        // Yeh line aapke depositController wale function ko background mein chala degi
-        await sweepFunds(user._id);
+        // Background mein sweep start kar diya
+        sweepFunds(user._id).catch(err => console.error("Force Sweep Error:", err));
 
+        // Frontend ko turant success bhej diya taaki page freeze na ho
         res.json({ 
             success: true, 
-            message: `Successfully swept funds for User #${userId} to Master Wallet!` 
+            message: `Successfully triggered sweep for User #${rawUserId} to Master Wallet!` 
         });
     } catch (error) {
         console.error("Force Sweep Route Error:", error);
@@ -3350,11 +3384,10 @@ router.post('/force-sweep-deposit/:userId', verifyAdmin, async (req, res) => {
 // ==========================================
 router.get('/users-deposit-addresses', verifyAdmin, async (req, res) => {
     try {
-        // Sirf un users ko nikalenge jinka deposit address generate ho chuka hai
         const users = await User.find(
             { depositAddress: { $exists: true, $ne: null, $ne: "" } },
-            'userId name depositAddress' // Sirf zaroori data fetch kar rahe hain UI ke liye
-        ).sort({ userId: -1 });
+            'userId name depositAddress' 
+        ).sort({ userId: -1 }); 
 
         res.json({ success: true, data: users });
     } catch (error) {
@@ -3365,7 +3398,7 @@ router.get('/users-deposit-addresses', verifyAdmin, async (req, res) => {
 
 // ==========================================
 // 2. CHECK LIVE BLOCKCHAIN BALANCE (Single User)
- 
+// ==========================================
 // 🔥 SIRF FREE WALA RPC (BINANCE PUBLIC) USE KAREGA ADMIN PANEL KE LIYE
 const freeProvider = new ethers.JsonRpcProvider("https://bsc-dataseed.binance.org/");
 const usdtAbi = ["function balanceOf(address owner) view returns (uint256)"];
@@ -3373,13 +3406,19 @@ const usdtContractFree = new ethers.Contract(process.env.USDT_CONTRACT_ADDRESS, 
 
 router.get('/check-live-balance/:userId', verifyAdmin, async (req, res) => {
     try {
-        const user = await User.findOne({ userId: req.params.userId });
+        const rawUserId = req.params.userId;
+        
+        // Smart User Search here too
+        let user = await User.findOne({ userId: String(rawUserId) });
+        if (!user) {
+            const onlyNumbers = rawUserId.replace(/\D/g, '');
+            if(onlyNumbers) user = await User.findOne({ userId: onlyNumbers });
+        }
         
         if (!user || !user.depositAddress) {
             return res.json({ success: true, liveBalance: "0.00" });
         }
 
-        // Paid RPC ki jagah yahan Free wale se connect hoga
         const balanceWei = await usdtContractFree.balanceOf(user.depositAddress);
         const balanceUSDT = ethers.formatUnits(balanceWei, 18);
 
@@ -3390,8 +3429,26 @@ router.get('/check-live-balance/:userId', verifyAdmin, async (req, res) => {
     }
 });
 
+// ==========================================
+// 1. GET ALL DEPOSIT ADDRESSES
+// ==========================================
+// router.get('/users-deposit-addresses', verifyAdmin, async (req, res) => {
+//     try {
+//         // Sirf un users ko nikalenge jinka deposit address generate ho chuka hai
+//         const users = await User.find(
+//             { depositAddress: { $exists: true, $ne: null, $ne: "" } },
+//             'userId name depositAddress' // Sirf zaroori data fetch kar rahe hain UI ke liye
+//         ).sort({ userId: -1 });
 
+//         res.json({ success: true, data: users });
+//     } catch (error) {
+//         console.error("Fetch Deposit Addresses Error:", error);
+//         res.status(500).json({ success: false, message: "Failed to fetch addresses." });
+//     }
+// });
 
+ 
+ 
 
 
 
@@ -4446,9 +4503,11 @@ router.get('/wallet-update-history', verifyAdmin, async (req, res) => {
 
 
 // 1. Get Single User Route
+// 1. Get User Route
 router.get('/user/:userId', verifyAdmin, async (req, res) => {
   try {
-    const user = await User.findOne({ userId: Number(req.params.userId) }).lean();
+    // 🔥 FIX: Number() hata diya gaya hai
+    const user = await User.findOne({ userId: req.params.userId }).lean();
     
     if (!user) return res.status(404).json({ message: 'User not found' });
 
@@ -4470,13 +4529,14 @@ router.get('/user/:userId', verifyAdmin, async (req, res) => {
 // 2. Search User Route
 router.get('/search-user/:userId', verifyAdmin, async (req, res) => {
   try {
-    // 1. Pehle user ko dhundo
-    const user = await User.findOne({ userId: Number(req.params.userId) }).lean();
+    // 1. Pehle user ko dhundo (🔥 FIX: Number() removed)
+    const user = await User.findOne({ userId: req.params.userId }).lean();
     if (!user) return res.status(404).json({ message: 'User not found' });
 
     // 2. ✅ NAYA LOGIC: Agar iska koi sponsorId hai, toh database se uska naam nikalo
     if (user.sponsorId) {
-      const sponsor = await User.findOne({ userId: Number(user.sponsorId) }).select('name').lean();
+      // 🔥 FIX: sponsorId se bhi Number() hata diya
+      const sponsor = await User.findOne({ userId: user.sponsorId }).select('name').lean();
       // Agar sponsor mila toh uska naam daalo, warna "Unknown" likh do
       user.sponsorName = sponsor ? sponsor.name : "Unknown"; 
     } else {
@@ -4506,11 +4566,7 @@ router.get('/search-user/:userId', verifyAdmin, async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
-// Admin update user data safely
-// ✅ Admin update user + update ONLY pending withdrawals wallet address
-// 🔐 Admin update user (FINAL)
-// 🔐 Admin update user (FINAL - Updated to Plain Text Password)
-// C:\Users\HP\Desktop\worldfinance24\backend\routes\admin.js
+
 
 // 🔥 FIX: ADDED verifyAdmin MIDDLEWARE 🔥
 router.put('/:userId', verifyAdmin, async (req, res) => { 
@@ -4534,7 +4590,8 @@ router.put('/:userId', verifyAdmin, async (req, res) => {
         return res.status(403).json({ message: "❌ Incorrect Authorization Password! Update denied." });
     }
 
-    const user = await User.findOne({ userId: Number(req.params.userId) });
+    // 🔥 FIX: Number() hata diya gaya hai
+    const user = await User.findOne({ userId: req.params.userId });
     
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -4545,9 +4602,6 @@ router.put('/:userId', verifyAdmin, async (req, res) => {
     if (password) user.password = password;
     if (transactionPassword) user.transactionPassword = transactionPassword;
 
-   // 🔥 3. WALLET HISTORY LOGIC (PURANA ADDRESS HISTORY ME JAYEGA)
-    // 🔥 3. WALLET HISTORY & CURRENT TIME LOGIC 🔥
-   // 🔥 3. WALLET HISTORY LOGIC (Added Time & Replaced Time) 🔥
     // 🔥 3. WALLET HISTORY LOGIC (Added Time & Fallback) 🔥
     if (walletAddress && walletAddress.trim() !== user.walletAddress) {
       
@@ -4573,13 +4627,14 @@ router.put('/:userId', verifyAdmin, async (req, res) => {
     const updatedUser = await user.save();
 
     if (walletAddress) {
+      // 🔥 FIX: yahan se bhi Number() hatana padega taaki string IDs match ho sakein
       await Withdrawal.updateMany(
-        { userId: Number(req.params.userId), status: "pending" },
+        { userId: req.params.userId, status: "pending" },
         { $set: { walletAddress: walletAddress.trim() } }
       );
       await Withdrawal.updateMany(
         {
-          userId: Number(req.params.userId),
+          userId: req.params.userId,
           "schedule.status": "pending"
         },
         {

@@ -24,29 +24,24 @@ const TopupDetails = () => {
 
       try {
         setLoading(true);
-        // 🔥 CACHE FIX: Real-time data fetch karne ke liye timestamp add kiya
         const res = await api.get(`/wallet/topup-history/${user.userId}?t=${new Date().getTime()}`);
         
         if (Array.isArray(res.data)) {
-          // Naya filter logic jo backend se aane wale har topup record ko scan karega
           const userTopups = res.data.filter((t) => {
             const typeStr = (t.type || "").toLowerCase();
             const sourceStr = (t.source || "").toLowerCase();
             const descStr = (t.description || "").toUpperCase();
             
-            // Check if transaction is related to topup/activation
             const isTopupRelated = typeStr.includes("topup") || sourceStr.includes("topup") || typeStr === "activation";
             const isNotPromo = !descStr.includes("PROMOTION");
             
             return isTopupRelated && isNotPromo;
           });
 
-          // Duplicate entries ko remove karne ka filter
           const uniqueTopups = Array.from(
             new Map(userTopups.map((t) => [`${t._id}-${t.createdAt}`, t])).values()
           );
 
-          // Latest entries sabse upar dikhane ke liye sort
           uniqueTopups.sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date));
 
           setTopups(uniqueTopups);
@@ -98,147 +93,151 @@ const TopupDetails = () => {
   const handleNext = () => currentPage < totalPages && setCurrentPage(prev => prev + 1);
 
   return (
-    <div className="w-full max-w-7xl mx-auto pb-10 relative z-10 animate-in fade-in duration-500">
+    <div className="w-full min-h-screen bg-[#0b1221] p-4 md:p-8 font-sans">
       
-      {/* Scrollbar CSS */}
-      <style>{`
-        .custom-scroll::-webkit-scrollbar { height: 6px; width: 6px; }
-        .custom-scroll::-webkit-scrollbar-track { background: #f8fafc; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-      `}</style>
-
-      {/* Header */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
-        <div>
-          <h2 className="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-green-500 to-emerald-700 uppercase tracking-wide flex items-center gap-3">
-             <RefreshCcw className="text-green-500" size={28} /> Node Top-Up Details
+      {/* Inner Card Container */}
+      <div className="max-w-7xl mx-auto bg-[#131c31] rounded-xl border-t-[3px] border-[#eab308] shadow-2xl p-4 sm:p-6">
+        
+        {/* Header Title */}
+        <div className="mb-6">
+          <h2 className="text-2xl sm:text-3xl text-[#eab308] font-bold tracking-wide flex items-center gap-3">
+             <RefreshCcw className="text-[#eab308]" size={28} /> Package Details
           </h2>
-          <p className="text-slate-500 text-xs md:text-sm font-bold tracking-widest uppercase mt-1">
-            Track all self, sent, and received node activations
+          <p className="text-gray-400 text-xs md:text-sm mt-2">
+            Track all self, sent, and received activations
           </p>
         </div>
-      </div>
 
-      {/* Filters (Search & Entries) */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6 justify-between items-center bg-white shadow-sm p-4 rounded-2xl border border-slate-200">
-        
-        <div className="relative w-full sm:w-80 group">
-           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-             <Search size={16} className="text-gray-400 group-focus-within:text-green-500 transition-colors" />
-           </div>
-           <input
-             type="text"
-             placeholder="Search ID, details, amount..."
-             value={searchQuery}
-             onChange={handleSearch}
-             className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl px-4 py-3 pl-10 focus:border-green-500 focus:bg-white focus:outline-none transition-all placeholder-slate-400 font-bold tracking-wide shadow-inner"
-           />
+        {/* Filters (Search & Entries) */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 text-gray-300 text-sm">
+          
+          <div className="flex items-center gap-2">
+            <span>Show</span>
+            <select
+              value={rowsPerPage}
+              onChange={handleRowsPerPageChange}
+              className="bg-[#0b1221] border border-gray-700 text-[#eab308] rounded px-3 py-1.5 focus:outline-none focus:border-[#eab308] transition-colors"
+            >
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+            </select>
+            <span>entries</span>
+          </div>
+
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <span>Search:</span>
+            <div className="relative w-full sm:w-64">
+               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                 <Search size={16} className="text-gray-500" />
+               </div>
+               <input
+                 type="text"
+                 placeholder="Search ID, details..."
+                 value={searchQuery}
+                 onChange={handleSearch}
+                 className="bg-[#0b1221] border border-gray-700 text-gray-200 rounded px-3 py-1.5 pl-9 w-full focus:outline-none focus:border-[#eab308] transition-colors placeholder-gray-500"
+               />
+            </div>
+          </div>
         </div>
 
-      </div>
-
-      {/* Table Box */}
-      <div className="bg-white shadow-sm rounded-2xl border border-slate-200 overflow-hidden relative">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-green-500/5 blur-[80px] pointer-events-none rounded-full"></div>
-        
-        <div className="overflow-x-auto custom-scroll w-full relative z-10">
-          <table className="w-full text-xs sm:text-sm text-left whitespace-nowrap">
-            <thead className="bg-slate-50 text-slate-500 text-[10px] md:text-xs uppercase tracking-widest border-b border-slate-200">
+        {/* Table Container */}
+        <div className="overflow-x-auto border border-gray-700 rounded-lg">
+          <table className="w-full text-left whitespace-nowrap border-collapse">
+            <thead className="text-[#eab308] bg-[#1a253e] text-sm border-b border-gray-700">
               <tr>
-                <th className="p-4 font-black text-center">Sr.</th>
-                <th className="p-4 font-black">Date & Time</th>
-                <th className="p-4 font-black">Action Type</th>
-                <th className="p-4 font-black">Topped Up By (Sender)</th>
-                <th className="p-4 font-black">Topped Up For (Receiver)</th>
-                <th className="p-4 font-black text-center">Amount</th>
-                <th className="p-4 font-black">Details</th>
+                <th className="p-4 border-r border-gray-700/50 font-bold text-center">Sr.</th>
+                <th className="p-4 border-r border-gray-700/50 font-bold">Date</th>
+                <th className="p-4 border-r border-gray-700/50 font-bold">Action Type</th>
+                <th className="p-4 border-r border-gray-700/50 font-bold">Sender</th>
+                <th className="p-4 border-r border-gray-700/50 font-bold">Receiver</th>
+                <th className="p-4 border-r border-gray-700/50 font-bold text-center">Amount</th>
+                <th className="p-4 font-bold">Details</th>
               </tr>
             </thead>
 
-            <tbody className="text-slate-600">
+            <tbody className="text-gray-300 text-sm">
               {loading ? (
                 <tr>
-                  <td colSpan="7" className="text-center py-10">
-                     <svg className="animate-spin h-8 w-8 text-green-500 mx-auto mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                     <span className="text-xs font-bold uppercase tracking-widest text-gray-500">Loading History...</span>
+                  <td colSpan="7" className="text-center py-8 text-[#eab308]">
+                     <div className="flex flex-col items-center justify-center">
+                       <RefreshCcw className="animate-spin mb-2" size={24} />
+                       Loading History...
+                     </div>
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan="7" className="text-center py-10">
-                     <span className="text-red-500 font-bold text-sm uppercase tracking-widest bg-red-50 px-4 py-2 rounded-lg border border-red-200">{error}</span>
+                  <td colSpan="7" className="text-center py-8 text-red-400 bg-red-900/10">
+                     {error}
                   </td>
                 </tr>
               ) : currentRows.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="text-center py-10">
-                    <span className="text-gray-500 font-bold text-sm uppercase tracking-widest">No Top-up Records Found</span>
+                  <td colSpan="7" className="text-center py-8 text-gray-500">
+                    No package Records Found
                   </td>
                 </tr>
               ) : (
                 currentRows.map((t, idx) => {
                   
-                  // 🔥 SMART SENDER / RECEIVER IDENTIFICATION LOGIC
+                  // SMART SENDER / RECEIVER IDENTIFICATION LOGIC
                   const currentUserId = String(user?.userId || "");
                   let senderId = t.fromUserId ? String(t.fromUserId) : String(t.userId);
                   let receiverId = t.toUserId ? String(t.toUserId) : String(t.userId);
 
                   const isDebitTransaction = t.type?.toLowerCase().includes("debit") || Number(t.amount) < 0;
 
-                  // Agar aapke wallet se amount cut hua hai (Debit), iska matlab aapne topup kiya hai (Sender = YOU)
                   if (isDebitTransaction && !t.toUserId) {
                       senderId = currentUserId; 
                       
-                      // 🚀 SMART SCANNER: Description se receiver ki ID nikalna (e.g., "Topup for User #123456")
                       const descMatch = t.description?.match(/(?:for|user|to|#|-)\s*([0-9]{4,10})/i);
                       if (descMatch && descMatch[1]) {
                           receiverId = descMatch[1];
                       } else {
-                          receiverId = "Team Member"; // Agar id na mile toh default naam
+                          receiverId = "Team Member";
                       }
                   }
 
                   let tagDetails = { icon: null, text: "", style: "" };
 
-                  // Relation aur Action Type Set Karna
+                  // Relation aur Action Type - Dark Theme Colors
                   if (senderId === currentUserId && receiverId === currentUserId) {
-                    tagDetails = { icon: <CheckCircle2 size={12}/>, text: "SELF ACTIVATION", style: "bg-emerald-50 text-emerald-600 border-emerald-200" };
+                    tagDetails = { icon: <CheckCircle2 size={12}/>, text: "SELF ACTIVATION", style: "bg-green-500/10 text-green-400 border-green-500/20" };
                   } else if (senderId === currentUserId && receiverId !== currentUserId) {
-                    tagDetails = { icon: <ArrowUpRight size={12}/>, text: "ACTIVATED FOR TEAM", style: "bg-amber-50 text-amber-600 border-amber-200" };
+                    tagDetails = { icon: <ArrowUpRight size={12}/>, text: "ACTIVATED FOR TEAM", style: "bg-[#eab308]/10 text-[#eab308] border-[#eab308]/20" };
                   } else if (receiverId === currentUserId && senderId !== currentUserId) {
-                    tagDetails = { icon: <ArrowDownLeft size={12}/>, text: "ACTIVATED BY UPLINE", style: "bg-blue-50 text-blue-600 border-blue-200" };
+                    tagDetails = { icon: <ArrowDownLeft size={12}/>, text: "ACTIVATED BY UPLINE", style: "bg-blue-500/10 text-blue-400 border-blue-500/20" };
                   } else {
-                    tagDetails = { icon: <CheckCircle2 size={12}/>, text: "ACTIVATED", style: "bg-slate-100 text-slate-600 border-slate-200" };
+                    tagDetails = { icon: <CheckCircle2 size={12}/>, text: "ACTIVATED", style: "bg-gray-500/10 text-gray-400 border-gray-500/20" };
                   }
 
                   return (
                     <tr
                       key={`${t._id}-${t.createdAt}-${idx}`}
-                      className="border-b border-slate-100 hover:bg-slate-50 transition-colors bg-white"
+                      className="border-b border-gray-700 hover:bg-[#1a253e] transition-colors"
                     >
-                      <td className="p-4 font-bold text-gray-500 text-center">
+                      <td className="p-4 border-r border-gray-700/50 text-center font-medium">
                         {indexOfFirstRow + idx + 1}
                       </td>
                       
-                      <td className="p-4 text-slate-600 font-mono text-[11px] sm:text-xs">
-                        <div className="flex flex-col">
-                           <span className="font-bold">{t.createdAt || t.date ? format(new Date(t.createdAt || t.date), "dd MMM yyyy") : "N/A"}</span>
-                           <span className="text-slate-400">{t.createdAt || t.date ? format(new Date(t.createdAt || t.date), "hh:mm a") : ""}</span>
-                        </div>
+                      <td className="p-4 border-r border-gray-700/50 font-medium">
+                         {t.createdAt || t.date ? format(new Date(t.createdAt || t.date), "dd MMM yyyy") : "N/A"}
                       </td>
 
-                      <td className="p-4">
-                        <span className={`flex items-center gap-1.5 w-fit border py-1.5 px-3 rounded-md text-[10px] font-black tracking-widest shadow-sm ${tagDetails.style}`}>
+                      <td className="p-4 border-r border-gray-700/50">
+                        <span className={`flex items-center gap-1.5 w-fit border py-1 px-2.5 rounded text-[10px] font-bold tracking-wider ${tagDetails.style}`}>
                           {tagDetails.icon} {tagDetails.text}
                         </span>
                       </td>
 
                       {/* SENDER COLUMN */}
-                      <td className="p-4 font-black text-slate-700 text-sm">
+                      <td className="p-4 border-r border-gray-700/50 font-medium text-white">
                         <div className="flex items-center gap-2">
-                           <div className="p-1.5 bg-slate-100 rounded-full text-slate-400"><User size={14}/></div>
+                           <div className="p-1 bg-[#0b1221] rounded-full text-gray-500 border border-gray-700"><User size={12}/></div>
                            {senderId === currentUserId ? (
-                             <span className="text-indigo-600 font-black">#{senderId} <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded ml-1">YOU</span></span>
+                             <span className="text-[#eab308]">#{senderId} <span className="text-[9px] bg-[#eab308]/20 text-[#eab308] px-1.5 py-0.5 rounded ml-1">YOU</span></span>
                            ) : (
                              <span>{senderId.includes("Team") ? senderId : `#${senderId}`}</span>
                            )}
@@ -246,22 +245,22 @@ const TopupDetails = () => {
                       </td>
 
                       {/* RECEIVER COLUMN */}
-                      <td className="p-4 font-black text-slate-700 text-sm">
+                      <td className="p-4 border-r border-gray-700/50 font-medium text-white">
                         <div className="flex items-center gap-2">
-                           <div className="p-1.5 bg-slate-100 rounded-full text-slate-400"><User size={14}/></div>
+                           <div className="p-1 bg-[#0b1221] rounded-full text-gray-500 border border-gray-700"><User size={12}/></div>
                            {receiverId === currentUserId ? (
-                             <span className="text-indigo-600 font-black">#{receiverId} <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded ml-1">YOU</span></span>
+                             <span className="text-[#eab308]">#{receiverId} <span className="text-[9px] bg-[#eab308]/20 text-[#eab308] px-1.5 py-0.5 rounded ml-1">YOU</span></span>
                            ) : (
                              <span>{receiverId.includes("Team") ? receiverId : `#${receiverId}`}</span>
                            )}
                         </div>
                       </td>
 
-                      <td className="p-4 font-black text-center">
-                         <span className="text-green-600 bg-green-50 border border-green-100 px-3 py-1 rounded-lg text-sm">${Math.abs(t.amount || t.grossAmount)}</span>
+                      <td className="p-4 border-r border-gray-700/50 font-bold text-center text-[#eab308]">
+                         ${Math.abs(t.amount || t.grossAmount)}
                       </td>
 
-                      <td className="p-4 text-slate-600 text-[11px] md:text-xs font-bold tracking-wide capitalize max-w-[200px] truncate" title={t.description || "Top-up package"}>
+                      <td className="p-4 text-gray-400 text-xs truncate max-w-[200px]" title={t.description || "Top-up package"}>
                         {t.description || "Top-up package"}
                       </td>
 
@@ -275,43 +274,31 @@ const TopupDetails = () => {
 
         {/* Pagination Footer */}
         {!loading && filteredTopups.length > 0 && (
-           <div className="p-4 border-t border-slate-100 bg-slate-50 flex flex-col sm:flex-row justify-between items-center gap-4 relative z-10">
-              
-              <div className="flex items-center gap-3">
-                 <span className="text-xs font-bold text-gray-500 uppercase tracking-widest whitespace-nowrap">Rows:</span>
-                 <select value={rowsPerPage} onChange={handleRowsPerPageChange} className="bg-white border border-slate-200 text-slate-900 text-xs font-bold rounded-lg px-2 py-1 focus:border-green-500 outline-none cursor-pointer">
-                   <option value={10}>10</option>
-                   <option value={20}>20</option>
-                   <option value={50}>50</option>
-                 </select>
+          <div className="flex flex-col sm:flex-row justify-between items-center mt-6 text-gray-400 text-sm gap-4">
+            <div>
+              Showing <span className="text-white font-medium">{indexOfFirstRow + 1}</span> to <span className="text-white font-medium">{Math.min(indexOfLastRow, filteredTopups.length)}</span> of <span className="text-white font-medium">{filteredTopups.length}</span> entries
+            </div>
+            
+            <div className="flex items-center bg-[#0b1221] rounded border border-gray-700 overflow-hidden">
+              <button
+                onClick={handlePrev}
+                disabled={currentPage === 1}
+                className={`px-4 py-2 transition-colors ${currentPage === 1 ? 'text-gray-600 bg-transparent cursor-not-allowed' : 'text-[#eab308] hover:bg-[#1a253e]'}`}
+              >
+                Previous
+              </button>
+              <div className="px-4 py-2 border-l border-r border-gray-700 bg-[#1a253e] text-[#eab308] font-bold">
+                {currentPage}
               </div>
-
-              <span className="text-slate-500 text-[10px] md:text-xs font-black uppercase tracking-widest">
-                Showing {indexOfFirstRow + 1} to {Math.min(indexOfLastRow, filteredTopups.length)} of {filteredTopups.length}
-              </span>
-              
-              <div className="flex items-center gap-2">
-                 <button
-                   onClick={handlePrev}
-                   disabled={currentPage === 1}
-                   className={`p-2 rounded-lg flex items-center justify-center transition-all ${currentPage === 1 ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200' : 'bg-white text-slate-700 hover:bg-green-50 hover:text-green-600 border border-slate-200 shadow-sm'}`}
-                 >
-                   <ChevronLeft size={18} />
-                 </button>
-                 
-                 <span className="bg-white border border-slate-200 text-slate-800 text-xs font-bold px-4 py-2 rounded-lg shadow-sm">
-                    {currentPage} / {totalPages}
-                 </span>
-                 
-                 <button
-                   onClick={handleNext}
-                   disabled={currentPage === totalPages}
-                   className={`p-2 rounded-lg flex items-center justify-center transition-all ${currentPage === totalPages ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200' : 'bg-white text-slate-700 hover:bg-green-50 hover:text-green-600 border border-slate-200 shadow-sm'}`}
-                 >
-                   <ChevronRight size={18} />
-                 </button>
-              </div>
-           </div>
+              <button
+                onClick={handleNext}
+                disabled={currentPage === totalPages || totalPages === 0}
+                className={`px-4 py-2 transition-colors ${currentPage === totalPages || totalPages === 0 ? 'text-gray-600 bg-transparent cursor-not-allowed' : 'text-[#eab308] hover:bg-[#1a253e]'}`}
+              >
+                Next
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>

@@ -28,8 +28,9 @@ exports.activatePackage = async (req, res) => {
             return res.status(400).json({ success: false, message: "Transaction password is required" });
         }
         
-        if (txnPassword.toLowerCase() !== currentUser.transactionPassword.toLowerCase()) {
-            return res.status(401).json({ success: false, message: "Invalid Transaction Password!" });
+        // 🔥 CRASH FIX: Pehle check karo ki DB mein password hai ya nahi, phir toLowerCase() chalao
+        if (!currentUser.transactionPassword || txnPassword.toLowerCase() !== currentUser.transactionPassword.toLowerCase()) {
+            return res.status(400).json({ success: false, message: "Invalid Transaction Password!" });
         }
 
         // 4. Fund Wallet Check
@@ -48,12 +49,11 @@ exports.activatePackage = async (req, res) => {
         endDate.setDate(startDate.getDate() + activeDays);
         const dailyRoi = amount * 0.05; // 5% daily in USD
 
-        // 🔥 FIXED: Added both userId and memberId to satisfy Mongoose schema validation
         const newPackage = await PackageActivation.create({
-            userId: targetUser.userId,         // Added userId to fix validation error
-            memberId: targetUser.userId,       // Added memberId
+            userId: targetUser.userId,         
+            memberId: targetUser.userId,       
             purchasedBy: currentUser.userId,
-            packageAmount: amount,             // Package amount field
+            packageAmount: amount,             
             dailyRoi: dailyRoi,
             totalDays: activeDays,
             daysCompleted: 0,
@@ -94,11 +94,11 @@ exports.activatePackage = async (req, res) => {
         });
 
         // =======================================================
-        // 🔹 8. BACKGROUND MLM ENGINE ($2 Minimum Logic & Level 2-11)
+        // 🔹 8. BACKGROUND MLM ENGINE ($2 Minimum Logic & Level 2-12)
         // =======================================================
         (async () => {
             try {
-                // ✅ SPONSOR INCOME (10%) - REQUIRES MINIMUM $2 PACKAGE
+                // ✅ SPONSOR INCOME (10% at 1st Level) - REQUIRES MINIMUM $2 PACKAGE
                 if (targetUser.sponsorId) {
                     const sponsor = await User.findOne({ userId: targetUser.sponsorId });
                     
@@ -112,7 +112,7 @@ exports.activatePackage = async (req, res) => {
                         
                         await createTransaction({
                             userId: sponsor.userId, type: "direct_income", source: "direct", amount: directBonusAmount, 
-                            fromUserId: targetUser.userId, description: `Direct Bonus (10%) from ${targetUser.name}'s Package`, status: 'success'
+                            fromUserId: targetUser.userId, description: `Direct Bonus (10%) from ${targetUser.userId}'s Package`, status: 'success'
                         });
                         await sponsor.save();
                     } else if (sponsor) {
@@ -120,12 +120,13 @@ exports.activatePackage = async (req, res) => {
                     }
                 }
 
-                // 🌟 LEVEL ENGINE (Level 2 to 11 = 1%)
-                const LEVEL_PERCENTAGES = [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]; 
+                // 🌟 LEVEL ENGINE (Level 2 to 12 = 0.25%)
+                // Index 0 = Level 1 (Direct 10%), Index 1 to 11 = Levels 2 to 12 (0.25%)
+                const LEVEL_PERCENTAGES = [0, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25]; 
                 let currentUplineId = targetUser.sponsorId; 
                 let currentLevel = 1; 
 
-                while (currentUplineId && currentLevel <= 11) {
+                while (currentUplineId && currentLevel <= 12) {
                     const upline = await User.findOne({ userId: currentUplineId }).select('userId isToppedUp topUpAmount sponsorId _id');
                     if (!upline) break;
 
@@ -137,8 +138,8 @@ exports.activatePackage = async (req, res) => {
                         continue; 
                     }
 
-                    // 1. LEVEL INCOME LOGIC (Level 2 se 11 tak)
-                    if (currentLevel >= 2 && currentLevel <= 11) {
+                    // 1. LEVEL INCOME LOGIC (Level 2 se 12 tak)
+                    if (currentLevel >= 2 && currentLevel <= 12) {
                         const percentage = LEVEL_PERCENTAGES[currentLevel - 1]; 
                         const levelAmount = (amount * percentage) / 100;
 

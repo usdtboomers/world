@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../../api/axios'; 
 import { format } from 'date-fns';
-import { Search, History, ArrowDownCircle, Calendar, Clock, ExternalLink } from 'lucide-react'; 
+import { Search, History, ArrowDownCircle, Calendar, ExternalLink } from 'lucide-react'; 
 
 const DepositHistory = () => {
   const [deposits, setDeposits] = useState([]);
@@ -90,7 +90,8 @@ const DepositHistory = () => {
     const filtered = deposits.filter((d) => {
       const amt = getSafeAmount(d.amount || d.grossAmount).toString();
       const recordDate = d.createdAt || d.date; 
-      const dateStr = recordDate ? format(new Date(recordDate), 'dd-MM-yyyy HH:mm').toLowerCase() : '';
+      // Time removed from search filtering as well
+      const dateStr = recordDate ? format(new Date(recordDate), 'dd-MM-yyyy').toLowerCase() : '';
       const hashString = (d.displayHash || '').toLowerCase(); 
         
       return amt.includes(query) || dateStr.includes(query) || hashString.includes(query);
@@ -100,66 +101,59 @@ const DepositHistory = () => {
   }, [search, deposits]);
 
   return (
-    <div className="w-full max-w-5xl mx-auto pb-10 relative z-10 animate-in fade-in duration-500">
+    <div className="w-full min-h-screen bg-[#0b1221] p-4 md:p-8 font-sans">
       
-      <style>{`
-        .custom-scroll::-webkit-scrollbar { height: 6px; width: 6px; }
-        .custom-scroll::-webkit-scrollbar-track { background: #050505; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #f97316; border-radius: 10px; }
-      `}</style>
-
-      {/* Header */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
-        <div>
-          <h2 className="text-2xl md:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500 uppercase tracking-wide flex items-center gap-3">
-             <History className="text-green-500" size={28} /> Deposit History
+      {/* Inner Card Container */}
+      <div className="max-w-5xl mx-auto bg-[#131c31] rounded-xl border-t-[3px] border-[#eab308] shadow-2xl p-4 sm:p-6">
+        
+        {/* Header Title */}
+        <div className="mb-6">
+          <h2 className="text-2xl sm:text-3xl text-[#eab308] font-bold tracking-wide flex items-center gap-3">
+             <History className="text-[#eab308]" size={28} /> Deposit History
           </h2>
-          <p className="text-black text-xs md:text-sm font-bold tracking-widest uppercase mt-1">
-            Track your wallet top-ups
-          </p>
+         
         </div>
-      </div>
 
-      {/* Filter (Search) */}
-      <div className="mb-6 bg-white shadow-sm p-4 rounded-2xl border border-slate-200">
-        <div className="relative w-full sm:w-[400px] group">
-           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-             <Search size={16} className="text-gray-500 group-focus-within:text-green-500 transition-colors" />
-           </div>
-           <input
-             type="text"
-             placeholder="Search by amount, date, or tx hash..."
-             value={search}
-             onChange={(e) => setSearch(e.target.value)}
-             className="w-full bg-white border border-slate-200 text-slate-900 text-sm font-bold tracking-wide rounded-xl px-4 py-3 pl-11 focus:border-green-500 focus:outline-none transition-all placeholder-slate-400"
-           />
+        {/* Filter (Search) */}
+        <div className="mb-6">
+          <div className="relative w-full sm:w-[400px]">
+             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+               <Search size={16} className="text-gray-500" />
+             </div>
+             <input
+               type="text"
+               placeholder="Search by amount, date, or tx hash..."
+               value={search}
+               onChange={(e) => setSearch(e.target.value)}
+               className="w-full bg-[#0b1221] border border-gray-700 text-gray-200 rounded px-3 py-2 pl-10 focus:outline-none focus:border-[#eab308] transition-colors placeholder-gray-500"
+             />
+          </div>
         </div>
-      </div>
 
-      {/* Table Box */}
-      <div className="bg-white shadow-sm backdrop-blur-xl rounded-2xl border border-slate-200 overflow-hidden relative">
-        <div className="overflow-x-auto custom-scroll w-full relative z-10">
-          <table className="w-full text-xs sm:text-sm text-left whitespace-nowrap">
-            <thead className="bg-slate-50 text-green-500 text-[10px] md:text-xs uppercase tracking-widest border-b border-slate-200">
+        {/* Table Container */}
+        <div className="overflow-x-auto border border-gray-700 rounded-lg">
+          <table className="w-full text-left whitespace-nowrap border-collapse">
+            <thead className="text-[#eab308] bg-[#1a253e] text-sm border-b border-gray-700">
               <tr>
-                <th className="p-4 font-black w-16 text-center">Sr.</th>
-                <th className="p-4 font-black text-right">Date & Time</th>
-                <th className="p-4 font-black">Type</th>
-                <th className="p-4 font-black text-center">TxHash (BscScan)</th>
-                <th className="p-4 font-black text-center">Amount</th>
+                <th className="p-4 border-r border-gray-700/50 font-bold w-16 text-center">Sr. <span className="text-[10px] text-gray-500 ml-1">♦</span></th>
+                <th className="p-4 border-r border-gray-700/50 font-bold text-center">Date <span className="text-[10px] text-gray-500 ml-1">♦</span></th>
+                <th className="p-4 border-r border-gray-700/50 font-bold">Type <span className="text-[10px] text-gray-500 ml-1">♦</span></th>
+                <th className="p-4 border-r border-gray-700/50 font-bold text-center">TxHash (BscScan) <span className="text-[10px] text-gray-500 ml-1">♦</span></th>
+                <th className="p-4 font-bold text-center">Amount</th>
               </tr>
             </thead>
-            <tbody className="text-slate-600">
+            
+            <tbody className="text-gray-300 text-sm">
               {loading ? (
                 <tr>
-                  <td colSpan="5" className="text-center py-12">
-                    <div className="animate-spin h-8 w-8 text-green-500 mx-auto mb-3 border-4 border-t-transparent rounded-full"></div>
-                    <span className="text-xs font-bold uppercase tracking-widest text-gray-500">Loading Records...</span>
+                  <td colSpan="5" className="text-center py-12 text-[#eab308]">
+                    <div className="animate-spin h-8 w-8 mx-auto mb-3 border-4 border-t-transparent border-[#eab308] rounded-full"></div>
+                    Loading Records...
                   </td>
                 </tr>
               ) : filteredDeposits.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="text-center py-12 text-gray-500 font-bold text-sm uppercase tracking-widest">
+                  <td colSpan="5" className="text-center py-12 text-gray-500">
                     No Deposit Records Found
                   </td>
                 </tr>
@@ -173,46 +167,38 @@ const DepositHistory = () => {
                   const shortHash = formatHash(hash);
                   
                   return (
-                    <tr key={record._id || index} className="border-b border-slate-100 hover:bg-slate-50 transition-colors bg-white">
-                      <td className="p-4 font-bold text-gray-500 text-center">{index + 1}</td>
+                    <tr key={record._id || index} className="border-b border-gray-700 hover:bg-[#1a253e] transition-colors">
+                      <td className="p-4 border-r border-gray-700/50 text-center font-medium">{index + 1}</td>
 
-                      {/* Date & Time */}
-                      <td className="p-4 text-right">
-                        <div className="flex flex-col items-end gap-0.5">
-                          <div className="flex items-center gap-1 text-slate-800 font-bold text-xs">
-                            <Calendar size={12} className="text-blue-500" />
-                            {recordDate ? format(new Date(recordDate), 'dd MMM yyyy') : 'N/A'}
-                          </div>
-                          <div className="flex items-center gap-1 text-slate-400 font-medium text-[10px]">
-                            <Clock size={10} />
-                            {recordDate ? format(new Date(recordDate), 'hh:mm a') : '--:--'}
-                          </div>
+                      {/* Date (Time removed) */}
+                      <td className="p-4 border-r border-gray-700/50 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <Calendar size={14} className="text-gray-400" />
+                          <span>{recordDate ? format(new Date(recordDate), 'dd MMM yyyy') : 'N/A'}</span>
                         </div>
                       </td>
 
-                      <td className="p-4">
-                        <span className="inline-flex items-center gap-1.5 bg-green-500/10 text-green-500 border border-green-500/20 py-1 px-2.5 rounded-md text-[10px] font-black tracking-widest uppercase">
+                      <td className="p-4 border-r border-gray-700/50">
+                        <span className="inline-flex items-center gap-1.5 bg-[#eab308]/10 text-[#eab308] border border-[#eab308]/20 py-1 px-2.5 rounded-md text-[10px] font-bold tracking-widest uppercase">
                           <ArrowDownCircle size={12} /> Deposit
                         </span>
                       </td>
 
                       {/* 🔥 FAKE/REAL HASH BUTTON */}
-                      <td className="p-4 text-center">
+                      <td className="p-4 border-r border-gray-700/50 text-center">
                         <a 
                           href={`https://bscscan.com/tx/${hash}`} 
                           target="_blank" 
                           rel="noopener noreferrer"
-                          className="inline-flex items-center justify-center gap-1.5 font-mono text-[11px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white border border-blue-200 px-3 py-1.5 rounded-lg transition-all duration-200 shadow-sm"
+                          className="inline-flex items-center justify-center gap-1.5 font-mono text-[11px] font-bold text-[#eab308] bg-[#0b1221] hover:bg-[#eab308] hover:text-[#0b1221] border border-gray-700 hover:border-[#eab308] px-3 py-1.5 rounded transition-all duration-200"
                           title="Click to view on BscScan"
                         >
                           {shortHash} <ExternalLink size={12} />
                         </a>
                       </td>
 
-                      <td className="p-4 font-black text-center">
-                        <span className="text-green-500 text-base drop-shadow-sm">
-                          + ${finalAmount.toFixed(2)}
-                        </span>
+                      <td className="p-4 font-bold text-center text-green-400">
+                         + ${finalAmount.toFixed(2)}
                       </td>
                   
                     </tr>

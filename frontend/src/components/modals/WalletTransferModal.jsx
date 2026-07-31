@@ -23,6 +23,7 @@ const WalletTransferModal = ({ onClose }) => {
   const fetchWalletData = async () => {
     try {
       const res = await api.get(`/wallet/info`, { headers: { Authorization: `Bearer ${token}` }});
+      // Ab backend se walletBalance aayega, toh yahan $0 nahi dikhega
       setWalletData({ balance: res.data.walletBalance || 0 });
     } catch (err) {
       console.error("Failed to fetch wallet data");
@@ -71,7 +72,7 @@ const WalletTransferModal = ({ onClose }) => {
         <div className="p-4 bg-[#0b101e] flex-1 overflow-y-auto">
           <div className="border border-[#2d3748] rounded-md overflow-hidden flex flex-col font-semibold text-[13px]">
             <div className="flex border-b border-[#2d3748]">
-              <div className="w-2/3 bg-[#131927] text-white p-2.5 border-r border-[#2d3748]">Available Wallet Balance</div>
+              <div className="w-2/3 bg-[#131927] text-white p-2.5 border-r border-[#2d3748]">Available Fund Balance</div>
               <div className="w-1/3 bg-[#131927] text-[#00ff88] p-2.5">${walletData.balance.toFixed(2)}</div>
             </div>
           </div>
@@ -83,7 +84,7 @@ const WalletTransferModal = ({ onClose }) => {
             
             <div className="flex gap-2">
               {[1, 5, 10, 20, 50].map((val) => (
-                <button key={val} onClick={() => handleQuickAmount(val)} className="flex-1 bg-[#1e2536] hover:bg-[#2d3748] border border-[#2d3748] text-white py-1.5 rounded font-bold text-sm transition-colors">${val}</button>
+                <button key={val} type="button" onClick={() => handleQuickAmount(val)} className="flex-1 bg-[#1e2536] hover:bg-[#2d3748] border border-[#2d3748] text-white py-1.5 rounded font-bold text-sm transition-colors">${val}</button>
               ))}
             </div>
 

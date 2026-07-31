@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const depositSchema = new mongoose.Schema(
   {
     userId: {
-      type: Number,
+      type: String, // 🔥 FIX: Number se badal kar String kar diya hai taaki "WF..." format save ho sake
       required: true,
       index: true, // fast lookup by user
     },
@@ -19,19 +19,19 @@ const depositSchema = new mongoose.Schema(
         message: 'Amount must be greater than 0',
       },
     },
-    // 🔥 NAYA: User ko jo HD address assign hua hai wo yahan save hoga
+    // 🔥 User ko jo HD address assign hua hai wo yahan save hoga
     depositAddress: {
       type: String,
       index: true,
     },
-    // 🔥 NAYA: Frontend ko jo reference ID milti hai (e.g. DEP_123456_userId)
+    // 🔥 Frontend ko jo reference ID milti hai (e.g. DEP_123456_userId)
     refId: {
       type: String,
       unique: true,
       sparse: true,
       index: true,
     },
-    // 🔥 NAYA: 15-minute countdown ke liye expiration time
+    // 🔥 15-minute countdown ke liye expiration time
     expiresAt: {
       type: Date, 
     },
@@ -52,7 +52,6 @@ const depositSchema = new mongoose.Schema(
       default: "pending", // ⚠️ SECURITY FIX: Default hamesha 'pending' hona chahiye
       index: true, 
     },
-  
     currency: {
       type: String, 
       default: "USDT", // USD se USDT kar diya

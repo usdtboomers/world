@@ -1,16 +1,15 @@
 const mongoose = require("mongoose");
 
 const withdrawalSchema = new mongoose.Schema({
-  userId: { type: Number, required: true },
+  // 🔥 FIX: `Number` ko `String` kiya hai kyunki "WF1757652" ek string hai
+  userId: { type: String, required: true },
   name: { type: String, default: "-" },
 
-  // 🔥 UPDATE: Enum hata diya taaki dynamic sources (pool_1, pool_2) save ho sakein
   source: {
     type: String,
     required: true
   },
 
-  // ✅ NAYA FIELD: 12-Level Pool Plan ke liye
   poolLevel: { 
     type: Number, 
     default: 0 

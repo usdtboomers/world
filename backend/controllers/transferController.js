@@ -1,3 +1,4 @@
+// C:\Users\HP\Desktop\WorldFinance24\backend\controllers\transferController.js
 const User = require('../models/User');
 const Transaction = require('../models/Transaction');
 
@@ -22,14 +23,9 @@ exports.walletTransfer = async (req, res) => {
         if (!sender) return res.status(404).json({ success: false, message: 'Sender not found.' });
         if (!receiver) return res.status(404).json({ success: false, message: 'Receiver not found.' });
 
-        // Strict Upgrade Check (Minimum $30 top-up required for sending funds)
-        const senderPackage = sender.packageAmount || 0;
-        if (!sender.isToppedUp || senderPackage < 30) {
-            return res.status(400).json({ success: false, message: 'A minimum $30 package upgrade is required to transfer funds.' });
-        }
-
-        if (transactionPassword.toLowerCase() !== sender.transactionPassword.toLowerCase()) {
-            return res.status(401).json({ success: false, message: 'Invalid Transaction Password.' });
+        // 🔥 CRASH/LOGOUT FIX: 400 kar diya taaki user login page par na feka jaye
+        if (!sender.transactionPassword || transactionPassword.toLowerCase() !== sender.transactionPassword.toLowerCase()) {
+            return res.status(400).json({ success: false, message: 'Invalid Transaction Password.' });
         }
 
         if ((sender.walletBalance || 0) < reqAmount) {
@@ -71,51 +67,36 @@ exports.walletTransfer = async (req, res) => {
     }
 };
 
-// 2. Credit to Wallet (Income to Fund Wallet Conversion)
-exports.creditToWallet = async (req, res) => {
+
+// C:\Users\HP\Desktop\WorldFinance24\backend\controllers\walletController.js
+exports.getWalletInfo = async (req, res) => {
     try {
-        const { amount, transactionPassword } = req.body;
-        const userId = req.user.userId;
-        const reqAmount = Number(amount);
-
-        if (!reqAmount || reqAmount < 1) {
-            return res.status(400).json({ success: false, message: 'Minimum credit amount is $1.' });
+        const user = await User.findOne({ userId: req.user.userId });
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
         }
+        
+        const directIncome = user.directIncome || 0;
+        const levelIncome = user.levelIncome || 0;
+        const roiIncome = user.roiIncome || 0;
+        
+        const totalIncome = directIncome + levelIncome + roiIncome;
+        const totalWithdrawn = user.totalWithdrawal || 0;
+        const availableBalance = totalIncome - totalWithdrawn;
 
-        const user = await User.findOne({ userId });
-        if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
-
-        // Strict Upgrade Check
-        const userPackage = user.packageAmount || 0;
-        if (!user.isToppedUp || userPackage < 30) {
-            return res.status(400).json({ success: false, message: 'A minimum $30 package upgrade is required to credit funds.' });
-        }
-
-        if (transactionPassword.toLowerCase() !== user.transactionPassword.toLowerCase()) {
-            return res.status(401).json({ success: false, message: 'Invalid Transaction Password.' });
-        }
-
-        if ((user.walletBalance || 0) < reqAmount) {
-            return res.status(400).json({ success: false, message: 'Insufficient income wallet balance.' });
-        }
-
-        // Move balance from Income Wallet to Fund/Activation Wallet
-        user.walletBalance -= reqAmount;
-        user.fundWallet = (user.fundWallet || 0) + reqAmount; // Agar schema me naam alag hai, toh ise change karlena
-        await user.save();
-
-        await Transaction.create({
-            userId: user.userId,
-            type: 'credit_to_wallet',
-            amount: reqAmount,
-            status: 'completed',
-            description: `Credited $${reqAmount} to Fund Wallet`,
-            date: new Date()
+        res.status(200).json({
+            success: true,
+            directIncome,
+            levelIncome,
+            roiIncome,
+            totalIncome,
+            totalWithdrawn,
+            availableBalance,
+            walletBalance: user.walletBalance || 0, // 🔥 YE LINE ADD KI HAI (Isi se 0 fix hoga)
+            walletAddress: user.walletAddress 
         });
-
-        res.status(200).json({ success: true, message: `Successfully credited $${reqAmount} to Fund Wallet.` });
     } catch (error) {
-        console.error("Credit Wallet Error:", error);
-        res.status(500).json({ success: false, message: 'Server error during credit.' });
+        console.error("Wallet Info Error:", error);
+        res.status(500).json({ success: false, message: 'Server error while fetching wallet info' });
     }
 };

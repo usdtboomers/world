@@ -22,7 +22,6 @@ router.use('/admin/video', require('./adminPromoVideo')); // 👈 YE LINE ADD KI
 router.use('/admin', require('./adminReports')); // 👈 YAHAN ADD KARNA HAI
 
 // 👇 Generic admin routes (hamesha LAST me)
-router.use('/admin', require('./admin'));
 
 // 📢 Notifications
 router.use('/admin/notifications', require('./adminNotification'));
@@ -44,7 +43,8 @@ router.use('/staking', require('./staking')); // 🔥 YEH LINE ADD KAREIN
 // 🎥 NAYA: User Promo Video Route (Dashboard pe video dikhane ke liye)
 router.use('/video', require('./videoRoutes')); // 👈 YE LINE BHI ADD KI HAI
 
- 
+ router.use('/admin', require('./admin'));
+
 // 🌐 Root test
 router.get('/', (req, res) => {
   res.send('API is running');

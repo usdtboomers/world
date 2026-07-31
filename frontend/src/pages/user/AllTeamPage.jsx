@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import api from "../../api/axios"; 
 import useAuth from "../../hooks/useAuth"; 
-import { Search, Globe2, Activity, ChevronLeft, ChevronRight, UserPlus } from "lucide-react";
 
 const AllTeamPage = () => {
   const { user } = useAuth();
@@ -23,7 +22,6 @@ const AllTeamPage = () => {
     const fetchAllTeam = async () => {
       setIsLoading(true); 
       try {
-        // 🔥 CACHE FIX: Added ?t=${new Date().getTime()}
         const res = await api.get(`/user/all-team/${user.userId}?t=${new Date().getTime()}`);
         
         let teamData = (res.data.team || []).filter(u => u.level > 0);
@@ -45,7 +43,7 @@ const AllTeamPage = () => {
   const sortedAndFilteredTeam = useMemo(() => {
     let filtered = team.filter(
       (u) =>
-        u.userId?.toString().includes(search) ||
+        u.userId?.toString().toLowerCase().includes(search.toLowerCase()) ||
         u.name?.toLowerCase().includes(search.toLowerCase())
     );
 
@@ -90,112 +88,112 @@ const AllTeamPage = () => {
   };
 
   const tableColumns = [
-    { label: "Sr", key: null, center: true },
-    { label: "Date", key: "createdAt", right: true },
-    { label: "Level", key: "level", center: true },
+    { label: "#", key: null },
+    { label: "Date", key: "createdAt" },
+    { label: "Level", key: "level" },
     { label: "User ID", key: "userId" },
     { label: "Name", key: "name" },
     { label: "Country", key: "country" },
   ];
 
   return (
-    <div className="w-full max-w-7xl mx-auto pb-10 relative z-10 animate-in fade-in duration-500">
+    <div className="w-full min-h-screen bg-[#0b1221] p-4 md:p-8 font-sans">
       
-      {/* Scrollbar CSS */}
-      <style>{`
-        .custom-scroll::-webkit-scrollbar { height: 6px; width: 6px; }
-        .custom-scroll::-webkit-scrollbar-track { background: #050505; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #f97316; border-radius: 10px; }
-      `}</style>
-
-      {/* Filters (Search & Entries) */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6 justify-between items-center bg-white shadow-sm p-4 rounded-2xl border border-slate-200">
+      {/* Inner Card Container */}
+      <div className="max-w-7xl mx-auto bg-[#131c31] rounded-xl border-t-[3px] border-[#eab308] shadow-2xl p-4 sm:p-6">
         
-        <div className="relative w-full sm:w-80 group">
-           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-             <Search size={16} className="text-gray-500 group-focus-within:text-green-500 transition-colors" />
-           </div>
-           <input
-             type="text"
-             placeholder="Search by name or ID..."
-             value={search}
-             onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
-             className="w-full bg-white border border-slate-200 text-slate-900 text-sm rounded-xl px-4 py-3 pl-10 focus:border-green-500 focus:outline-none transition-all placeholder-slate-400"
-           />
+        {/* Header Title */}
+        <h2 className="text-2xl sm:text-3xl text-[#eab308] font-bold mb-6 tracking-wide">
+          All Team Report
+        </h2>
+
+        {/* Filters (Entries & Search) */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 text-gray-300 text-sm">
+          
+          <div className="flex items-center gap-2">
+            <span>Show</span>
+            <select
+              value={entriesPerPage}
+              onChange={handleEntriesChange}
+              className="bg-[#0b1221] border border-gray-700 text-[#eab308] rounded px-3 py-1.5 focus:outline-none focus:border-[#eab308] transition-colors"
+            >
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+            <span>entries</span>
+          </div>
+
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <span>Search:</span>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+              className="bg-[#0b1221] border border-gray-700 text-gray-200 rounded px-3 py-1.5 w-full sm:w-64 focus:outline-none focus:border-[#eab308] transition-colors placeholder-gray-500"
+              placeholder="Search by ID or Name..."
+            />
+          </div>
         </div>
 
-      </div>
-
-      {/* Table */}
-      <div className="bg-white shadow-sm backdrop-blur-xl rounded-2xl border border-slate-200 overflow-hidden shadow-2xl">
-        <div className="overflow-x-auto custom-scroll w-full">
-          <table className="w-full text-xs sm:text-sm text-left whitespace-nowrap">
-            <thead className="bg-slate-50 text-green-500 text-[10px] md:text-xs uppercase tracking-widest border-b border-slate-200">
+        {/* Table Container */}
+        <div className="overflow-x-auto border border-gray-700 rounded-lg">
+          <table className="w-full text-left whitespace-nowrap border-collapse">
+            <thead className="text-[#eab308] bg-[#1a253e] text-sm border-b border-gray-700">
               <tr>
                 {tableColumns.map((col) => (
                   <th
                     key={col.label}
                     onClick={() => handleSort(col.key)}
-                    className={`p-4 font-black transition-colors ${col.key ? 'cursor-pointer hover:text-green-400 select-none' : ''} ${col.center ? 'text-center' : ''} ${col.right ? 'text-right' : ''}`}
+                    className={`p-4 border-r border-gray-700/50 font-bold ${col.key ? 'cursor-pointer select-none hover:text-yellow-400' : ''}`}
                   >
-                    <div className={`flex items-center gap-1 ${col.center ? 'justify-center' : ''} ${col.right ? 'justify-end' : ''}`}>
-                      {col.label}
-                      {sortConfig.key === col.key && (
-                        <span className="text-[10px] text-slate-900">
-                          {sortConfig.direction === "asc" ? "▲" : "▼"}
-                        </span>
-                      )}
-                    </div>
+                    {col.label}
+                    {col.key && (
+                      <span className="text-[10px] text-gray-500 ml-1">
+                        {sortConfig.key === col.key 
+                          ? (sortConfig.direction === "asc" ? "▲" : "▼") 
+                          : "♦"}
+                      </span>
+                    )}
+                    {!col.key && <span className="text-[10px] text-gray-500 ml-1">♦</span>}
                   </th>
                 ))}
               </tr>
             </thead>
 
-            <tbody className="text-slate-600">
+            <tbody className="text-gray-300 text-sm">
               {isLoading ? (
                 <tr>
-                  <td colSpan="6" className="text-center py-10">
-                     <svg className="animate-spin h-8 w-8 text-green-500 mx-auto mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                     <span className="text-xs font-bold uppercase tracking-widest text-gray-500">Loading Network Data...</span>
+                  <td colSpan="6" className="text-center py-8 text-[#eab308]">
+                    Loading Data...
                   </td>
                 </tr>
               ) : currentItems.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="text-center py-10">
-                    <span className="text-gray-500 font-bold text-sm uppercase tracking-widest">No Team Members Found</span>
+                  <td colSpan="6" className="text-center py-8 text-gray-500">
+                    No matching records found
                   </td>
                 </tr>
               ) : (
-                currentItems.map((u, i) => (
-                  <tr
-                    key={u._id || i}
-                    className="border-b border-slate-100 hover:bg-green-500/5 transition-colors bg-white"
-                  >
-                    <td className="p-4 font-bold text-gray-500 text-center">
-                      {indexOfFirst + i + 1}
-                    </td>
-                     <td className="p-4 text-black font-mono text-xs text-right">
+                currentItems.map((u, index) => (
+                  <tr key={u._id || index} className="border-b border-gray-700 hover:bg-[#1a253e] transition-colors">
+                    <td className="p-4 border-r border-gray-700/50">{indexOfFirst + index + 1}</td>
+                    <td className="p-4 border-r border-gray-700/50">
                       {u.createdAt ? new Date(u.createdAt).toLocaleDateString("en-GB") : "-"}
                     </td>
-                    
-                    <td className="p-4 text-center">
-                      <span className="bg-blue-500/10 border border-blue-500/30 text-blue-400 py-1 px-2.5 rounded-md text-[10px] font-black tracking-widest">
-                        L-{u.level}
-                      </span>
+                    <td className="p-4 border-r border-gray-700/50 font-semibold text-[#eab308]">
+                      L-{u.level}
                     </td>
-                    
-                    <td className="p-4 font-black text-slate-900">
+                    <td className="p-4 border-r border-gray-700/50 font-medium text-white">
                       {u.userId}
                     </td>
-
-                    <td className="p-4 font-bold text-slate-600 max-w-[150px] truncate" title={u.name || "-"}>
+                    <td className="p-4 border-r border-gray-700/50">
                       {u.name || "-"}
                     </td>
-
-                    <td className="p-4 text-black">
+                    <td className="p-4">
                       {u.country || "-"}
                     </td>
-
                   </tr>
                 ))
               )}
@@ -204,35 +202,32 @@ const AllTeamPage = () => {
         </div>
 
         {/* Pagination Footer */}
-        {totalPages > 0 && (
-           <div className="p-4 border-t border-slate-100 bg-slate-50/40 flex flex-col sm:flex-row justify-between items-center gap-4">
-              <span className="text-gray-500 text-[10px] md:text-xs font-black uppercase tracking-widest">
-                Showing {indexOfFirst + 1} to {Math.min(indexOfLast, team.length)} of {team.length} Entries
-              </span>
-              
-              <div className="flex items-center gap-2">
-                 <button
-                   onClick={handlePrev}
-                   disabled={currentPage === 1}
-                   className={`p-2 rounded-lg flex items-center justify-center transition-all ${currentPage === 1 ? 'bg-white/5 text-gray-600 cursor-not-allowed' : 'bg-white/10 text-slate-900 hover:bg-green-500/20 hover:text-green-500 border border-transparent hover:border-green-500/30'}`}
-                 >
-                   <ChevronLeft size={18} />
-                 </button>
-                 
-                 <span className="bg-white border border-slate-200 text-slate-900 text-xs font-bold px-4 py-2 rounded-lg">
-                    {currentPage} / {totalPages}
-                 </span>
-                 
-                 <button
-                   onClick={handleNext}
-                   disabled={currentPage === totalPages}
-                   className={`p-2 rounded-lg flex items-center justify-center transition-all ${currentPage === totalPages ? 'bg-white/5 text-gray-600 cursor-not-allowed' : 'bg-white/10 text-slate-900 hover:bg-green-500/20 hover:text-green-500 border border-transparent hover:border-green-500/30'}`}
-                 >
-                   <ChevronRight size={18} />
-                 </button>
-              </div>
-           </div>
-        )}
+        <div className="flex flex-col sm:flex-row justify-between items-center mt-6 text-gray-400 text-sm gap-4">
+          <div>
+            Showing <span className="text-white font-medium">{sortedAndFilteredTeam.length === 0 ? 0 : indexOfFirst + 1}</span> to <span className="text-white font-medium">{Math.min(indexOfLast, sortedAndFilteredTeam.length)}</span> of <span className="text-white font-medium">{sortedAndFilteredTeam.length}</span> entries
+          </div>
+          
+          <div className="flex items-center bg-[#0b1221] rounded border border-gray-700 overflow-hidden">
+            <button
+              onClick={handlePrev}
+              disabled={currentPage === 1}
+              className={`px-4 py-2 transition-colors ${currentPage === 1 ? 'text-gray-600 bg-transparent cursor-not-allowed' : 'text-[#eab308] hover:bg-[#1a253e]'}`}
+            >
+              Previous
+            </button>
+            <div className="px-4 py-2 border-l border-r border-gray-700 bg-[#1a253e] text-[#eab308] font-bold">
+              {currentPage}
+            </div>
+            <button
+              onClick={handleNext}
+              disabled={currentPage === totalPages || totalPages === 0}
+              className={`px-4 py-2 transition-colors ${currentPage === totalPages || totalPages === 0 ? 'text-gray-600 bg-transparent cursor-not-allowed' : 'text-[#eab308] hover:bg-[#1a253e]'}`}
+            >
+              Next
+            </button>
+          </div>
+        </div>
+
       </div>
     </div>
   );

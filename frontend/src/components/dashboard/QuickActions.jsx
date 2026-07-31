@@ -90,8 +90,8 @@ const QuickActions = ({ onDepositClick }) => {
               <span className="text-[11px] md:text-[12px] font-semibold text-white group-hover:text-[#d4af37] transition-colors text-center leading-tight">Ticket<br/>Reply</span>
             </div>
 
-            {/* Plan */}
-            <div onClick={() => navigate('/plan')} className="flex flex-col items-center gap-2 cursor-pointer group">
+            {/* 🔥 Plan (PDF Open/Download logic) */}
+            <div onClick={() => window.open('/WORLD FINANCE.pdf', '_blank')} className="flex flex-col items-center gap-2 cursor-pointer group">
               <div className={`${iconBoxStyle} rounded-xl`}>
                 <Building size={24} strokeWidth={2.5} />
               </div>

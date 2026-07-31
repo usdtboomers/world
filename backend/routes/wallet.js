@@ -14,6 +14,10 @@ const DummyTransaction = require("../models/DummyTransaction");
  
  const authMiddleware = require("../middleware/authMiddleware"); // sets req.user
 const checkFeature = require("../middleware/checkFeatureEnabled");
+// routes wali file ke sabse upar:
+const walletController = require('../controllers/walletController');
+const transferController = require('../controllers/transferController'); // Ye import hona zaroori hai
+
 const withdrawalController = require('../controllers/withdrawalController'); // Apna naya controller import kiya
 // Helper: Get Settings
 const getSettings = async () => await Setting.findOne();
@@ -598,102 +602,7 @@ router.post("/promo-usdt-bep20-transfer", authMiddleware, async (req, res) => {
 });
 
 
-router.post('/transfer', async (req, res) => {
-  try {
-    const { fromUserId, toUserId, amount, transactionPassword } = req.body;
-
-    const settings = await getSettings();
-    if (!settings?.allowWalletTransfer) {
-      return res.status(403).json({ message: 'Transfers are currently disabled in the system' });
-    }
-
-    const [sender, receiver] = await Promise.all([
-      User.findOne({ userId: Number(fromUserId) }),
-      User.findOne({ userId: Number(toUserId) }),
-    ]);
-
-    if (!sender) return res.status(404).json({ message: 'Sender not found' });
-    if (!receiver) return res.status(404).json({ message: 'Recipient not found' });
-
-    const amt = Number(amount);
-    
-    // ✨ LIMIT CHANGED: Ab minimum $10 ka transfer ho sakta hai
-    if (amt < 10) return res.status(400).json({ message: "Minimum transfer amount is $10" });
-
-    // ✨ INTEGER CHECK: Koi decimal nahi chalega (Sirf round figures: 10, 11, 12, 13... allow hoga)
-    if (amt % 1 !== 0) return res.status(400).json({ message: "Decimals not allowed. Please enter a whole number (e.g., 10, 11, 12)." });
-
-    // 🔥 PROMO USER LOGIC START
-    if (sender.role === "promo") {
-      return res.json({ message: 'Transfer successful (Promo Mode)' });
-    }
-    // 🔥 PROMO USER LOGIC END
-
-    // ============================================
-    // 🛡️ NORMAL USER CHECKS START
-    // ============================================
-
-    // 1. Password Check (Capital/Small issue fixed)
-    const isPasswordValid = (transactionPassword.toLowerCase() === sender.transactionPassword.toLowerCase());
-    if (!isPasswordValid) {
-      return res.status(400).json({ message: 'Invalid transaction password' });
-    }
-
-    // 2. Balance Check
-    if (sender.walletBalance < amt) {
-      return res.status(400).json({ message: 'Insufficient balance' });
-    }
-
-    // 3. ✨ STRICT DOWNLINE CHECK (Sirf Downline me transfer allow hoga)
-    let isDownline = false;
-    let currentSponsorId = receiver.sponsorId;
-    let depth = 0;
-    const maxDepth = 1000; // Infinite loop se bachne ke liye limit
-
-    while (currentSponsorId && depth < maxDepth) {
-      if (Number(currentSponsorId) === Number(sender.userId)) {
-        isDownline = true; // Mil gaya! Sender iska upline hai (Yani Receiver downline me hai)
-        break;
-      }
-      
-      // Upar ki taraf search badhao
-      const uplineUser = await User.findOne({ userId: Number(currentSponsorId) }).lean();
-      if (!uplineUser) break; // Agar koi upline na mile to break
-      
-      currentSponsorId = uplineUser.sponsorId;
-      depth++;
-    }
-
-    if (!isDownline) {
-      return res.status(403).json({ message: 'Transfer restricted. You can only transfer funds to your downline members.' });
-    }
-
-    // ============================================
-    // 💸 TRANSFER EXECUTION
-    // ============================================
-    sender.walletBalance -= amt;
-    receiver.walletBalance += amt;
-
-    await sender.save();
-    await receiver.save();
-
-    await Transaction.create({
-      userId: sender.userId,
-      type: 'transfer',
-      fromUserId: sender.userId,
-      toUserId: receiver.userId,
-      amount: amt,
-      grossAmount: amt,
-      description: `Transfer from ${sender.userId} to ${receiver.userId}`,
-    });
-
-    res.json({ message: 'Transfer successful' });
-
-  } catch (err) {
-    console.error("Transfer error:", err);
-    res.status(500).json({ message: 'Transfer failed' });
-  }
-});
+ 
 
 
 // ==========================================
@@ -1145,12 +1054,68 @@ router.post(
 
 
 
-// Upar import add karna
-const transferController = require('../controllers/transferController');
 
-// Routes
+// Phir tumhare routes kuch aise dikhenge:
+router.get('/info', authMiddleware, walletController.getWalletInfo);
 router.post('/transfer', authMiddleware, transferController.walletTransfer);
-router.post('/credit-to-wallet', authMiddleware, transferController.creditToWallet);
+
+ 
+// 1. Wallet Info Get karne ka route
+// router.get('/info', authMiddleware, async (req, res) => {
+//     try {
+//         // req.user.userId token se mil jayega
+//         const user = await User.findOne({ userId: req.user.userId });
+//         if (!user) return res.status(404).json({ success: false, message: "Sender not found" });
+
+//         res.json({ success: true, walletBalance: user.walletBalance || 0 });
+//     } catch (err) {
+//       res.status(500).json({ success: false, message: "Server error" });
+//     }
+// });
+
+// 2. Fund Transfer karne ka route
+// router.post('/transfer', authMiddleware, async (req, res) => {
+//     try {
+//         const { receiverId, amount, transactionPassword } = req.body;
+//         const senderUserId = req.user.userId; // Token se mila hua logged-in user
+
+//         // Sender dhoondo
+//         const sender = await User.findOne({ userId: senderUserId });
+//         if (!sender) return res.status(404).json({ success: false, message: "Sender not found" });
+
+//         // Receiver dhoondo
+//         const receiver = await User.findOne({ userId: receiverId });
+//         if (!receiver) return res.status(404).json({ success: false, message: "Receiver not found!" });
+
+//         // Khud ko transfer na kare
+//         if (sender.userId === receiver.userId) {
+//             return res.status(400).json({ success: false, message: "You cannot transfer funds to yourself!" });
+//         }
+
+//         // Transaction password match check
+//         if (!sender.transactionPassword || transactionPassword.toLowerCase() !== sender.transactionPassword.toLowerCase()) {
+//             return res.status(400).json({ success: false, message: "Invalid Transaction Password!" });
+//         }
+
+//         // Balance check
+//         if ((sender.walletBalance || 0) < amount) {
+//             return res.status(400).json({ success: false, message: "Insufficient wallet balance!" });
+//         }
+
+//         // Transfer execution
+//         sender.walletBalance -= Number(amount);
+//         receiver.walletBalance = (receiver.walletBalance || 0) + Number(amount);
+
+//         await sender.save();
+//         await receiver.save();
+
+//         res.json({ success: true, message: `Successfully transferred $${amount} to ${receiverId}` });
+//     } catch (err) {
+//         console.error("Transfer Error:", err);
+//         res.status(500).json({ success: false, message: "Transfer failed due to server error" });
+//       }
+//     });
+
 
 
 
@@ -1177,10 +1142,13 @@ router.get("/withdrawable/:userId", async (req, res) => {
 
 
  
- router.post('/withdraw', authMiddleware, withdrawalController.withdrawFunds);
-
 router.get('/info', authMiddleware, withdrawalController.getWalletInfo);
 
+
+router.post('/withdraw', authMiddleware, withdrawalController.withdrawFunds);
+
+
+router.post('/credit-to-wallet', authMiddleware, withdrawalController.creditToWallet);
 
 router.post("/promo-withdraw", authMiddleware, async (req, res) => {
   try {

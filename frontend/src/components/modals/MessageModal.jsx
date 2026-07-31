@@ -17,35 +17,35 @@ const MessageModal = ({
 }) => {
   if (!isOpen) return null;
 
-  // 🔥 THEME CONFIG: Type ke hisaab se colors aur icons
+  // 🔥 THEME CONFIG: Dark Theme ke hisaab se high-contrast colors
   const theme = {
     success: {
-      text: "text-emerald-600",
-      bg: "bg-emerald-50",
-      border: "border-emerald-100",
+      text: "text-emerald-400",
+      bg: "bg-emerald-500/10",
+      border: "border-emerald-500/30",
       icon: CheckCircle2,
-      btn: "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+      btn: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500 hover:text-[#0b1221]"
     },
     error: {
-      text: "text-red-600",
-      bg: "bg-red-50",
-      border: "border-red-100",
+      text: "text-red-400",
+      bg: "bg-red-500/10",
+      border: "border-red-500/30",
       icon: AlertCircle,
-      btn: "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+      btn: "bg-red-500/10 text-red-400 border-red-500/30 hover:bg-red-500 hover:text-white"
     },
     warning: {
-      text: "text-amber-600",
-      bg: "bg-amber-50",
-      border: "border-amber-100",
+      text: "text-[#eab308]", // Gold Color
+      bg: "bg-[#eab308]/10",
+      border: "border-[#eab308]/30",
       icon: TriangleAlert,
-      btn: "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
+      btn: "bg-[#eab308]/10 text-[#eab308] border-[#eab308]/30 hover:bg-[#eab308] hover:text-[#0b1221]"
     },
     info: {
-      text: "text-blue-600",
-      bg: "bg-blue-50",
-      border: "border-blue-100",
+      text: "text-blue-400",
+      bg: "bg-blue-500/10",
+      border: "border-blue-500/30",
       icon: Info,
-      btn: "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+      btn: "bg-blue-500/10 text-blue-400 border-blue-500/30 hover:bg-blue-500 hover:text-white"
     },
   };
 
@@ -54,17 +54,18 @@ const MessageModal = ({
 
   return (
     <div
-      className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-300"
+      className="fixed inset-0 bg-[#0b1221]/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300"
       style={{ zIndex }}
     >
-      <div className="bg-white rounded-[28px] border border-slate-200 shadow-2xl w-full max-w-sm flex flex-col relative overflow-hidden transform scale-100 transition-all">
+      {/* Modal Box - Dark Navy Background */}
+      <div className="bg-[#131c31] rounded-[24px] border border-gray-700 shadow-2xl w-full max-w-sm flex flex-col relative overflow-hidden transform scale-100 transition-all">
         
-        {/* Soft Ambient Glow */}
-        <div className="absolute top-0 right-0 w-24 h-24 bg-green-100 blur-[40px] pointer-events-none rounded-full"></div>
+        {/* Soft Ambient Glow - Type ke hisaab se color change hoga */}
+        <div className={`absolute top-0 right-0 w-32 h-32 ${currentTheme.bg} blur-[60px] pointer-events-none rounded-full`}></div>
 
         {/* Header with Close Icon */}
         <div className="flex justify-end p-3 relative z-10">
-           <button onClick={onClose} className="p-1.5 rounded-full hover:bg-slate-100 transition-colors text-slate-400">
+           <button onClick={onClose} className="p-1.5 rounded-full hover:bg-white/10 transition-colors text-gray-400 hover:text-white">
               <X size={18} />
            </button>
         </div>
@@ -80,9 +81,9 @@ const MessageModal = ({
             {title}
           </h2>
 
-          {/* Scrollable Message Area */}
+          {/* Scrollable Message Area - High Contrast Text */}
           <div className="max-h-40 overflow-y-auto px-2 custom-scroll w-full text-center">
-            <p className="text-sm text-slate-600 font-bold leading-relaxed">
+            <p className="text-sm text-gray-300 font-medium leading-relaxed">
               {message}
             </p>
           </div>
@@ -92,7 +93,7 @@ const MessageModal = ({
         <div className="p-6 relative z-10">
           <button
             onClick={onClose}
-            className={`w-full py-3.5 rounded-xl font-black uppercase tracking-widest text-xs border transition-all shadow-sm active:scale-95 ${currentTheme.btn}`}
+            className={`w-full py-3.5 rounded-xl font-black uppercase tracking-widest text-xs border transition-all duration-200 active:scale-95 ${currentTheme.btn}`}
           >
             Acknowledge
           </button>
@@ -100,9 +101,12 @@ const MessageModal = ({
       </div>
 
       <style>{`
-        .custom-scroll { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
-        .custom-scroll::-webkit-scrollbar { width: 3px; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        /* Custom Scrollbar for Dark Mode */
+        .custom-scroll { scrollbar-width: thin; scrollbar-color: #374151 transparent; }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #374151; border-radius: 10px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #eab308; }
       `}</style>
     </div>
   );

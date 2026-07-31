@@ -49,3 +49,38 @@ exports.getWalletHistory = async (req, res) => {
     res.status(500).json({ message: 'Failed to fetch history' });
   }
 };
+
+
+
+// C:\Users\HP\Desktop\WorldFinance24\backend\controllers\walletController.js
+exports.getWalletInfo = async (req, res) => {
+    try {
+        const user = await User.findOne({ userId: req.user.userId });
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+        
+        const directIncome = user.directIncome || 0;
+        const levelIncome = user.levelIncome || 0;
+        const roiIncome = user.roiIncome || 0;
+        
+        const totalIncome = directIncome + levelIncome + roiIncome;
+        const totalWithdrawn = user.totalWithdrawal || 0;
+        const availableBalance = totalIncome - totalWithdrawn;
+
+        res.status(200).json({
+            success: true,
+            directIncome,
+            levelIncome,
+            roiIncome,
+            totalIncome,
+            totalWithdrawn,
+            availableBalance,
+            walletBalance: user.walletBalance || 0, // 🔥 YE LINE ADD KI HAI (Isi se 0 fix hoga)
+            walletAddress: user.walletAddress 
+        });
+    } catch (error) {
+        console.error("Wallet Info Error:", error);
+        res.status(500).json({ success: false, message: 'Server error while fetching wallet info' });
+    }
+};

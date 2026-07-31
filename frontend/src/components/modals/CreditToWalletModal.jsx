@@ -2,14 +2,19 @@ import React, { useState, useEffect } from "react";
 import api from "../../api/axios";
 import { useAuth } from "../../context/AuthContext";
 import Swal from 'sweetalert2';
-import { X, Eye, EyeOff } from "lucide-react";
+import { X, Eye, EyeOff, Zap, Users, RefreshCcw } from "lucide-react";
 
 const CreditToWalletModal = ({ onClose }) => {
   const { user, token } = useAuth();
   
   const [loading, setLoading] = useState(false);
-  const [walletData, setWalletData] = useState({ balance: 0 });
-  const [amount, setAmount] = useState("");
+  const [walletData, setWalletData] = useState({ 
+    directIncome: 0, levelIncome: 0, roiIncome: 0, balance: 0 
+  });
+  
+  const [directAmount, setDirectAmount] = useState("");
+  const [levelAmount, setLevelAmount] = useState("");
+  const [roiAmount, setRoiAmount] = useState("");
   const [transactionPassword, setTransactionPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
@@ -20,82 +25,156 @@ const CreditToWalletModal = ({ onClose }) => {
   const fetchWalletData = async () => {
     try {
       const res = await api.get(`/wallet/info`, { headers: { Authorization: `Bearer ${token}` }});
-      setWalletData({ balance: res.data.walletBalance || 0 });
+      setWalletData({
+        directIncome: res.data.directIncome || 0,
+        levelIncome: res.data.levelIncome || 0,
+        roiIncome: res.data.roiIncome || 0,
+        balance: res.data.availableBalance || 0 
+      });
     } catch (err) {
-      console.error("Failed to fetch wallet data");
+      console.error("Failed to fetch wallet data", err);
     }
   };
 
-  const handleQuickAmount = (val) => setAmount(val);
+  const totalSelection = (Number(directAmount) || 0) + (Number(levelAmount) || 0) + (Number(roiAmount) || 0);
 
   const handleSubmit = async () => {
-    if (!amount || amount < 1) return Swal.fire({ icon: 'warning', title: 'Invalid Amount', text: 'Minimum credit amount is $1.', background: '#0b101e', color: '#e4c568' });
-    if (!transactionPassword) return Swal.fire({ icon: 'warning', title: 'Password Required', text: 'Enter Transaction Password.', background: '#0b101e', color: '#e4c568' });
+    if (totalSelection < 1) {
+      return Swal.fire({ icon: 'warning', title: 'Invalid Amount', text: 'Minimum credit amount is $1.', background: '#111827', color: '#d4af37' });
+    }
+    if (totalSelection > walletData.balance) {
+      return Swal.fire({ icon: 'error', title: 'Insufficient Balance', text: `You only have $${walletData.balance.toFixed(2)} available.`, background: '#111827', color: '#ff4d4d' });
+    }
+    if (!transactionPassword) {
+      return Swal.fire({ icon: 'warning', title: 'Password Required', text: 'Enter Transaction Password.', background: '#111827', color: '#d4af37' });
+    }
 
     setLoading(true);
     try {
       const response = await api.post('/wallet/credit-to-wallet', {
-        amount: Number(amount),
-        transactionPassword
+        amount: totalSelection, 
+        transactionPassword,
+        details: { direct: directAmount, level: levelAmount, roi: roiAmount }
       }, { headers: { Authorization: `Bearer ${token}` }});
 
       if (response.data.success) {
-        Swal.fire({ icon: 'success', title: 'Success!', text: response.data.message, background: '#0b101e', color: '#e4c568' });
+        Swal.fire({ icon: 'success', title: 'Success!', text: response.data.message, background: '#111827', color: '#d4af37' });
         onClose();
-      }
+       }
     } catch (err) {
-      Swal.fire({ icon: 'error', title: 'Request Failed', text: err.response?.data?.message || 'Something went wrong.', background: '#0b101e', color: '#ff4d4d' });
+      Swal.fire({ icon: 'error', title: 'Request Failed', text: err.response?.data?.message || 'Something went wrong.', background: '#111827', color: '#ff4d4d' });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-[99999] flex justify-center items-center p-3 sm:p-4">
-      <div className="bg-[#0b101e] w-full max-w-[420px] max-h-[85vh] sm:max-h-[90vh] rounded-xl shadow-[0_0_20px_rgba(212,175,55,0.15)] border border-[#2d3748] overflow-hidden flex flex-col mt-4 sm:mt-0">
+    <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-[99999] flex justify-center items-start sm:items-center pt-16 sm:pt-4 p-3 sm:p-4">
+      
+      <div className="bg-[#0b101e] w-full max-w-[420px] max-h-[85vh] sm:max-h-[90vh] rounded-xl shadow-[0_0_20px_rgba(212,175,55,0.15)] border border-[#2d3748] overflow-hidden flex flex-col">
         
+        {/* Header */}
         <div className="bg-[#e4c568] px-4 py-3 flex justify-between items-center shrink-0">
-          <h2 className="text-black font-extrabold text-[17px] tracking-wide">Fund To Wallet</h2>
-          <button onClick={onClose} className="text-black hover:bg-black/10 p-1 rounded-full transition-colors"><X size={20} strokeWidth={2.5} /></button>
+          <h2 className="text-black font-extrabold text-[17px] tracking-wide">
+            Fund To Wallet
+          </h2>
+          <button onClick={onClose} className="text-black hover:bg-black/10 p-1 rounded-full transition-colors">
+            <X size={20} strokeWidth={2.5} />
+          </button>
         </div>
 
-        <div className="bg-[#161c2d] px-4 py-2 border-b border-[#2d3748] shrink-0">
-          <p className="text-[#e4c568] text-xs font-bold tracking-wide">Minimum $1 Amount For Credit!</p>
-        </div>
+        {/* Scrollable Content Area */}
+        <div className="p-4 bg-[#0b101e] flex-1 overflow-y-auto custom-scroll space-y-4">
+          
+          <div className="bg-[#161c2d] border border-[#2d3748] p-3 rounded-lg text-center shadow-inner mb-2">
+            <p className="text-[10px] text-gray-400 font-bold tracking-wider mb-1 uppercase">Total Income Balance</p>
+            <p className="text-[#00ff88] font-black text-xl">${walletData.balance.toFixed(2)}</p>
+          </div>
 
-        <div className="p-4 bg-[#0b101e] flex-1 overflow-y-auto">
-          <div className="border border-[#2d3748] rounded-md overflow-hidden flex flex-col font-semibold text-[13px]">
-            <div className="flex border-b border-[#2d3748]">
-              <div className="w-2/3 bg-[#131927] text-white p-2.5 border-r border-[#2d3748]">Income Wallet Balance</div>
-              <div className="w-1/3 bg-[#131927] text-[#00ff88] p-2.5">${walletData.balance.toFixed(2)}</div>
+          {/* 🔥 DIRECT INCOME BOX */}
+          <div className="bg-[#1e2536] p-3.5 rounded-lg border border-[#2d3748] shadow-sm">
+            <div className="flex justify-between items-center mb-2.5">
+              <span className="text-[#e4c568] text-xs font-bold flex items-center gap-1.5"><Zap size={14}/> DIRECT INCOME</span>
+              <span className="text-gray-400 text-[11px] font-semibold">Earned: ${walletData.directIncome.toFixed(2)}</span>
+            </div>
+            <div className="flex items-center gap-2 bg-[#0b101e] border border-[#2d3748] rounded px-3 py-2.5 focus-within:border-[#e4c568] transition-colors">
+              <span className="text-[#e4c568] font-bold">$</span>
+              <input 
+                type="number" value={directAmount} onChange={(e) => setDirectAmount(e.target.value)} 
+                className="bg-transparent outline-none text-white w-full text-sm font-semibold" placeholder="0.00" 
+              />
             </div>
           </div>
 
-          <div className="mt-4 space-y-3">
-            <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Enter Amount to Credit ($)" className="w-full bg-[#131927] border border-[#2d3748] text-white px-3 py-2.5 rounded outline-none focus:border-[#e4c568] focus:ring-1 focus:ring-[#e4c568] placeholder-gray-500 text-sm" />
-            
-            <div className="flex gap-2">
-              {[1, 5, 10, 20, 50].map((val) => (
-                <button key={val} onClick={() => handleQuickAmount(val)} className="flex-1 bg-[#1e2536] hover:bg-[#2d3748] border border-[#2d3748] text-white py-1.5 rounded font-bold text-sm transition-colors">${val}</button>
-              ))}
+          {/* 🔥 LEVEL INCOME BOX */}
+          <div className="bg-[#1e2536] p-3.5 rounded-lg border border-[#2d3748] shadow-sm">
+            <div className="flex justify-between items-center mb-2.5">
+              <span className="text-[#60a5fa] text-xs font-bold flex items-center gap-1.5"><Users size={14}/> LEVEL INCOME</span>
+              <span className="text-gray-400 text-[11px] font-semibold">Earned: ${walletData.levelIncome.toFixed(2)}</span>
             </div>
-
-            <div className="relative mt-2">
-              <input type={showPassword ? "text" : "password"} value={transactionPassword} onChange={(e) => setTransactionPassword(e.target.value)} placeholder="Enter Transaction Password" className="w-full bg-[#131927] border border-[#2d3748] text-white px-3 py-2.5 rounded outline-none focus:border-[#e4c568] focus:ring-1 focus:ring-[#e4c568] placeholder-gray-500 pr-10 text-sm" />
-              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200">{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+            <div className="flex items-center gap-2 bg-[#0b101e] border border-[#2d3748] rounded px-3 py-2.5 focus-within:border-[#60a5fa] transition-colors">
+              <span className="text-[#60a5fa] font-bold">$</span>
+              <input 
+                type="number" value={levelAmount} onChange={(e) => setLevelAmount(e.target.value)} 
+                className="bg-transparent outline-none text-white w-full text-sm font-semibold" placeholder="0.00" 
+              />
             </div>
-
-            <button onClick={handleSubmit} disabled={loading} className="w-full mt-3 bg-[#e4c568] hover:bg-[#d4af37] text-black font-extrabold py-2.5 rounded shadow-[0_0_10px_rgba(228,197,104,0.3)] hover:scale-[1.02] transition-transform disabled:opacity-70 disabled:hover:scale-100 uppercase tracking-widest text-[15px]">
-              {loading ? 'Processing...' : 'CREDIT FUNDS'}
-            </button>
           </div>
 
-          <div className="mt-4 pb-2 text-[#9ca3af] text-[11px] leading-relaxed font-medium">
-            <h4 className="text-[#e4c568] font-bold text-xs mb-1.5">Terms & Conditions</h4>
+          {/* 🔥 ROI INCOME BOX */}
+          <div className="bg-[#1e2536] p-3.5 rounded-lg border border-[#2d3748] shadow-sm">
+            <div className="flex justify-between items-center mb-2.5">
+              <span className="text-[#c084fc] text-xs font-bold flex items-center gap-1.5"><RefreshCcw size={14}/> ROI INCOME</span>
+              <span className="text-gray-400 text-[11px] font-semibold">Earned: ${walletData.roiIncome.toFixed(2)}</span>
+            </div>
+            <div className="flex items-center gap-2 bg-[#0b101e] border border-[#2d3748] rounded px-3 py-2.5 focus-within:border-[#c084fc] transition-colors">
+              <span className="text-[#c084fc] font-bold">$</span>
+              <input 
+                type="number" value={roiAmount} onChange={(e) => setRoiAmount(e.target.value)} 
+                className="bg-transparent outline-none text-white w-full text-sm font-semibold" placeholder="0.00" 
+              />
+            </div>
+          </div>
+
+          {/* 🔥 TOTAL SELECTION */}
+          <div className="flex justify-between items-center bg-[#131927] border border-[#d4af37]/30 p-3.5 rounded-lg mt-2">
+            <span className="text-gray-300 text-xs font-extrabold tracking-widest uppercase">Total Transfer</span>
+            <span className="text-[#d4af37] text-lg font-black">${totalSelection.toFixed(2)}</span>
+          </div>
+
+          {/* Transaction Password */}
+          <div className="mt-4">
+            <label className="text-gray-400 text-[11px] font-bold mb-1.5 block tracking-wide uppercase">Transaction Password</label>
+            <div className="relative">
+              <input 
+                type={showPassword ? "text" : "password"}
+                value={transactionPassword}
+                onChange={(e) => setTransactionPassword(e.target.value)}
+                placeholder="Enter Secure PIN"
+                className="w-full bg-[#131927] border border-[#2d3748] text-white px-4 py-3 rounded-lg outline-none focus:border-[#e4c568] focus:ring-1 focus:ring-[#e4c568] placeholder-gray-600 text-sm font-semibold"
+              />
+              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+          </div>
+
+          {/* Submit Button */}
+          <button 
+            onClick={handleSubmit}
+            disabled={loading}
+            className="w-full mt-2 bg-gradient-to-r from-[#d4af37] to-[#e4c568] hover:brightness-110 text-black font-extrabold py-3.5 rounded-lg shadow-[0_0_15px_rgba(228,197,104,0.3)] hover:scale-[1.02] transition-all disabled:opacity-50 disabled:hover:scale-100 uppercase tracking-widest text-[14px]"
+          >
+            {loading ? 'Processing...' : 'CREDIT FUNDS'}
+          </button>
+
+          {/* Terms and Conditions */}
+          <div className="mt-4 text-[#6b7280] text-[10px] leading-relaxed font-medium text-center px-2">
             <p>1. Convert income balance to fund balance for upgrades.</p>
             <p>2. Minimum transfer amount is $1.</p>
             <p>3. Active package upgrade is required.</p>
           </div>
+
         </div>
       </div>
     </div>
