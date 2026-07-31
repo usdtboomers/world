@@ -52,19 +52,148 @@ const generateTransactionPassword = () => {
  
 
 
+// router.post('/register', checkFeature('allowRegistrations'), async (req, res) => {
+//   try {
+//     // Wallet aur Country nikal diya idhar se
+//     let { name, mobile, email, sponsorId, deviceId, upi, password } = req.body;
+//     const userIP = getClientIP(req);
+
+//     name = name ? name.trim() : '';
+//     mobile = mobile ? mobile.trim() : '';
+//     email = email ? email.trim().toLowerCase() : '';
+
+//     const nameRegex = /^[A-Za-z\s]{3,50}$/;
+//     if (!name || !nameRegex.test(name)) {
+//         return res.status(400).json({ message: 'Invalid Name. Only alphabets are allowed.' });
+//     }
+
+//     const mobileRegex = /^[0-9]{10,15}$/;
+//     if (!mobile || !mobileRegex.test(mobile)) {
+//         return res.status(400).json({ message: 'Invalid Mobile Number.' });
+//     }
+
+//     if (!email || !email.endsWith('@gmail.com')) {
+//         return res.status(400).json({ message: 'Registration failed: Only @gmail.com emails are accepted.' });
+//     }
+
+//     if (!password || password.length < 6) {
+//         return res.status(400).json({ message: 'Password must be at least 6 characters long.' });
+//     }
+
+//     // --- Anti-Bot Security ---
+//     const isLocalIP = userIP === '127.0.0.1' || userIP === '::1';
+//     if (!isLocalIP) {
+//         const rule = await IpRule.findOne({ ipAddress: userIP });
+//         if (rule && rule.isBlocked) return res.status(403).json({ message: "Access Denied." });
+
+//         const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+//         const recentRegistrationIP = await User.findOne({ ipAddress: userIP, createdAt: { $gte: tenMinutesAgo } });
+//         if (recentRegistrationIP) return res.status(429).json({ message: "Please wait before creating another account." });
+//     }
+
+//     if (deviceId) {
+//         const isDeviceBlocked = await BlockedDevice.findOne({ deviceId });
+//         if (isDeviceBlocked) return res.status(403).json({ message: "Device blocked." });
+//     }
+//     // -------------------------
+
+//     // 🔥 YAHAN CHANGE KIYA HAI: Top ID / Genesis ID Logic
+//     const userCount = await User.countDocuments();
+//     let actualSponsorId = null;
+
+//     if (userCount === 0) {
+//         // Agar database khali hai, toh ye system ki 1st ID hai. Sponsor optional hai.
+//         // Agar sponsorId frontend se nahi aayi toh default 'ROOT' set ho jayegi
+//         actualSponsorId = sponsorId || 'ROOT'; 
+//     } else {
+//         // Agar pehle se log registered hain, toh Sponsor ID strict aur compulsory hai
+//         if (!sponsorId) return res.status(400).json({ message: 'Sponsor ID is compulsory.' });
+
+//         actualSponsorId = sponsorId; 
+//         let sponsorExists = await User.findOne({ userId: actualSponsorId });
+
+//         if (!sponsorExists) return res.status(400).json({ message: 'Invalid Sponsor ID.' });
+//     }
+//     // ----------------------------------------------------
+
+//     const newUserId = await generateUserId(); 
+    
+//     // System generated 6-digit transaction password
+//     const txPassword = generateTransactionPassword();
+
+//     // User Object me se walletAddress hat gaya
+//     const user = new User({
+//       userId: newUserId, 
+//       name, 
+//       mobile, 
+//       email, 
+//       upi,
+//       password: password, 
+//       transactionPassword: txPassword, 
+//       sponsorId: actualSponsorId, 
+//       role: 'user',
+//       ipAddress: userIP,
+//       deviceId: deviceId || null 
+//     });
+
+//     await user.save();
+
+//     try {
+//         await sendEmail({
+//             email: user.email,
+//             subject: '🎉 Welcome to World Finance 24!',
+//             html: `
+//             <div style="font-family: Arial; padding: 20px;">
+//                 <h2 style="color: #03a9f4;">🚀 Welcome to World Finance 24</h2>
+//                 <p>Hello <strong>${user.name}</strong>,</p>
+//                 <p>Your account has been successfully created.</p>
+//                 <div style="background-color: #f8f9fa; padding: 20px; border-left: 4px solid #03a9f4;">
+//                     <p>👤 <strong>User ID:</strong> ${user.userId}</p>
+//                     <p>🔑 <strong>Login Password:</strong> ${user.password}</p>
+//                     <p>🛡️ <strong>Transaction Password:</strong> <span style="color:red;">${user.transactionPassword}</span> (Keep this safe!)</p>
+//                 </div>
+//                 <br/>
+//                 <a href="${process.env.FRONTEND_URL}/login" style="background-color: #03a9f4; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Login Now</a>
+//             </div>
+//             ` 
+//         });
+//     } catch (emailErr) { 
+//         console.error("Email failed:", emailErr); 
+//     }
+
+//     // YAHAN PAR TRANSACTION PASSWORD ADD KIYA HAI 👇
+//     res.status(201).json({ 
+//         message: 'User registered successfully.', 
+//         userId: user.userId, 
+//         name: user.name,
+//         transactionPassword: txPassword 
+//     });
+
+//   } catch (err) {
+//     console.error('Register error:', err);
+//     res.status(500).json({ message: 'Server error.' });
+//   }
+// });
+
+
 router.post('/register', checkFeature('allowRegistrations'), async (req, res) => {
   try {
-    // Wallet aur Country nikal diya idhar se
-    let { name, mobile, email, sponsorId, deviceId, upi, password } = req.body;
+    // 🔥 YAHAN CHANGE KIYA HAI: Country add kiya gaya hai
+    let { name, mobile, email, sponsorId, deviceId, upi, password, country } = req.body;
     const userIP = getClientIP(req);
 
     name = name ? name.trim() : '';
     mobile = mobile ? mobile.trim() : '';
     email = email ? email.trim().toLowerCase() : '';
+    country = country ? country.trim() : '';
 
     const nameRegex = /^[A-Za-z\s]{3,50}$/;
     if (!name || !nameRegex.test(name)) {
         return res.status(400).json({ message: 'Invalid Name. Only alphabets are allowed.' });
+    }
+
+    if (!country) {
+        return res.status(400).json({ message: 'Country is required.' });
     }
 
     const mobileRegex = /^[0-9]{10,15}$/;
@@ -97,16 +226,13 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
     }
     // -------------------------
 
-    // 🔥 YAHAN CHANGE KIYA HAI: Top ID / Genesis ID Logic
+    // Top ID / Genesis ID Logic
     const userCount = await User.countDocuments();
     let actualSponsorId = null;
 
     if (userCount === 0) {
-        // Agar database khali hai, toh ye system ki 1st ID hai. Sponsor optional hai.
-        // Agar sponsorId frontend se nahi aayi toh default 'ROOT' set ho jayegi
         actualSponsorId = sponsorId || 'ROOT'; 
     } else {
-        // Agar pehle se log registered hain, toh Sponsor ID strict aur compulsory hai
         if (!sponsorId) return res.status(400).json({ message: 'Sponsor ID is compulsory.' });
 
         actualSponsorId = sponsorId; 
@@ -121,12 +247,13 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
     // System generated 6-digit transaction password
     const txPassword = generateTransactionPassword();
 
-    // User Object me se walletAddress hat gaya
+    // 🔥 User Object me country pass kar diya hai
     const user = new User({
       userId: newUserId, 
       name, 
       mobile, 
       email, 
+      country, // Added
       upi,
       password: password, 
       transactionPassword: txPassword, 
@@ -161,7 +288,6 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
         console.error("Email failed:", emailErr); 
     }
 
-    // YAHAN PAR TRANSACTION PASSWORD ADD KIYA HAI 👇
     res.status(201).json({ 
         message: 'User registered successfully.', 
         userId: user.userId, 
@@ -174,7 +300,6 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
     res.status(500).json({ message: 'Server error.' });
   }
 });
-
 router.post('/login', async (req, res) => {
     // ... (Login API purani wali hi rahegi, koi change nahi)
     try {
@@ -185,9 +310,7 @@ router.post('/login', async (req, res) => {
         const user = await User.findOne({ userId: new RegExp('^' + userId + '$', 'i') });
         
         // 👇 YEH ADD KARO 👇
-console.log("Login Check -> ID Aayi:", userId, "| Password Aaya:", password);
-console.log("Database me user mila?:", user ? "Haan" : "Nahi");
-
+ 
         if (!user) return res.status(401).json({ message: 'Invalid credentials' });
         if (password !== user.password) return res.status(401).json({ message: 'Invalid credentials' });
         
