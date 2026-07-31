@@ -99,12 +99,12 @@ const QuickActions = ({ onDepositClick }) => {
             </div>
 
             {/* Telegram */}
-            <div onClick={() => window.open('https://t.me/your_telegram_link', '_blank')} className="flex flex-col items-center gap-2 cursor-pointer group col-span-4 justify-center">
-              <div className="flex items-center gap-2 bg-[#0a0f1c] border border-[#229ED9]/50 hover:border-[#229ED9] px-6 py-2 rounded-full transition-all group-hover:shadow-[0_0_12px_rgba(34,158,217,0.5)]">
-                <Send size={20} strokeWidth={2.5} className="text-[#229ED9]" />
-                <span className="text-[13px] font-semibold text-white group-hover:text-[#229ED9] transition-colors">Join Telegram Channel</span>
-              </div>
-            </div>
+         <div className="flex flex-col items-center gap-2 group col-span-4 justify-center">
+  <div className="flex items-center gap-2 bg-[#0a0f1c] border border-[#229ED9]/50 hover:border-[#229ED9] px-6 py-2 rounded-full transition-all group-hover:shadow-[0_0_12px_rgba(34,158,217,0.5)]">
+    <Send size={20} strokeWidth={2.5} className="text-[#229ED9]" />
+    <span className="text-[13px] font-semibold text-white group-hover:text-[#229ED9] transition-colors">Join Telegram Channel</span>
+  </div>
+</div>
 
           </div>
         </div>

@@ -19,8 +19,7 @@ const Packages = () => {
     { id: 6, name: 'SAVING 6', price: 200, roi: 10, days: 25, profit: 250 },
     { id: 7, name: 'SAVING 7', price: 500, roi: 25, days: 25, profit: 625 },
     { id: 8, name: 'SAVING 8', price: 1000, roi: 50, days: 25, profit: 1250 },
-    { id: 9, name: 'SAVING 9', price: 2000, roi: 100, days: 25, profit: 2500 },
-    { id: 10, name: 'SAVING 10', price: 5000, roi: 250, days: 25, profit: 6250 },
+    
   ];
 
   const handleBuyClick = (pkg) => {
