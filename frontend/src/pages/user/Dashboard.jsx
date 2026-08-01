@@ -156,9 +156,9 @@ const Dashboard = ({ modalState, setModalState }) => {
         </div>
 
         {/* 5. LIVE TRADING FEED (SABSE NEECHE) 🚀 */}
-        {/* <div className="mt-8 rounded-2xl overflow-hidden">
+        <div className="mt-8 rounded-2xl overflow-hidden">
             <TradingStatusPanel />
-        </div> */}
+        </div>
 
       </div>
     </div>

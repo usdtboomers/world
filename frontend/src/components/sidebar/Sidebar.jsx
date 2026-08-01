@@ -423,7 +423,7 @@ const Sidebar = ({ user, isOpen, setIsOpen }) => {
       items: [
         { label: "Dashboard", icon: Home, path: "/dashboard" },
         // 🔥 YAHAN LIVE TRADING ADD KIYA HAI
-        // { label: "Live Trading", icon: Activity, path: "/user/trading" }, 
+        { label: "Live Trading", icon: Activity, path: "/user/trading" }, 
         { label: "My Profile", icon: UserCircle2, path: "/profile" },
         { label: "Package Details", icon: Zap, path: "/topup-details" },
         { label: "My Packages", icon: Box, path: "/my-packages" },
