@@ -19,11 +19,13 @@ const DirectIncome = () => {
     }
 
     setLoading(true);
+    // API directly sirf direct_income filter karke hi laa rahi hai
     api.get(`/transaction/transactions/${userId}?type=direct_income&t=${new Date().getTime()}`)
       .then((res) => {
+        // Strict filter hataya hua hai
         const sorted = (res.data || [])
-          .filter(txn => txn.fromUserId && txn.fromUserId !== userId)
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+          
         setTransactions(sorted);
         setFiltered(sorted);
       })
@@ -75,7 +77,6 @@ const DirectIncome = () => {
           <h2 className="text-2xl sm:text-3xl text-[#eab308] font-bold tracking-wide flex items-center gap-3">
              Direct Income
           </h2>
-        
         </div>
 
         {/* Filters (Entries & Search) */}
@@ -145,8 +146,10 @@ const DirectIncome = () => {
                 paginated.map((txn, idx) => {
                   const date = new Date(txn.createdAt);
                   
-                  // 🔥 PACKAGE FIX: Agar package database me nahi hai, toh default 30 dikhayega
-                  const packageAmount = Number(txn.package) > 0 ? Number(txn.package) : 30;
+                  // 🔥 PACKAGE FIX: Agar package value database me nahi hai, toh Income * 10 kar lega (Kyunki Direct Income 10% hoti hai)
+                  const packageAmount = Number(txn.package) > 0 
+                    ? Number(txn.package) 
+                    : Number(txn.amount) * 10;
                   
                   // 🔥 LEADER TEXT FIX: Description se "(Leader)" word ko clean kar dega
                   const cleanDescription = txn.description 
