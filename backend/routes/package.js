@@ -11,17 +11,37 @@
 
 
 
+// const express = require('express');
+// const router = express.Router();
+
+// // 🔥 FIX 1: Apne auth middleware ko import karo
+// // (Agar tumhare middleware ka naam verifyToken ya kuch aur hai, toh wo likhna)
+// const authMiddleware = require('../middleware/authMiddleware'); 
+
+// // ✅ Sahi path: ../controllers
+// const { activatePackage } = require('../controllers/packageController');
+
+// // 🔥 FIX 2: Route par authMiddleware laga diya taaki bina login koi hit na kar sake
+// router.post('/activate', authMiddleware, activatePackage);
+
+// module.exports = router;
+
+
+
 const express = require('express');
 const router = express.Router();
 
-// 🔥 FIX 1: Apne auth middleware ko import karo
-// (Agar tumhare middleware ka naam verifyToken ya kuch aur hai, toh wo likhna)
+// 🔥 Auth middleware import
 const authMiddleware = require('../middleware/authMiddleware'); 
 
-// ✅ Sahi path: ../controllers
-const { activatePackage } = require('../controllers/packageController');
+// ✅ Naya function 'getUserPackages' bhi yahan import kar liya hai
+const { activatePackage, getUserPackages } = require('../controllers/packageController');
 
-// 🔥 FIX 2: Route par authMiddleware laga diya taaki bina login koi hit na kar sake
+// Yeh tumhara POST route hai (Package kharidne/activate karne ke liye)
 router.post('/activate', authMiddleware, activatePackage);
+
+// 🔥 YEH RAHA NAYA GET ROUTE (User ke packages list karne ke liye)
+// Ispe bhi authMiddleware lagaya hai taaki data safe rahe
+router.get('/user/:userId', authMiddleware, getUserPackages);
 
 module.exports = router;

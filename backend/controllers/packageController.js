@@ -347,3 +347,29 @@ exports.activatePackage = async (req, res) => {
         res.status(500).json({ success: false, message: "Server Error during activation" });
     }
 };
+
+
+// =======================================================
+// 🔹 GET USER PACKAGES LOGIC (Yahan se naya code hai)
+// =======================================================
+exports.getUserPackages = async (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        // User ki ID ke basis par database se uske saare packages nikalna
+        const packages = await PackageActivation.find({ userId: String(userId) }).sort({ startDate: -1 });
+
+        // Frontend ko response bhejna
+        res.status(200).json({
+            success: true,
+            data: packages
+        });
+
+    } catch (error) {
+        console.error("Error fetching user packages:", error);
+        res.status(500).json({ 
+            success: false, 
+            message: "Server Error while fetching packages" 
+        });
+    }
+};

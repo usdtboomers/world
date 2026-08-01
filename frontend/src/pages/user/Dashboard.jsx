@@ -11,7 +11,7 @@ import SpinnerOverlay from "../../components/common/SpinnerOverlay";
 
 // 🔥 Packages component ko yahan import kar liya hai
 import Packages from "../../components/Packages"; 
-
+import UserPackages from "../../pages/user/UserPackages";
 // 🔥 props me { modalState, setModalState } add kar diya hai
 const Dashboard = ({ modalState, setModalState }) => {
   const { user, token, setUser, logout } = useAuth();
@@ -58,11 +58,19 @@ const Dashboard = ({ modalState, setModalState }) => {
             }
           }} 
         />
+       
 
         {/* 3. PACKAGES SECTION 🔥 Yahan dashboard me packages render honge */}
         <div className="mt-8">
             <h2 className="text-2xl font-bold text-gray-800 mb-4 px-2">Investment Packages</h2>
             <Packages />
+        </div>
+
+
+
+         <div className="mt-8 bg-[#070b14] rounded-2xl overflow-hidden">
+            {/* Naya component yahan call hoga */}
+            <UserPackages />
         </div>
 
       </div>

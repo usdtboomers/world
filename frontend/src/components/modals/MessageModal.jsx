@@ -4,7 +4,8 @@ import {
   Info, 
   CheckCircle2, 
   AlertCircle, 
-  TriangleAlert 
+  TriangleAlert,
+  Calendar
 } from "lucide-react";
 
 const MessageModal = ({
@@ -17,96 +18,114 @@ const MessageModal = ({
 }) => {
   if (!isOpen) return null;
 
-  // 🔥 THEME CONFIG: Dark Theme ke hisaab se high-contrast colors
+  // 🔥 PREMIUM FINANCE THEME CONFIG
   const theme = {
     success: {
-      text: "text-emerald-400",
+      color: "text-emerald-400",
       bg: "bg-emerald-500/10",
-      border: "border-emerald-500/30",
+      border: "border-emerald-500/20",
       icon: CheckCircle2,
-      btn: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500 hover:text-[#0b1221]"
+      btn: "bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-500/20"
     },
     error: {
-      text: "text-red-400",
-      bg: "bg-red-500/10",
-      border: "border-red-500/30",
+      color: "text-rose-400",
+      bg: "bg-rose-500/10",
+      border: "border-rose-500/20",
       icon: AlertCircle,
-      btn: "bg-red-500/10 text-red-400 border-red-500/30 hover:bg-red-500 hover:text-white"
+      btn: "bg-rose-500 hover:bg-rose-600 text-white shadow-rose-500/20"
     },
     warning: {
-      text: "text-[#eab308]", // Gold Color
-      bg: "bg-[#eab308]/10",
-      border: "border-[#eab308]/30",
+      color: "text-amber-400",
+      bg: "bg-amber-500/10",
+      border: "border-amber-500/20",
       icon: TriangleAlert,
-      btn: "bg-[#eab308]/10 text-[#eab308] border-[#eab308]/30 hover:bg-[#eab308] hover:text-[#0b1221]"
+      btn: "bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20"
     },
     info: {
-      text: "text-blue-400",
+      color: "text-blue-400",
       bg: "bg-blue-500/10",
-      border: "border-blue-500/30",
+      border: "border-blue-500/20",
       icon: Info,
-      btn: "bg-blue-500/10 text-blue-400 border-blue-500/30 hover:bg-blue-500 hover:text-white"
+      btn: "bg-blue-500 hover:bg-blue-600 text-white shadow-blue-500/20"
     },
   };
 
   const currentTheme = theme[type] || theme.info;
   const Icon = currentTheme.icon;
 
+  // Get current date only (no time)
+  const todayDate = new Date().toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  });
+
   return (
     <div
-      className="fixed inset-0 bg-[#0b1221]/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300"
+      className="fixed inset-0 bg-[#070b14]/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-200"
       style={{ zIndex }}
     >
-      {/* Modal Box - Dark Navy Background */}
-      <div className="bg-[#131c31] rounded-[24px] border border-gray-700 shadow-2xl w-full max-w-sm flex flex-col relative overflow-hidden transform scale-100 transition-all">
+      {/* Premium Minimalist Modal Card */}
+      <div className="bg-[#111827] rounded-2xl border border-gray-800 shadow-2xl w-full max-w-sm flex flex-col relative overflow-hidden">
         
-        {/* Soft Ambient Glow - Type ke hisaab se color change hoga */}
-        <div className={`absolute top-0 right-0 w-32 h-32 ${currentTheme.bg} blur-[60px] pointer-events-none rounded-full`}></div>
+        {/* Subtle Top Gradient Line */}
+        <div className={`absolute top-0 left-0 right-0 h-1 ${currentTheme.btn} opacity-70`}></div>
 
-        {/* Header with Close Icon */}
-        <div className="flex justify-end p-3 relative z-10">
-           <button onClick={onClose} className="p-1.5 rounded-full hover:bg-white/10 transition-colors text-gray-400 hover:text-white">
-              <X size={18} />
+        {/* Top Close Button */}
+        <div className="absolute top-4 right-4 z-10">
+           <button 
+             onClick={onClose} 
+             className="p-1.5 rounded-full bg-gray-800/50 hover:bg-gray-700 transition-all text-gray-400 hover:text-white"
+           >
+              <X size={16} strokeWidth={2.5} />
            </button>
         </div>
 
-        {/* Icon Section */}
-        <div className="flex flex-col items-center px-6 pb-2 relative z-10">
-          <div className={`p-4 rounded-2xl ${currentTheme.bg} ${currentTheme.text} border ${currentTheme.border} mb-4 shadow-sm`}>
-            <Icon size={32} strokeWidth={2.5} />
+        {/* Content Area */}
+        <div className="flex flex-col items-center pt-10 pb-4 px-6 relative z-10">
+          
+          {/* Elegant Icon Box */}
+          <div className={`p-4 rounded-2xl ${currentTheme.bg} border ${currentTheme.border} mb-5 shadow-inner`}>
+            <Icon size={32} className={currentTheme.color} strokeWidth={2.5} />
           </div>
 
           {/* Title */}
-          <h2 className={`text-xl font-black uppercase tracking-widest text-center mb-2 ${currentTheme.text}`}>
+          <h2 className="text-xl font-bold text-white mb-2 text-center tracking-wide">
             {title}
           </h2>
 
-          {/* Scrollable Message Area - High Contrast Text */}
-          <div className="max-h-40 overflow-y-auto px-2 custom-scroll w-full text-center">
-            <p className="text-sm text-gray-300 font-medium leading-relaxed">
+          {/* Message Area */}
+          <div className="max-h-32 overflow-y-auto w-full text-center px-2 custom-scroll">
+            <p className="text-sm text-gray-400 leading-relaxed font-medium">
               {message}
             </p>
           </div>
         </div>
 
-        {/* OK Button */}
-        <div className="p-6 relative z-10">
+        {/* Footer Area with Button & Date */}
+        <div className="px-6 pb-6 pt-3 flex flex-col gap-4">
           <button
             onClick={onClose}
-            className={`w-full py-3.5 rounded-xl font-black uppercase tracking-widest text-xs border transition-all duration-200 active:scale-95 ${currentTheme.btn}`}
+            className={`w-full py-3.5 rounded-xl font-bold tracking-wide text-sm transition-all duration-200 active:scale-95 shadow-lg ${currentTheme.btn}`}
           >
-            Acknowledge
+            Got It
           </button>
+          
+          {/* Footer Date Section */}
+          <div className="flex items-center justify-center gap-1.5 text-gray-500">
+            <Calendar size={13} />
+            <span className="text-xs font-medium tracking-wider uppercase">{todayDate}</span>
+          </div>
         </div>
       </div>
 
       <style>{`
-        /* Custom Scrollbar for Dark Mode */
+        /* Minimalist Scrollbar for Dark Mode */
         .custom-scroll { scrollbar-width: thin; scrollbar-color: #374151 transparent; }
-        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar { width: 3px; }
         .custom-scroll::-webkit-scrollbar-track { background: transparent; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #374151; border-radius: 10px; }
-        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #eab308; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #4b5563; }
       `}</style>
     </div>
   );

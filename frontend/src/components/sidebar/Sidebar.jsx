@@ -3,7 +3,7 @@ import api from "../../api/axios";
 import { useNavigate, useLocation, Link } from "react-router-dom"; 
 import { 
   Home, Wallet, Banknote, History, Users, UserCircle2, 
-  HelpCircle, BadgeDollarSign, BarChart, Zap, Coins, LogOut 
+  HelpCircle, BadgeDollarSign, BarChart, Zap, Coins, LogOut, Box 
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
@@ -74,6 +74,7 @@ const Sidebar = ({ user, isOpen, setIsOpen }) => {
         { label: "Dashboard", icon: Home, path: "/dashboard" },
         { label: "My Profile", icon: UserCircle2, path: "/profile" },
         { label: "Package Details", icon: Zap, path: "/topup-details" },
+        { label: "My Packages", icon: Box, path: "/my-packages" },
       ]
     },
     {

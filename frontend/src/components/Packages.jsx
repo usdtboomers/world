@@ -10,17 +10,17 @@ const Packages = () => {
   const [selectedPackage, setSelectedPackage] = useState({ amount: 0, name: '' });
 
   // USD Packages List (Data same as before)
-  const packagesList = [
+const packagesList = [
     { id: 1, name: 'SAVING 1', price: 2, roi: 0.10, days: 25, profit: 2.50 },
-    { id: 2, name: 'SAVING 2', price: 10, roi: 0.50, days: 25, profit: 12.50 },
-    { id: 3, name: 'SAVING 3', price: 20, roi: 1, days: 25, profit: 25 },
-    { id: 4, name: 'SAVING 4', price: 50, roi: 2.50, days: 25, profit: 62.50 },
-    { id: 5, name: 'SAVING 5', price: 100, roi: 5, days: 25, profit: 125 },
-    { id: 6, name: 'SAVING 6', price: 200, roi: 10, days: 25, profit: 250 },
-    { id: 7, name: 'SAVING 7', price: 500, roi: 25, days: 25, profit: 625 },
-    { id: 8, name: 'SAVING 8', price: 1000, roi: 50, days: 25, profit: 1250 },
-    
-  ];
+    { id: 2, name: 'SAVING 2', price: 5, roi: 0.25, days: 25, profit: 6.25 },
+    { id: 3, name: 'SAVING 3', price: 10, roi: 0.50, days: 25, profit: 12.50 },
+    { id: 4, name: 'SAVING 4', price: 20, roi: 1, days: 25, profit: 25 },
+    { id: 5, name: 'SAVING 5', price: 50, roi: 2.50, days: 25, profit: 62.50 },
+    { id: 6, name: 'SAVING 6', price: 100, roi: 5, days: 25, profit: 125 },
+    { id: 7, name: 'SAVING 7', price: 200, roi: 10, days: 25, profit: 250 },
+    { id: 8, name: 'SAVING 8', price: 500, roi: 25, days: 25, profit: 625 },
+    { id: 9, name: 'SAVING 9', price: 1000, roi: 50, days: 25, profit: 1250 },
+];
 
   const handleBuyClick = (pkg) => {
     setSelectedPackage({ amount: pkg.price, name: pkg.name });

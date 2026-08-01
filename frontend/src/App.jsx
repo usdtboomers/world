@@ -30,6 +30,7 @@ import UserWithdrawalHistory from './pages/user/UserWithdrawalHistory.jsx';
 import WalletHistory from './pages/user/WalletHistory.jsx';
 import AllTeamPage from './pages/user/AllTeamPage.jsx';
 import DirectTeamPage from './pages/user/DirectTeamPage.jsx';
+import UserPackages from './pages/user/UserPackages.jsx';
 import DirectIncome from './pages/user/DirectIncome.jsx';
 import StakingDirectIncome from './pages/user/StakingDirectIncome.jsx';
 import StakingLevelIncome from './pages/user/StakingLevelIncome.jsx';
@@ -128,11 +129,16 @@ function AppContent() {
   const isAllowed = !maintenance || whitelist.includes(currentUserId) || isAdmin;
 
   // 🔥 Loading Screen Updated to Light Theme
-  if (!checked) return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-900">
+ if (!checked) return (
+    <div className="min-h-screen bg-[#070b14] flex items-center justify-center text-white">
       <div className="flex flex-col items-center gap-4">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-green-500"></div>
-        <p className="text-black text-sm font-medium">Initializing Crypto Network...</p>
+        {/* Gold color ka spinner */}
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#eab308]"></div>
+        
+        {/* World Finance 24 ke naam ke sath premium loading text */}
+        <p className="text-[#eab308] text-sm font-bold tracking-widest uppercase animate-pulse">
+           World Finance 24...
+        </p>
       </div>
     </div>
   );
@@ -232,7 +238,10 @@ function AppContent() {
             <Route path="/notifications" element={<RequireUserAuth><UserLayout><Notifications/></UserLayout></RequireUserAuth>} />
             <Route path="/wallet-history" element={<RequireUserAuth><UserLayout><WalletHistory /></UserLayout></RequireUserAuth>} />
             <Route path="/direct-team" element={<RequireUserAuth><UserLayout><DirectTeamPage /></UserLayout></RequireUserAuth>} />
+            
+            
             <Route path="/all-team" element={<RequireUserAuth><UserLayout><AllTeamPage /></UserLayout></RequireUserAuth>} />
+            <Route path="/my-packages" element={<RequireUserAuth><UserLayout><UserPackages /></UserLayout></RequireUserAuth>} />
             <Route 
     path="/global-community" 
     element={

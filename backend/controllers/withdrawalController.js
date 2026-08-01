@@ -136,10 +136,11 @@ exports.creditToWallet = async (req, res) => {
             return res.status(400).json({ success: false, message: 'An active package upgrade is required to use this feature.' });
         }
 
-        // 3. Password Verify
-        if (transactionPassword.toLowerCase() !== user.transactionPassword.toLowerCase()) {
-            return res.status(401).json({ success: false, message: 'Invalid Transaction Password.' });
-        }
+      // 3. Password Verify
+  if (transactionPassword.toLowerCase() !== user.transactionPassword.toLowerCase()) {
+      // 401 ki jagah 400 use karo
+      return res.status(400).json({ success: false, message: 'Invalid Transaction Password.' });
+  }
 
         // 4. INDIVIDUAL WALLET DEDUCTION LOGIC (Same as Withdrawal)
         const directReq = Number(details?.direct) || 0;
