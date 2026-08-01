@@ -26,6 +26,7 @@ router.use('/admin', require('./adminReports')); // 👈 YAHAN ADD KARNA HAI
 // 📢 Notifications
 router.use('/admin/notifications', require('./adminNotification'));
 
+router.use('/market', require('./market')); // Assuming market.js is in the same folder
 // 🔗 Other modules
 router.use('/referral', require('./referral'));
 router.use('/transaction', require('./transaction'));

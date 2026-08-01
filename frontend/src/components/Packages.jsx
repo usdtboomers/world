@@ -30,7 +30,7 @@ const packagesList = [
   if (!user) return null;
 
   return (
-    <div className="w-full pb-28 md:pb-8 pt-4">
+    <div className="w-full pb-2 md:pb-8 pt-4">
       {/* --- USD PACKAGE GRID --- */}
       {/* 🔥 UPDATE: Mobile ke liye grid-cols-2 set kiya hai aur baaki screens ke liye 3 aur 4 */}
       <div className="max-w-6xl mx-auto px-2 sm:px-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-5">

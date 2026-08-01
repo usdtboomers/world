@@ -67,7 +67,9 @@ const QuickActions = ({ onDepositClick }) => {
             </div>
 
             {/* Team */}
-            <div onClick={() => navigate('/team')} className="flex flex-col items-center gap-2 cursor-pointer group">
+            <div 
+            // onClick={() => navigate('/team')} 
+            className="flex flex-col items-center gap-2 cursor-pointer group">
               <div className={`${iconBoxStyle} rounded-full`}>
                 <Users size={24} strokeWidth={2.5} />
               </div>
@@ -83,7 +85,9 @@ const QuickActions = ({ onDepositClick }) => {
             </div>
 
             {/* Ticket Reply */}
-            <div onClick={() => navigate('/ticket-reply')} className="flex flex-col items-center gap-2 cursor-pointer group">
+            <div
+            //  onClick={() => navigate('/ticket-reply')}
+             className="flex flex-col items-center gap-2 cursor-pointer group">
               <div className={`${iconBoxStyle} rounded-[18px]`}>
                 <Ticket size={24} strokeWidth={2.5} />
               </div>

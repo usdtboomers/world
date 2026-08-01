@@ -1517,6 +1517,216 @@ router.get('/withdrawals/:userId', async (req, res) => {
   
 
 
+// router.get('/history/:userId', async (req, res) => {
+//   try {
+//     const rawUserId = req.params.userId; 
+    
+//     // 🔥 FIX 1: 'WF' ya koi bhi alphabets ko hata kar sirf number nikalo
+//     const numericIdString = String(rawUserId).replace(/\D/g, ''); 
+//     const userIdNum = Number(numericIdString);
+
+//     // Agar ID bilkul galat hai toh 400 bhejo, warna aage badho
+//     if (!numericIdString || isNaN(userIdNum)) {
+//       return res.status(400).json({ success: false, history: [], balances: null });
+//     }
+
+//     // 🌟 NAYA LOGIC: Bulletproof Database Query (String aur Number dono match karega)
+//     const userData = await User.findOne({ 
+//         $or: [{ userId: userIdNum }, { userId: rawUserId }] 
+//     }).select('walletBalance usdtBep20Balance').lean();
+
+//     // 🚀 YAHAN 'fund_transfer_sent' AUR 'fund_transfer_received' ADD KIYA HAI
+//     const allowedTypes = [
+//       "deposit",
+//       "credit_to_wallet",
+//       "credit",        
+//       "transfer",
+//       "usdt_bep20_transfer", 
+//       "topup",         
+//       "debit_topup",
+//       // "withdrawal", <-- Ise comment rakha hai taaki withdrawal na dikhe
+//       "manual_credit",
+//       "manual_debit",
+//       "fast_track",
+//       "convert_to_cct", 
+//       "cct_stake_send",  
+//       "cct_transfer",
+//       "fund_transfer_sent",       // 🔥 ADDED
+//       "fund_transfer_received"    // 🔥 ADDED
+//     ];
+
+//     // ✨ 2. FAST DATABASE QUERY 
+//     let txs = await Transaction.find({
+//       $and: [
+//         {
+//           $or: [
+//             { userId: userIdNum },       
+//             { userId: rawUserId },
+//             { fromUserId: userIdNum },   
+//             { fromUserId: rawUserId },
+//             { toUserId: userIdNum },      
+//             { toUserId: rawUserId }
+//           ]
+//         },
+//         { type: { $in: allowedTypes } },
+//         { description: { $not: /PROMOTION/i } },
+//         { description: { $not: /auto-pool/i } } 
+//       ]
+//     }).sort({ date: -1, createdAt: -1 }).lean();
+
+//     // 🛡️ 3. CLEANUP & DECIMAL128 FIX 
+//     const cleanHistory = txs
+//       .filter(t => {
+//         if (t.type === 'fast_track') {
+//             return String(t.userId) === String(rawUserId) || String(t.userId) === String(userIdNum);
+//         }
+//         return true;
+//       })
+//       .map(t => {
+//         let safeAmount = 0;
+//         let safeGross = 0;
+
+//         if (t.amount && t.amount.$numberDecimal) {
+//             safeAmount = parseFloat(t.amount.$numberDecimal);
+//         } else {
+//             safeAmount = parseFloat(t.amount) || 0;
+//         }
+
+//         if (t.grossAmount && t.grossAmount.$numberDecimal) {
+//             safeGross = parseFloat(t.grossAmount.$numberDecimal);
+//         } else {
+//             safeGross = parseFloat(t.grossAmount) || 0;
+//         }
+
+//         return {
+//           ...t,
+//           amount: safeAmount,
+//           grossAmount: safeGross
+//         };
+//       });
+
+//     // 🌟 4. FINAL RESPONSE
+//     res.json({ 
+//         success: true, 
+//         history: cleanHistory,
+//         balances: {
+//             walletBalance: userData?.walletBalance || 0,
+//             usdtBep20Balance: userData?.usdtBep20Balance || 0
+//         }
+//     });
+
+//   } catch (err) {
+//     console.error("Wallet history error:", err);
+//     res.status(500).json({ success: false, history: [], balances: null });
+//   }
+// });
+
+// router.get('/history/:userId', async (req, res) => {
+//   try {
+//     const rawUserId = req.params.userId; 
+    
+//     // 🔥 FIX 1: 'WF' ya koi bhi alphabets ko hata kar sirf number nikalo
+//     const numericIdString = String(rawUserId).replace(/\D/g, ''); 
+//     const userIdNum = Number(numericIdString);
+
+//     // Agar ID bilkul galat hai toh 400 bhejo, warna aage badho
+//     if (!numericIdString || isNaN(userIdNum)) {
+//       return res.status(400).json({ success: false, history: [], balances: null });
+//     }
+
+//     // 🌟 NAYA LOGIC: Bulletproof Database Query (String aur Number dono match karega)
+//     const userData = await User.findOne({ 
+//         $or: [{ userId: userIdNum }, { userId: rawUserId }] 
+//     }).select('walletBalance usdtBep20Balance').lean();
+
+//     // 🚀 YAHAN 'package_activation' ADD KIYA HAI TAAKI WALLET DEDUCTION HISTORY MEIN DIKHE
+//     const allowedTypes = [
+//       "deposit",
+//       "credit_to_wallet",
+//       "credit",        
+//       "transfer",
+//       "usdt_bep20_transfer", 
+//       "topup",         
+//       "debit_topup",
+//       "package_activation",       // 🔥 ADDED FOR PACKAGE ACTIVATION DEDUCTION
+//       // "withdrawal", <-- Ise comment rakha hai taaki withdrawal na dikhe
+//       "manual_credit",
+//       "manual_debit",
+//       "fast_track",
+//       "convert_to_cct", 
+//       "cct_stake_send",  
+//       "cct_transfer",
+//       "fund_transfer_sent",       
+//       "fund_transfer_received"    
+//     ];
+
+//     // ✨ 2. FAST DATABASE QUERY 
+//     let txs = await Transaction.find({
+//       $and: [
+//         {
+//           $or: [
+//             { userId: userIdNum },       
+//             { userId: rawUserId },
+//             { fromUserId: userIdNum },   
+//             { fromUserId: rawUserId },
+//             { toUserId: userIdNum },      
+//             { toUserId: rawUserId }
+//           ]
+//         },
+//         { type: { $in: allowedTypes } },
+//         { description: { $not: /PROMOTION/i } },
+//         { description: { $not: /auto-pool/i } } 
+//       ]
+//     }).sort({ date: -1, createdAt: -1 }).lean();
+
+//     // 🛡️ 3. CLEANUP & DECIMAL128 FIX 
+//     const cleanHistory = txs
+//       .filter(t => {
+//         if (t.type === 'fast_track') {
+//             return String(t.userId) === String(rawUserId) || String(t.userId) === String(userIdNum);
+//         }
+//         return true;
+//       })
+//       .map(t => {
+//         let safeAmount = 0;
+//         let safeGross = 0;
+
+//         if (t.amount && t.amount.$numberDecimal) {
+//             safeAmount = parseFloat(t.amount.$numberDecimal);
+//         } else {
+//             safeAmount = parseFloat(t.amount) || 0;
+//         }
+
+//         if (t.grossAmount && t.grossAmount.$numberDecimal) {
+//             safeGross = parseFloat(t.grossAmount.$numberDecimal);
+//         } else {
+//             safeGross = parseFloat(t.grossAmount) || 0;
+//         }
+
+//         return {
+//           ...t,
+//           amount: safeAmount,
+//           grossAmount: safeGross
+//         };
+//       });
+
+//     // 🌟 4. FINAL RESPONSE
+//     res.json({ 
+//         success: true, 
+//         history: cleanHistory,
+//         balances: {
+//             walletBalance: userData?.walletBalance || 0,
+//             usdtBep20Balance: userData?.usdtBep20Balance || 0
+//         }
+//     });
+
+//   } catch (err) {
+//     console.error("Wallet history error:", err);
+//     res.status(500).json({ success: false, history: [], balances: null });
+//   }
+// });
+
+
 router.get('/history/:userId', async (req, res) => {
   try {
     const rawUserId = req.params.userId; 
@@ -1535,7 +1745,7 @@ router.get('/history/:userId', async (req, res) => {
         $or: [{ userId: userIdNum }, { userId: rawUserId }] 
     }).select('walletBalance usdtBep20Balance').lean();
 
-    // 🚀 YAHAN 'fund_transfer_sent' AUR 'fund_transfer_received' ADD KIYA HAI
+    // 🚀 ALLOWED TYPES
     const allowedTypes = [
       "deposit",
       "credit_to_wallet",
@@ -1544,28 +1754,27 @@ router.get('/history/:userId', async (req, res) => {
       "usdt_bep20_transfer", 
       "topup",         
       "debit_topup",
-      // "withdrawal", <-- Ise comment rakha hai taaki withdrawal na dikhe
+      "package_activation",       // 🔥 SENDER KO DEDUCTION DIKHEGA
+      // "withdrawal", 
       "manual_credit",
       "manual_debit",
       "fast_track",
       "convert_to_cct", 
       "cct_stake_send",  
       "cct_transfer",
-      "fund_transfer_sent",       // 🔥 ADDED
-      "fund_transfer_received"    // 🔥 ADDED
+      "fund_transfer_sent",       
+      "fund_transfer_received"    
     ];
 
     // ✨ 2. FAST DATABASE QUERY 
+    // 🔥 FIX: Yahan se `fromUserId` aur `toUserId` hata diya! 
+    // Ab dusre ki history kisi aur ko nahi dikhegi. Jisne pay kiya hai sirf usko dikhega.
     let txs = await Transaction.find({
       $and: [
         {
           $or: [
             { userId: userIdNum },       
-            { userId: rawUserId },
-            { fromUserId: userIdNum },   
-            { fromUserId: rawUserId },
-            { toUserId: userIdNum },      
-            { toUserId: rawUserId }
+            { userId: rawUserId }
           ]
         },
         { type: { $in: allowedTypes } },
@@ -1620,7 +1829,6 @@ router.get('/history/:userId', async (req, res) => {
     res.status(500).json({ success: false, history: [], balances: null });
   }
 });
-
 
 // GET /api/wallet/topup-history/:userId
 // GET /api/wallet/topup-history/:userId

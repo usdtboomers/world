@@ -66,10 +66,10 @@ const WalletHistoryPage = () => {
   // IST Date Formatter
   const getISTDateTimeString = (dateString) => {
     if (!dateString) return '';
-    return new Date(dateString).toLocaleString('en-IN', {
+    // Sirf date dikhane ka logic (User correction ledger ke hisaab se time strip karna)
+    return new Date(dateString).toLocaleDateString('en-IN', {
       timeZone: 'Asia/Kolkata',
-      day: '2-digit', month: 'short', year: 'numeric',
-      hour: '2-digit', minute: '2-digit', hour12: true
+      day: '2-digit', month: 'short', year: 'numeric'
     });
   };
 
@@ -150,9 +150,9 @@ const WalletHistoryPage = () => {
                 </tr>
               ) : (
                 currentItems.map((tx, index) => {
-                  // Credit/Debit UI Logic
-                  const isCredit = ['deposit', 'credit_to_wallet', 'credit', 'topup', 'manual_credit', 'fast_track'].includes(tx.type);
-                  const isDebit = ['withdrawal', 'debit_topup', 'manual_debit'].includes(tx.type);
+                  // 🔥 FIX: Credit/Debit UI Logic mein package_activation aur naye types add kiye hain
+                  const isCredit = ['deposit', 'credit_to_wallet', 'credit', 'topup', 'manual_credit', 'fast_track', 'fund_transfer_received'].includes(tx.type);
+                  const isDebit = ['withdrawal', 'debit_topup', 'manual_debit', 'package_activation', 'fund_transfer_sent'].includes(tx.type);
                   
                   let amountColor = 'text-white';
                   let prefix = '';
@@ -164,7 +164,10 @@ const WalletHistoryPage = () => {
                     <tr key={tx._id || index} className="border-b border-gray-700 hover:bg-[#1a253e] transition-colors">
                       <td className="p-4 border-r border-gray-700/50">{indexOfFirst + index + 1}</td>
                       <td className="p-4 border-r border-gray-700/50 capitalize font-medium text-white">
-                        {tx.type ? tx.type.replace(/_/g, ' ') : 'Transaction'}
+                        {/* 🔥 FIX: Agar type manual_credit hai toh direct 'Deposit' dikhao, warna underline hata kar normally dikhao */}
+                        {tx.type 
+                          ? (tx.type === 'manual_credit' ? 'Deposit' : tx.type.replace(/_/g, ' ')) 
+                          : 'Transaction'}
                       </td>
                       <td className="p-4 border-r border-gray-700/50 truncate max-w-xs" title={tx.description}>
                         {tx.description || "-"}
