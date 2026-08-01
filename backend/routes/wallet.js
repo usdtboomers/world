@@ -1517,10 +1517,9 @@ router.get('/withdrawals/:userId', async (req, res) => {
   
 
 
- 
- router.get('/history/:userId', async (req, res) => {
+router.get('/history/:userId', async (req, res) => {
   try {
-    const rawUserId = req.params.userId; // Example: "WF8489157"
+    const rawUserId = req.params.userId; 
     
     // 🔥 FIX 1: 'WF' ya koi bhi alphabets ko hata kar sirf number nikalo
     const numericIdString = String(rawUserId).replace(/\D/g, ''); 
@@ -1536,6 +1535,7 @@ router.get('/withdrawals/:userId', async (req, res) => {
         $or: [{ userId: userIdNum }, { userId: rawUserId }] 
     }).select('walletBalance usdtBep20Balance').lean();
 
+    // 🚀 YAHAN 'fund_transfer_sent' AUR 'fund_transfer_received' ADD KIYA HAI
     const allowedTypes = [
       "deposit",
       "credit_to_wallet",
@@ -1544,16 +1544,18 @@ router.get('/withdrawals/:userId', async (req, res) => {
       "usdt_bep20_transfer", 
       "topup",         
       "debit_topup",
-      "withdrawal",
+      // "withdrawal", <-- Ise comment rakha hai taaki withdrawal na dikhe
       "manual_credit",
       "manual_debit",
       "fast_track",
       "convert_to_cct", 
       "cct_stake_send",  
-      "cct_transfer"        
+      "cct_transfer",
+      "fund_transfer_sent",       // 🔥 ADDED
+      "fund_transfer_received"    // 🔥 ADDED
     ];
 
-    // ✨ 2. FAST DATABASE QUERY (Ab "WF" aur number dono format ke transactions catch karega)
+    // ✨ 2. FAST DATABASE QUERY 
     let txs = await Transaction.find({
       $and: [
         {

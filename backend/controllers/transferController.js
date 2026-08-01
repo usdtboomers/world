@@ -1,7 +1,6 @@
 // C:\Users\HP\Desktop\WorldFinance24\backend\controllers\transferController.js
 const User = require('../models/User');
 const Transaction = require('../models/Transaction');
-
 // 1. Wallet to Wallet Transfer (User to User)
 exports.walletTransfer = async (req, res) => {
     try {
@@ -11,6 +10,15 @@ exports.walletTransfer = async (req, res) => {
 
         if (!receiverId || !reqAmount || !transactionPassword) {
             return res.status(400).json({ success: false, message: 'All fields are required.' });
+        }
+
+        // 🔥 FIX 1: Khud ko paise bhejte time error throw karo
+        // String aur toLowerCase use kiya taaki wf123 aur WF123 dono match ho jayein
+        if (String(senderId).toLowerCase() === String(receiverId).toLowerCase()) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'You cannot transfer funds to your own wallet.' 
+            });
         }
 
         if (reqAmount < 1) {
@@ -66,7 +74,6 @@ exports.walletTransfer = async (req, res) => {
         res.status(500).json({ success: false, message: 'Server error during transfer.' });
     }
 };
-
 
 // C:\Users\HP\Desktop\WorldFinance24\backend\controllers\walletController.js
 exports.getWalletInfo = async (req, res) => {

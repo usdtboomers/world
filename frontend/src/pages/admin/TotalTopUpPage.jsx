@@ -2,16 +2,13 @@ import React, { useEffect, useState } from 'react';
 import api from "../../api/axios";
 import Papa from 'papaparse';
 import { saveAs } from 'file-saver';
-import Swal from 'sweetalert2';
-import { Crown, User, ArrowRightCircle, ExternalLink } from 'lucide-react';
+import { Package, User } from 'lucide-react';
 
-// 🔥 HELPER 1: Hamesha Indian Standard Time (IST) Date dega (YYYY-MM-DD format mein) filter aur stats ke liye
 const getISTDateStr = (dateObj = new Date()) => {
   if (!dateObj) return '';
   return new Date(dateObj).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 };
 
-// 🔥 HELPER 2: Table me dikhane ke liye Proper Indian DateTime Format (DD MMM YYYY, hh:mm AM/PM)
 const getISTDateTimeString = (dateString) => {
   if (!dateString) return '';
   return new Date(dateString).toLocaleString('en-IN', {
@@ -41,71 +38,12 @@ const TotalTopUpPage = () => {
   const [loading, setLoading] = useState(true);
 
   const [searchId, setSearchId] = useState('');
-  const [selectedRole, setSelectedRole] = useState(''); 
+  const [searchPackage, setSearchPackage] = useState(''); 
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(20); 
-
-  // ----------------- 🔥 IMPERSONATE (LOGIN) LOGIC -----------------
-  // const handleImpersonate = async (targetId) => {
-  //   // 🔥 FIX: Agar target "Self" ya "System" hai toh function wahi ruk jayega
-  //   const idStr = String(targetId || "").toLowerCase();
-  //   if (!targetId || idStr.includes("system") || idStr === "self") return;
-
-  //   const match = String(targetId).match(/\d+/);
-  //   const cleanUserId = match ? match[0] : targetId;
-
-  //   const result = await Swal.fire({
-  //     title: 'Login as User?',
-  //     text: `Do you want to log in to the account with User ID: #${cleanUserId}?`,
-  //     icon: 'question',
-  //     showCancelButton: true,
-  //     confirmButtonText: 'Yes, Login'
-  //   });
-
-  //   if (!result.isConfirmed) return;
-
-  //   try {
-  //     Swal.fire({ title: 'Logging in...', didOpen: () => { Swal.showLoading(); } });
-  //     const token = localStorage.getItem('adminToken');
-      
-  //     const res = await api.post('/admin/impersonate', { userId: cleanUserId }, {
-  //       headers: { Authorization: `Bearer ${token}` }
-  //     });
-
-  //     if (res.data.token) {
-  //       Swal.close();
-        
-  //       const { token: userToken, user: impersonatedUser } = res.data;
-  //       const userDataStr = encodeURIComponent(JSON.stringify(impersonatedUser));
-
-  //       let targetBaseUrl = "";
-  //       const currentHost = window.location.hostname;
-
-  //       if (currentHost.includes("localhost") || currentHost === "127.0.0.1") {
-  //         targetBaseUrl = "http://localhost:5173"; 
-  //       } else {
-  //         targetBaseUrl = "https://worldfinance24.online"; 
-  //       }
-
-  //       const mainWebsiteUrl = `${targetBaseUrl}/login?token=${userToken}&user=${userDataStr}`;
-
-  //       const link = document.createElement('a');
-  //       link.href = mainWebsiteUrl;
-  //       link.target = '_blank';
-  //       link.rel = 'noopener noreferrer'; 
-  //       document.body.appendChild(link);
-  //       link.click();
-  //       document.body.removeChild(link);
-  //     }
-  //   } catch (error) {
-  //     console.error("Impersonation error:", error);
-  //     Swal.fire('Error', error.response?.data?.message || "Failed to impersonate user", 'error');
-  //   }
-  // };
-  // --------------------------------------------------------------
 
   useEffect(() => {
     const fetchTopupUsers = async () => {
@@ -134,30 +72,32 @@ const TotalTopUpPage = () => {
   useEffect(() => {
     const filtered = topupUsers.filter((user) => {
       const matchesId = searchId ? String(user.userId).includes(searchId) : true;
-      const matchesRole = selectedRole ? user.initiatorRole === selectedRole : true; 
+      const matchesPackage = searchPackage ? user.packageName === searchPackage : true; 
 
       const dateStr = user.topUpDate ? getISTDateStr(new Date(user.topUpDate)) : null;
       
       const matchesFrom = fromDate ? dateStr && dateStr >= fromDate : true;
       const matchesTo = toDate ? dateStr && dateStr <= toDate : true;
 
-      return matchesId && matchesRole && matchesFrom && matchesTo;
+      return matchesId && matchesPackage && matchesFrom && matchesTo;
     });
 
     setFilteredUsers(filtered);
     setCurrentPage(1);
-  }, [searchId, selectedRole, fromDate, toDate, topupUsers]);
+  }, [searchId, searchPackage, fromDate, toDate, topupUsers]);
 
   const todayIST = getISTDateStr(); 
   
   let totalBusiness = 0;
   let todayBusiness = 0;
   let todayCount = 0;
-  
-  let leaderBusiness = 0;
-  let leaderCount = 0;
-  let normalBusiness = 0;
-  let normalCount = 0;
+
+  // 🔥 NAYA LOGIC: Har package ka count track karne ke liye
+  let packageCounts = {
+    'SAVING 1': 0, 'SAVING 2': 0, 'SAVING 3': 0, 
+    'SAVING 4': 0, 'SAVING 5': 0, 'SAVING 6': 0, 
+    'SAVING 7': 0, 'SAVING 8': 0, 'SAVING 9': 0
+  };
 
   filteredUsers.forEach(u => {
       const amt = u.topUpAmount;
@@ -170,12 +110,9 @@ const TotalTopUpPage = () => {
           todayCount++;
       }
 
-      if (u.initiatorRole === 'leader') {
-          leaderBusiness += amt;
-          leaderCount++;
-      } else {
-          normalBusiness += amt;
-          normalCount++;
+      // 📦 Count incrementing logic based on packageName
+      if (u.packageName && packageCounts[u.packageName] !== undefined) {
+          packageCounts[u.packageName]++;
       }
   });
 
@@ -191,21 +128,16 @@ const TotalTopUpPage = () => {
   const exportToCSV = () => {
     const summary = [
       { Metric: 'Total TopUps', Value: filteredUsers.length },
-      { Metric: 'Total Business', Value: totalBusiness },
+      { Metric: 'Total Business ($)', Value: totalBusiness },
       { Metric: 'Today TopUps', Value: todayCount },
-      { Metric: 'Today Business', Value: todayBusiness },
-      { Metric: 'Leader TopUps (Count)', Value: leaderCount },
-      { Metric: 'Leader Business ($)', Value: leaderBusiness },
-      { Metric: 'Normal TopUps (Count)', Value: normalCount },
-      { Metric: 'Normal Business ($)', Value: normalBusiness },
+      { Metric: 'Today Business ($)', Value: todayBusiness }
     ];
 
     const table = filteredUsers.map((u, i) => ({
       SNo: i + 1,
       UserID: u.userId,
       Name: u.name || '',
-      Mobile: u.mobile || 'N/A',
-      Type: u.initiatorRole === 'leader' ? 'Leader' : 'Normal',
+      Package: u.packageName,
       ToppedUpBy: u.topUpBy || 'Self / System',
       Amount: u.topUpAmount,
       Date: getISTDateTimeString(u.topUpDate),
@@ -218,8 +150,9 @@ const TotalTopUpPage = () => {
 
   return (
     <div className="p-6 max-w-7xl pt-24 text-black mx-auto">
-      <h2 className="text-3xl font-bold text-indigo-700 mb-6">💰 Detailed Top-Up Report</h2>
+      <h2 className="text-3xl font-bold text-indigo-700 mb-6">📦 User Package Report</h2>
 
+      {/* FILTER SECTION */}
       <div className="flex flex-col md:flex-row gap-4 mb-6 flex-wrap bg-slate-50 p-4 rounded-xl border border-slate-200">
         <input
           type="text"
@@ -230,13 +163,20 @@ const TotalTopUpPage = () => {
         />
 
         <select
-          value={selectedRole}
-          onChange={(e) => setSelectedRole(e.target.value)}
+          value={searchPackage}
+          onChange={(e) => setSearchPackage(e.target.value)}
           className="px-4 py-2 border rounded w-full md:flex-1 shadow-sm outline-none font-semibold text-slate-700"
         >
-          <option value="">All Types</option>
-          <option value="leader">Leader TopUps</option>
-          <option value="normal">Normal TopUps</option>
+          <option value="">All Packages</option>
+          <option value="SAVING 1">SAVING 1 ($2)</option>
+          <option value="SAVING 2">SAVING 2 ($5)</option>
+          <option value="SAVING 3">SAVING 3 ($10)</option>
+          <option value="SAVING 4">SAVING 4 ($20)</option>
+          <option value="SAVING 5">SAVING 5 ($50)</option>
+          <option value="SAVING 6">SAVING 6 ($100)</option>
+          <option value="SAVING 7">SAVING 7 ($200)</option>
+          <option value="SAVING 8">SAVING 8 ($500)</option>
+          <option value="SAVING 9">SAVING 9 ($1000)</option>
         </select>
 
         <div className="flex items-center gap-2">
@@ -271,23 +211,37 @@ const TotalTopUpPage = () => {
         </select>
         
         <button 
-           onClick={() => { setFromDate(''); setToDate(''); }} 
+           onClick={() => { setFromDate(''); setToDate(''); setSearchPackage(''); setSearchId(''); }} 
            className="bg-gray-200 text-gray-700 font-bold px-4 py-2 rounded hover:bg-gray-300 transition shadow-sm text-xs w-full md:w-auto"
         >
-          Clear Dates
+          Clear
         </button>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-6">
+      {/* 🚀 MAIN STATS CARDS */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+        <SummaryCard label="Total TopUps" value={filteredUsers.length} color="bg-indigo-100 border-indigo-200" />
         <SummaryCard label="Total Business" value={`$${totalBusiness}`} color="bg-green-100 border-green-200" />
+        <SummaryCard label="Today TopUps" value={todayCount} color="bg-blue-100 border-blue-200" />
         <SummaryCard label="Today Business" value={`$${todayBusiness}`} color="bg-teal-100 border-teal-200" />
-        <SummaryCard label="Leader Business" value={`$${leaderBusiness}`} color="bg-yellow-100 border-yellow-300" />
-        <SummaryCard label="Leader Count" value={leaderCount} color="bg-orange-100 border-orange-300" />
-        <SummaryCard label="Normal Business" value={`$${normalBusiness}`} color="bg-indigo-100 border-indigo-200" />
-        <SummaryCard label="Normal Count" value={normalCount} color="bg-blue-100 border-blue-200" />
       </div>
 
-      <div className="flex justify-between items-center mb-4">
+      {/* 📦 PACKAGE-WISE STATS CARDS */}
+      <h3 className="text-sm font-black text-slate-500 uppercase tracking-widest mb-3 border-b pb-2">📦 Package Sales Summary</h3>
+      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-9 gap-3 mb-8">
+        <SmallCard label="SAVING 1 ($2)" value={packageCounts['SAVING 1']} />
+        <SmallCard label="SAVING 2 ($5)" value={packageCounts['SAVING 2']} />
+        <SmallCard label="SAVING 3 ($10)" value={packageCounts['SAVING 3']} />
+        <SmallCard label="SAVING 4 ($20)" value={packageCounts['SAVING 4']} />
+        <SmallCard label="SAVING 5 ($50)" value={packageCounts['SAVING 5']} />
+        <SmallCard label="SAVING 6 ($100)" value={packageCounts['SAVING 6']} />
+        <SmallCard label="SAVING 7 ($200)" value={packageCounts['SAVING 7']} />
+        <SmallCard label="SAVING 8 ($500)" value={packageCounts['SAVING 8']} />
+        <SmallCard label="SAVING 9 ($1K)" value={packageCounts['SAVING 9']} />
+      </div>
+
+      {/* TABLE HEADER */}
+      <div className="flex justify-between items-center mb-4 mt-4">
         <p className="text-sm text-gray-500 font-bold uppercase tracking-widest">Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredUsers.length)} of {filteredUsers.length} entries</p>
         <button
           onClick={exportToCSV}
@@ -297,6 +251,7 @@ const TotalTopUpPage = () => {
         </button>
       </div>
 
+      {/* DATA TABLE */}
       {loading ? (
         <div className="text-center p-10 text-gray-500 font-bold tracking-widest uppercase text-lg animate-pulse">⏳ Loading Data...</div>
       ) : (
@@ -307,7 +262,7 @@ const TotalTopUpPage = () => {
                 <th className="px-4 py-3 font-black text-slate-600 uppercase tracking-widest text-[11px]">#</th>
                 <th className="px-4 py-3 font-black text-slate-600 uppercase tracking-widest text-[11px]">User ID</th>
                 <th className="px-4 py-3 font-black text-slate-600 uppercase tracking-widest text-[11px]">Name</th>
-                <th className="px-4 py-3 font-black text-slate-600 uppercase tracking-widest text-[11px]">Type</th>
+                <th className="px-4 py-3 font-black text-slate-600 uppercase tracking-widest text-[11px]">Package Name</th>
                 <th className="px-4 py-3 font-black text-slate-600 uppercase tracking-widest text-[11px] whitespace-nowrap">Topped Up By</th>
                 <th className="px-4 py-3 font-black text-slate-600 uppercase tracking-widest text-[11px]">Amount</th>
                 <th className="px-4 py-3 font-black text-slate-600 uppercase tracking-widest text-[11px]">Date (IST)</th>
@@ -322,54 +277,36 @@ const TotalTopUpPage = () => {
                 paginatedUsers.map((u, i) => (
                   <tr 
                     key={u._id || i} 
-                    // 🔥 YAHAN CONDITIONAL CLASS LAGI HAI LEADER RED LINE KE LIYE
-                    className={`transition-colors border-b ${u.initiatorRole === 'leader' ? 'bg-red-50 hover:bg-red-100 border-red-100' : 'bg-white hover:bg-indigo-50/30 border-slate-100'}`}
+                    className="transition-colors border-b bg-white hover:bg-indigo-50/30 border-slate-100"
                   >
                     <td className="px-4 py-3 text-gray-500 font-bold">{startIndex + i + 1}</td>
                     
                     <td className="px-4 py-3 font-black text-indigo-600">
-                      <button
-                        onClick={() => handleImpersonate(u.userId)}
-                        className="flex items-center gap-1 hover:text-indigo-800 hover:underline transition-all"
-                       >
-                        #{u.userId}
-                        {/* <ExternalLink size={12} className="opacity-70" /> */}
-                      </button>
+                      <span className="flex items-center gap-1">#{u.userId}</span>
                     </td>
 
                     <td className="px-4 py-3 text-gray-800 capitalize font-bold">{u.name}</td>
                     
                     <td className="px-4 py-3">
-                      {u.initiatorRole === 'leader' ? (
-                        <span className="inline-flex items-center gap-1 bg-yellow-100 text-yellow-800 border border-yellow-300 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest">
-                          <Crown size={12} /> Leader
+                        <span className="inline-flex items-center gap-1.5 bg-indigo-100 text-indigo-800 border border-indigo-200 px-2 py-1 rounded text-[11px] font-black tracking-wider">
+                          <Package size={14} /> {u.packageName}
                         </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 border border-blue-200 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest">
-                          <User size={12} /> Normal
-                        </span>
-                      )}
                     </td>
 
                     <td className="px-4 py-3 text-gray-600 font-medium">
                        {(!u.topUpBy || String(u.topUpBy).toLowerCase() === 'self' || String(u.topUpBy).toLowerCase() === 'system') ? (
-                         <span className={`text-[10px] border px-2 py-0.5 rounded font-black uppercase tracking-widest ${u.initiatorRole === 'leader' ? 'bg-white border-red-200 text-red-500' : 'bg-slate-100 border-slate-200 text-slate-500'}`}>
-                           {u.topUpBy || 'Self / System'}
+                         <span className="text-[10px] border px-2 py-0.5 rounded font-black uppercase tracking-widest bg-slate-100 border-slate-200 text-slate-500">
+                           {u.topUpBy || 'Self'}
                          </span>
                        ) : (
-                         <button 
-                           onClick={() => handleImpersonate(u.topUpBy)}
-                           className={`flex items-center gap-1.5 px-2 py-1 rounded border w-max transition-all ${u.initiatorRole === 'leader' ? 'bg-white border-red-200 hover:bg-red-100 text-red-600' : 'bg-gray-50 border-gray-200 hover:bg-gray-100 hover:text-indigo-600 text-gray-700'}`}
-                          >
-                          
-                           <ArrowRightCircle size={14} className={u.initiatorRole === 'leader' ? 'text-red-400' : 'text-gray-400'} />
-                           <span className="text-xs font-bold transition-colors">{u.topUpBy}</span>
-                           {/* <ExternalLink size={12} className="opacity-70" /> */}
-                         </button>
+                         <span className="text-xs font-bold text-indigo-600 border border-indigo-100 bg-indigo-50 px-2 py-1 rounded">
+                           {u.topUpBy}
+                         </span>
                        )}
                     </td>
 
                     <td className="px-4 py-3 text-emerald-600 font-black text-base">${u.topUpAmount}</td>
+                    
                     <td className="px-4 py-3 text-slate-500 font-bold text-[11px] md:text-xs whitespace-nowrap">
                         {getISTDateTimeString(u.topUpDate)}
                     </td>
@@ -404,10 +341,19 @@ const TotalTopUpPage = () => {
   );
 };
 
+// Main Stats Card Component
 const SummaryCard = ({ label, value, color }) => (
   <div className={`${color} p-4 rounded-xl shadow-sm border flex flex-col justify-center transform hover:scale-[1.02] transition-transform`}>
     <h4 className="text-slate-600 text-[10px] sm:text-[11px] font-black uppercase tracking-widest mb-1.5 leading-tight">{label}</h4>
     <p className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">{value}</p>
+  </div>
+);
+
+// 🔥 New Component for Package Mini Cards
+const SmallCard = ({ label, value }) => (
+  <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-200 flex flex-col items-center justify-center text-center">
+    <h4 className="text-slate-500 text-[9px] font-black uppercase tracking-widest mb-1">{label}</h4>
+    <p className="text-lg font-black text-indigo-600">{value}</p>
   </div>
 );
 

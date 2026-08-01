@@ -1736,21 +1736,104 @@ const user = await User.findOne({ userId: req.params.userId });
 
 
  // Get deduplicated top-up users
+// router.get('/topup-users', verifyAdmin, async (req, res) => {
+//   try {
+//     const topups = await Transaction.aggregate([
+//       { 
+//         $match: { 
+//           type: 'topup',
+//           status: { $in: ['success', 'completed'] }, // 🔥 FIX: Sirf successful topups
+//           $expr: { $eq: ["$userId", "$toUserId"] } // Duplicate filter
+//         } 
+//       },
+//       {
+//         $group: {
+//           _id: {
+//             userId: "$userId",
+//             // Ek hi din mein same amount ke multiple entries ko group karne ke liye
+//             date: { $dateToString: { format: "%Y-%m-%d", date: { $ifNull: ["$date", "$createdAt"] } } }
+//           },
+//           latest: { $last: "$$ROOT" }
+//         }
+//       },
+//       { $replaceRoot: { newRoot: "$latest" } },
+//       { $sort: { date: -1 } }
+//     ]);
+
+//     // 🔍 Saare User IDs (Receiver) aur Initiator IDs (Jisne topup kiya) dono ko nikalna
+//     const allUserIds = new Set();
+//     topups.forEach(t => {
+//         if (t.userId) allUserIds.add(Number(t.userId));
+//         if (t.fromUserId) allUserIds.add(Number(t.fromUserId));
+//     });
+
+//     // 🚀 Users table se Data aur Role fetch karna
+//     const users = await User.find(
+//       { userId: { $in: Array.from(allUserIds) } }, 
+//       { userId: 1, name: 1, mobile: 1, role: 1 }
+//     ).lean();
+
+//     // Fast lookup ke liye userMap banana
+//     const userMap = {};
+//     users.forEach(u => userMap[Number(u.userId)] = u);
+
+//     // Final result map karna frontend ke liye
+//     const result = topups.map(tx => {
+//       // 💰 DECIMAL128 & AMOUNT FIX
+//       let amountStr = "0";
+//       if (tx.amount !== undefined && tx.amount !== null) {
+//           if (tx.amount.$numberDecimal) amountStr = tx.amount.$numberDecimal;
+//           else amountStr = tx.amount.toString();
+//       }
+//       let amount = Number(amountStr) || 0;
+//       if (amount === 0) amount = 30; // Fallback for old records
+
+//       // 👑 ROLE & "TOPPED UP BY" FINDER
+//       const initiatorId = Number(tx.fromUserId || tx.userId);
+//       const initiatorRole = userMap[initiatorId]?.role === 'leader' ? 'leader' : 'normal';
+
+//       // 🔥 NAYA LOGIC: Kisne Top-Up kiya?
+//       let topUpByName = "Self"; 
+//       if (tx.fromUserId && Number(tx.fromUserId) !== Number(tx.userId)) {
+//           const senderName = userMap[Number(tx.fromUserId)]?.name || 'Unknown';
+//           topUpByName = `${senderName} (#${tx.fromUserId})`; // Result: "Rahul Sharma (#123456)"
+//       } else if (tx.source === 'admin' || tx.source === 'system') {
+//           topUpByName = "System / Admin";
+//       }
+
+//       return {
+//         _id: tx._id,
+//         userId: tx.userId,
+//         name: userMap[Number(tx.userId)]?.name || 'Unknown',
+//         mobile: userMap[Number(tx.userId)]?.mobile || 'N/A', 
+//         topUpAmount: amount,
+//         topUpDate: tx.date || tx.createdAt,
+//         initiatorRole: initiatorRole, 
+//         topUpBy: topUpByName // 🔥 NAYA FIELD FRONTEND KE LIYE BHEJ DIYA
+//       };
+//     });
+
+//     res.json(result);
+//   } catch (err) {
+//     console.error('Error in /topup-users:', err);
+//     res.status(500).json({ error: 'Failed to fetch top-up users' });
+//   }
+// });
+
+
 router.get('/topup-users', verifyAdmin, async (req, res) => {
   try {
     const topups = await Transaction.aggregate([
       { 
         $match: { 
-          type: 'topup',
-          status: { $in: ['success', 'completed'] }, // 🔥 FIX: Sirf successful topups
-          $expr: { $eq: ["$userId", "$toUserId"] } // Duplicate filter
+          type: { $in: ['topup', 'package_activation'] }, 
+          status: { $in: ['success', 'completed'] }
         } 
       },
       {
         $group: {
           _id: {
-            userId: "$userId",
-            // Ek hi din mein same amount ke multiple entries ko group karne ke liye
+            userId: "$toUserId", // Jisko package mila
             date: { $dateToString: { format: "%Y-%m-%d", date: { $ifNull: ["$date", "$createdAt"] } } }
           },
           latest: { $last: "$$ROOT" }
@@ -1760,56 +1843,61 @@ router.get('/topup-users', verifyAdmin, async (req, res) => {
       { $sort: { date: -1 } }
     ]);
 
-    // 🔍 Saare User IDs (Receiver) aur Initiator IDs (Jisne topup kiya) dono ko nikalna
+    // 🔥 FIX 1: Number() ki jagah String() use kiya gaya hai
     const allUserIds = new Set();
     topups.forEach(t => {
-        if (t.userId) allUserIds.add(Number(t.userId));
-        if (t.fromUserId) allUserIds.add(Number(t.fromUserId));
+        const receiver = t.toUserId || t.userId;
+        if (receiver) allUserIds.add(String(receiver)); 
+        if (t.fromUserId) allUserIds.add(String(t.fromUserId));
     });
 
-    // 🚀 Users table se Data aur Role fetch karna
     const users = await User.find(
       { userId: { $in: Array.from(allUserIds) } }, 
-      { userId: 1, name: 1, mobile: 1, role: 1 }
+      { userId: 1, name: 1, mobile: 1 } 
     ).lean();
 
-    // Fast lookup ke liye userMap banana
+    // 🔥 FIX 2: Mapping me bhi String() use kiya hai
     const userMap = {};
-    users.forEach(u => userMap[Number(u.userId)] = u);
+    users.forEach(u => userMap[String(u.userId)] = u);
 
-    // Final result map karna frontend ke liye
+    const packageMap = {
+      2: 'SAVING 1', 5: 'SAVING 2', 10: 'SAVING 3', 20: 'SAVING 4',
+      50: 'SAVING 5', 100: 'SAVING 6', 200: 'SAVING 7', 500: 'SAVING 8', 1000: 'SAVING 9'
+    };
+
     const result = topups.map(tx => {
-      // 💰 DECIMAL128 & AMOUNT FIX
       let amountStr = "0";
       if (tx.amount !== undefined && tx.amount !== null) {
           if (tx.amount.$numberDecimal) amountStr = tx.amount.$numberDecimal;
           else amountStr = tx.amount.toString();
       }
       let amount = Number(amountStr) || 0;
-      if (amount === 0) amount = 30; // Fallback for old records
 
-      // 👑 ROLE & "TOPPED UP BY" FINDER
-      const initiatorId = Number(tx.fromUserId || tx.userId);
-      const initiatorRole = userMap[initiatorId]?.role === 'leader' ? 'leader' : 'normal';
+      const packageName = packageMap[amount] || `Custom`;
+      
+      // 🔥 FIX 3: receiverId ko properly String banaya
+      const receiverId = String(tx.toUserId || tx.userId);
 
       // 🔥 NAYA LOGIC: Kisne Top-Up kiya?
       let topUpByName = "Self"; 
-      if (tx.fromUserId && Number(tx.fromUserId) !== Number(tx.userId)) {
-          const senderName = userMap[Number(tx.fromUserId)]?.name || 'Unknown';
-          topUpByName = `${senderName} (#${tx.fromUserId})`; // Result: "Rahul Sharma (#123456)"
+      if (tx.fromUserId && String(tx.fromUserId) !== receiverId) {
+          const senderIdStr = String(tx.fromUserId);
+          const senderName = userMap[senderIdStr]?.name || 'Unknown';
+          topUpByName = `${senderName} (#${senderIdStr})`; 
       } else if (tx.source === 'admin' || tx.source === 'system') {
           topUpByName = "System / Admin";
       }
 
       return {
         _id: tx._id,
-        userId: tx.userId,
-        name: userMap[Number(tx.userId)]?.name || 'Unknown',
-        mobile: userMap[Number(tx.userId)]?.mobile || 'N/A', 
+        userId: receiverId,
+        // 🔥 FIX 4: userMap se data proper String key pass karke nikala
+        name: userMap[receiverId]?.name || 'Unknown',
+        mobile: userMap[receiverId]?.mobile || 'N/A', 
         topUpAmount: amount,
-        topUpDate: tx.date || tx.createdAt,
-        initiatorRole: initiatorRole, 
-        topUpBy: topUpByName // 🔥 NAYA FIELD FRONTEND KE LIYE BHEJ DIYA
+        packageName: packageName,
+        topUpBy: topUpByName, 
+        topUpDate: tx.date || tx.createdAt
       };
     });
 
@@ -1819,9 +1907,6 @@ router.get('/topup-users', verifyAdmin, async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch top-up users' });
   }
 });
-
-
-
 
 
 
