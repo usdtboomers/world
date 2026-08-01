@@ -160,8 +160,7 @@ cron.schedule('01 1 * * *', async () => {
                 const roiAmount = pkg.dailyRoi; 
                 user.roiIncome = (user.roiIncome || 0) + roiAmount;
                 user.totalRoiIncome = (user.totalRoiIncome || 0) + roiAmount;
-                user.walletBalance = (user.walletBalance || 0) + roiAmount; 
-                await user.save();
+                 await user.save();
 
                 // 3. Package days update
                 pkg.daysCompleted += 1;
@@ -210,8 +209,7 @@ cron.schedule('01 1 * * *', async () => {
                         if (dailyLevelBonus > 0) {
                             upline.levelIncome = (upline.levelIncome || 0) + dailyLevelBonus;
                             upline.totalLevelIncome = (upline.totalLevelIncome || 0) + dailyLevelBonus;
-                            upline.walletBalance = (upline.walletBalance || 0) + dailyLevelBonus; 
-                            await upline.save();
+                             await upline.save();
 
                             await Transaction.create({
                                 userId: upline.userId,
