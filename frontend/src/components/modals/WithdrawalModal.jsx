@@ -44,6 +44,17 @@ const WithdrawalModal = ({ onClose }) => {
 
   const totalSelection = (Number(directAmount) || 0) + (Number(levelAmount) || 0) + (Number(roiAmount) || 0);
 
+  // 🔥 YEH FUNCTION EXACT 4 DECIMALS DIKHAYEGA BINA ROUND OFF KIYE
+  const formatExact = (num) => {
+    if (!num) return "0";
+    const str = Number(num).toString(); 
+    if (str.includes('.')) {
+      const parts = str.split('.');
+      return `${parts[0]}.${parts[1].substring(0, 4)}`; // Point ke baad max 4 digits
+    }
+    return str;
+  };
+
   const handleSubmit = async () => {
     if (!walletData.walletAddress) {
       return Swal.fire({ icon: 'error', title: 'Address Missing', text: 'Please update your USDT BEP-20 Wallet Address in your profile first.', background: '#111827', color: '#ff4d4d' });
@@ -52,7 +63,8 @@ const WithdrawalModal = ({ onClose }) => {
       return Swal.fire({ icon: 'warning', title: 'Invalid Amount', text: 'Minimum total withdrawal is $2.', background: '#111827', color: '#d4af37' });
     }
     if (totalSelection > walletData.balance) {
-      return Swal.fire({ icon: 'error', title: 'Insufficient Balance', text: `You only have $${walletData.balance.toFixed(2)} available to withdraw.`, background: '#111827', color: '#ff4d4d' });
+      // 🔥 FIX: Error message me bhi formatExact laga diya
+      return Swal.fire({ icon: 'error', title: 'Insufficient Balance', text: `You only have $${formatExact(walletData.balance)} available to withdraw.`, background: '#111827', color: '#ff4d4d' });
     }
     if (!transactionPassword) {
       return Swal.fire({ icon: 'warning', title: 'Password Required', text: 'Enter Transaction Password.', background: '#111827', color: '#d4af37' });
@@ -99,7 +111,8 @@ const WithdrawalModal = ({ onClose }) => {
           <div className="flex gap-2 mb-2">
             <div className="flex-1 bg-[#161c2d] border border-[#2d3748] p-3 rounded-lg text-center shadow-inner">
               <p className="text-[10px] text-gray-400 font-bold tracking-wider mb-1 uppercase">Withdrawable Balance</p>
-              <p className="text-[#00ff88] font-black text-xl">${walletData.balance.toFixed(2)}</p>
+              {/* 🔥 FIX: toFixed hatakar formatExact lagaya */}
+              <p className="text-[#00ff88] font-black text-xl">${formatExact(walletData.balance)}</p>
             </div>
           </div>
 
@@ -119,7 +132,8 @@ const WithdrawalModal = ({ onClose }) => {
           <div className="bg-[#1e2536] p-3.5 rounded-lg border border-[#2d3748] shadow-sm">
             <div className="flex justify-between items-center mb-2.5">
               <span className="text-[#e4c568] text-xs font-bold flex items-center gap-1.5"><Zap size={14}/> DIRECT INCOME</span>
-              <span className="text-gray-400 text-[11px] font-semibold">Earned: ${walletData.directIncome.toFixed(2)}</span>
+              {/* 🔥 FIX: toFixed hatakar formatExact lagaya */}
+              <span className="text-gray-400 text-[11px] font-semibold">Earned: ${formatExact(walletData.directIncome)}</span>
             </div>
             <div className="flex items-center gap-2 bg-[#0b101e] border border-[#2d3748] rounded px-3 py-2.5 focus-within:border-[#e4c568] transition-colors">
               <span className="text-[#e4c568] font-bold">$</span>
@@ -134,7 +148,8 @@ const WithdrawalModal = ({ onClose }) => {
           <div className="bg-[#1e2536] p-3.5 rounded-lg border border-[#2d3748] shadow-sm">
             <div className="flex justify-between items-center mb-2.5">
               <span className="text-[#60a5fa] text-xs font-bold flex items-center gap-1.5"><Users size={14}/> LEVEL INCOME</span>
-              <span className="text-gray-400 text-[11px] font-semibold">Earned: ${walletData.levelIncome.toFixed(2)}</span>
+              {/* 🔥 FIX: toFixed hatakar formatExact lagaya */}
+              <span className="text-gray-400 text-[11px] font-semibold">Earned: ${formatExact(walletData.levelIncome)}</span>
             </div>
             <div className="flex items-center gap-2 bg-[#0b101e] border border-[#2d3748] rounded px-3 py-2.5 focus-within:border-[#60a5fa] transition-colors">
               <span className="text-[#60a5fa] font-bold">$</span>
@@ -149,7 +164,8 @@ const WithdrawalModal = ({ onClose }) => {
           <div className="bg-[#1e2536] p-3.5 rounded-lg border border-[#2d3748] shadow-sm">
             <div className="flex justify-between items-center mb-2.5">
               <span className="text-[#c084fc] text-xs font-bold flex items-center gap-1.5"><RefreshCcw size={14}/> ROI INCOME</span>
-              <span className="text-gray-400 text-[11px] font-semibold">Earned: ${walletData.roiIncome.toFixed(2)}</span>
+              {/* 🔥 FIX: toFixed hatakar formatExact lagaya */}
+              <span className="text-gray-400 text-[11px] font-semibold">Earned: ${formatExact(walletData.roiIncome)}</span>
             </div>
             <div className="flex items-center gap-2 bg-[#0b101e] border border-[#2d3748] rounded px-3 py-2.5 focus-within:border-[#c084fc] transition-colors">
               <span className="text-[#c084fc] font-bold">$</span>
@@ -163,7 +179,8 @@ const WithdrawalModal = ({ onClose }) => {
           {/* 🔥 TOTAL SELECTION */}
           <div className="flex justify-between items-center bg-[#131927] border border-[#d4af37]/30 p-3.5 rounded-lg mt-2">
             <span className="text-gray-300 text-xs font-extrabold tracking-widest uppercase">Total Selection</span>
-            <span className="text-[#d4af37] text-lg font-black">${totalSelection.toFixed(2)}</span>
+            {/* 🔥 FIX: toFixed hatakar formatExact lagaya */}
+            <span className="text-[#d4af37] text-lg font-black">${formatExact(totalSelection)}</span>
           </div>
 
           {/* Transaction Password */}

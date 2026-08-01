@@ -19,14 +19,11 @@ const LevelIncome = () => {
     }
 
     setLoading(true);
-    // 🔥 CACHE FIX: URL mein &t=${new Date().getTime()} add kiya hai
-    // type ko direct_income se level_income kar diya
     api.get(`/transaction/transactions/${userId}?type=level_income&t=${new Date().getTime()}`)
       .then((res) => {
-        // Extra strict filter hata diya (jaise Direct income mein kiya tha)
         const sorted = (res.data || [])
+          .filter(txn => txn.fromUserId && txn.fromUserId !== userId)
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-          
         setTransactions(sorted);
         setFiltered(sorted);
       })
@@ -147,25 +144,15 @@ const LevelIncome = () => {
                 paginated.map((txn, idx) => {
                   const date = new Date(txn.createdAt);
                   
-                  // 🔥 LEADER TEXT FIX: Remove "(Leader)" from description
                   const cleanDescription = txn.description 
                     ? txn.description.replace(/\s*\(Leader\)/gi, "") 
                     : "Level income";
 
-                  // 🔥 SMART PACKAGE CALCULATION FOR LEVEL INCOME
                   let packageAmount = Number(txn.package);
+                  
                   if (!packageAmount || packageAmount <= 0) {
-                    const descLower = cleanDescription.toLowerCase();
-                    if (descLower.includes("level 1 ") || descLower.includes("level 1")) {
-                      // Level 1 = 5% Income -> Package = Income * 20
-                      packageAmount = Number(txn.amount) * 20;
-                    } else {
-                      // Level 2 to 12 = 1% Income -> Package = Income * 100
-                      packageAmount = Number(txn.amount) * 100;
-                    }
-                    
-                    // Fallback to 30 just in case amount is 0
-                    if (packageAmount === 0) packageAmount = 30;
+                      packageAmount = Number(txn.amount) * 400;
+                      if (packageAmount === 0) packageAmount = 30;
                   }
 
                   return (
@@ -176,7 +163,7 @@ const LevelIncome = () => {
                         {indexOfFirst + idx + 1}
                       </td>
                       
-                      {/* Date (Time Removed) */}
+                      {/* Date */}
                       <td className="p-4 border-r border-gray-700/50 text-center font-medium">
                          {date.toLocaleDateString("en-GB", { day: '2-digit', month: 'short', year: 'numeric' })}
                       </td>
@@ -196,9 +183,9 @@ const LevelIncome = () => {
                         </span>
                       </td>
 
-                      {/* Income Amount */}
+                      {/* 🔥 INCOME AMOUNT FIX: Hata diya .toFixed(2) ab exact decimal aayega */}
                       <td className="p-4 border-r border-gray-700/50 font-bold text-center text-green-400">
-                        + ${Number(txn.amount).toFixed(2)}
+                        + ${Number(txn.amount)}
                       </td>
 
                       {/* Description */}
