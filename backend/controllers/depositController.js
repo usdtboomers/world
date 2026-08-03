@@ -166,8 +166,28 @@ const sweepFunds = async (user_id) => {
         user.walletBalance = (user.walletBalance || 0) + finalSweptAmount; // <-- YAHAN CHANGE KIYA HAI
         await user.save();
         
+        // await Transaction.create({
+        //     userId: user.userId,
+        //     amount: finalSweptAmount,
+        //     type: 'deposit',
+        //     status: 'completed', 
+        //     description: `Auto-Deposit of ${finalSweptAmount} USDT via BEP-20`,
+        //     date: new Date(),
+        //     txHash: actualHash,  
+        //     txnHash: actualHash  
+        // });
+
+        // await Deposit.create({
+        //     userId: user.userId,
+        //     amount: finalSweptAmount,
+        //     txnHash: actualHash, 
+        //     status: 'approved',
+        //     createdAt: new Date()
+        // });
+
         await Transaction.create({
             userId: user.userId,
+            name: user.name, // 🔥 NAYA: Name add kar diya
             amount: finalSweptAmount,
             type: 'deposit',
             status: 'completed', 
@@ -179,6 +199,7 @@ const sweepFunds = async (user_id) => {
 
         await Deposit.create({
             userId: user.userId,
+            name: user.name, // 🔥 NAYA: Name add kar diya taaki table me N/A na aaye!
             amount: finalSweptAmount,
             txnHash: actualHash, 
             status: 'approved',

@@ -10,7 +10,7 @@ const DummyUserSchema = new mongoose.Schema({
   mobile: { type: String },
   isDummy: { type: Boolean, default: true },
   topUpAmount: { type: Number, default: 0 },
-  withdrawAmount: { type: Number, default: 0 }, // 🔥 NAYA FIELD ADD KIYA HAI WITHDRAW KE LIYE
+  withdrawAmount: { type: Number, default: 0 }, // NAYA FIELD ADD KIYA HAI WITHDRAW KE LIYE
   sponsorId: { type: String }, 
   createdAt: { type: Date, default: Date.now }
 });

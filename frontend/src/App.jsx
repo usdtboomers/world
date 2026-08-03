@@ -49,6 +49,7 @@ import CreditToWallet from './pages/user/CreditToWallet.jsx';
 import Notifications from "./pages/user/Notifications.jsx";
 import UserLayout from "./components/layout/UserLayout.jsx";
 import TradingStatusPanel from './pages/user/TradingStatusPanel';
+import SystemDepositHistory from './pages/user/SystemDepositHistory';
  
  import GlobalTeam from './pages/user/GlobalTeam';
 // 🔹 Admin Pages
@@ -244,6 +245,9 @@ function AppContent() {
             <Route path="/all-team" element={<RequireUserAuth><UserLayout><AllTeamPage /></UserLayout></RequireUserAuth>} />
             <Route path="/my-packages" element={<RequireUserAuth><UserLayout><UserPackages /></UserLayout></RequireUserAuth>} />
 <Route path="/user/trading" element={<RequireUserAuth><UserLayout><TradingStatusPanel /></UserLayout></RequireUserAuth>} />            
+<Route path="system-live-feed" element={<RequireUserAuth><UserLayout><SystemDepositHistory /></UserLayout></RequireUserAuth>} />            
+          
+          
             <Route 
     path="/global-community" 
     element={

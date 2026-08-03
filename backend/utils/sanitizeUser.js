@@ -10,7 +10,7 @@ module.exports = function sanitizeUser(user) {
     mobile: user.mobile, 
     role: user.role,
     sponsorId: user.sponsorId,
-    
+    createdAt: user.createdAt,
     // 🛡️ WALLET & SECURITY
     walletAddress: user.walletAddress || "", 
     walletAddressChangeCount: user.walletAddressChangeCount || 0,

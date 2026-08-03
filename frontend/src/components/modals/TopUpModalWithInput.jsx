@@ -848,9 +848,9 @@ const TopUpModalWithInput = ({ onClose, onSuccess, packageAmount }) => {
         login(refreshedRes.data.user, token);
         setFundWallet(refreshedRes.data.user.walletBalance);
 
-        if (onSuccess) {
-            setTimeout(() => { onSuccess(); onClose(); }, 2000);
-        }
+       if (onSuccess) {
+    onSuccess(); 
+ }
       }
     } catch (err) {
       const msg = err.response?.data?.message || "❌ Activation failed";
@@ -915,7 +915,7 @@ const TopUpModalWithInput = ({ onClose, onSuccess, packageAmount }) => {
                 value={memberId} 
                 onChange={(e) => setMemberId(e.target.value)}
                 required
-                placeholder="Enter Target Member ID"
+                placeholder="Enter Member ID"
                 className="w-full bg-[#131927] border border-[#2d3748] text-white px-3 py-2.5 rounded outline-none focus:border-[#e4c568] focus:ring-1 focus:ring-[#e4c568] placeholder-gray-500 text-sm"
               />
             </div>

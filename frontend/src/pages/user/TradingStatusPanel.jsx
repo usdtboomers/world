@@ -237,11 +237,291 @@
 // }
 
 
+// import React, { useEffect, useState, useRef } from "react";
+// import api from "../../api/axios";
+// import { TrendingUp, TrendingDown, Activity, Zap, RefreshCcw, Search } from "lucide-react";
+
+// // Stable hash - har coin ko hamesha same Long/Short + leverage milta hai (har poll pe flip nahi hoga)
+// function hashCode(str) {
+//   let hash = 0;
+//   for (let i = 0; i < str.length; i++) {
+//     hash = (hash << 5) - hash + str.charCodeAt(i);
+//     hash |= 0;
+//   }
+//   return Math.abs(hash);
+// }
+
+// const LEVERAGES = [5, 10, 15, 20];
+// const BATCH_SIZE = 10; // 🔥 10-10 karke load
+
+// export default function TradingStatusPanel() {
+//   const [symbols, setSymbols] = useState([]);      // 🔥 real, backend-validated USDT pairs (BTC/USDT sabse upar)
+//   const [rows, setRows] = useState([]);
+//   const [loading, setLoading] = useState(true);
+//   const [lastUpdated, setLastUpdated] = useState("");
+//   const [searchQuery, setSearchQuery] = useState("");
+//   const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
+
+//   const entriesRef = useRef({}); // pehli baar jo price mile wahi entry freeze ho jaati hai
+
+//   // 🔥 Step 1: backend se real validated symbols ki poori list (ek hi baar)
+//   async function loadSymbols() {
+//     try {
+//       const res = await api.get("/market/symbols");
+//       const list = res.data?.symbols || [];
+//       setSymbols(list);
+//     } catch (e) {
+//       console.error("Failed to fetch symbol list:", e);
+//     }
+//   }
+
+//   // 🔥 Step 2: sirf abhi jitne coins visible hain unhi ke live prices fetch karo (10-10 karke)
+//   async function loadPrices(activeSymbols) {
+//     if (!activeSymbols.length) {
+//       setLoading(false);
+//       return;
+//     }
+
+//     try {
+//       const res = await api.get("/market/prices", {
+//         params: { symbols: activeSymbols.join(",") },
+//       });
+//       const prices = res.data?.prices || [];
+//       const map = new Map(prices.map((p) => [p.symbol, Number(p.price)]));
+
+//       const merged = activeSymbols.map((symbol) => {
+//         const latest = map.get(symbol);
+//         const pair = `${symbol.replace("USDT", "")}/USDT`;
+
+//         // entry price sirf pehli baar freeze hoti hai, phir wahi rehti hai
+//         if (latest && !entriesRef.current[symbol]) {
+//           entriesRef.current[symbol] = latest;
+//         }
+//         const entry = entriesRef.current[symbol];
+
+//         const h = hashCode(symbol);
+//         const side = h % 2 === 0 ? "Long" : "Short";
+//         const lev = LEVERAGES[h % LEVERAGES.length];
+
+//         let pnl = "--";
+//         let pnlValue = null; // 🔥 numeric PnL - isi se sahi sorting hogi, koi random nahi
+//         let isProfit = false;
+//         let color = "text-gray-500";
+//         let bgColor = "bg-gray-500/10";
+
+//         if (latest && entry) {
+//           const move = ((latest - entry) / entry) * 100;
+//           const pnlPct = move * (side === "Short" ? -1 : 1) * lev;
+
+//           pnlValue = pnlPct;
+//           isProfit = pnlPct >= 0;
+//           pnl = `${pnlPct > 0 ? "+" : ""}${pnlPct.toFixed(2)}%`;
+//           color = isProfit ? "text-green-400" : "text-red-400";
+//           bgColor = isProfit ? "bg-green-500/10 border-green-500/20" : "bg-red-500/10 border-red-500/20";
+//         }
+
+//         return { symbol, pair, entry, latest, side, lev, pnl, pnlValue, color, bgColor, isProfit };
+//       });
+
+//       // pehle se load ho chuke rows ko preserve karke naye merge karo
+//       setRows((prev) => {
+//         const prevMap = new Map(prev.map((r) => [r.symbol, r]));
+//         merged.forEach((r) => prevMap.set(r.symbol, r));
+
+//         const all = symbols.filter((s) => prevMap.has(s)).map((s) => prevMap.get(s));
+
+//         // 🔥 Sabse zyada REAL profit wala coin hamesha upar - koi fixed/random coin nahi.
+//         // Jinka price abhi load nahi hua (pnlValue null) woh sabse neeche chale jaate hain.
+//         return [...all].sort((a, b) => {
+//           if (a.pnlValue == null && b.pnlValue == null) return 0;
+//           if (a.pnlValue == null) return 1;
+//           if (b.pnlValue == null) return -1;
+//           return b.pnlValue - a.pnlValue;
+//         });
+//       });
+
+//       setLastUpdated(new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute:'2-digit', second:'2-digit' }));
+//     } catch (e) {
+//       console.error("Failed to fetch market prices:", e);
+//     }
+
+//     setLoading(false);
+//   }
+
+//   useEffect(() => {
+//     loadSymbols();
+//   }, []);
+
+//   // jab bhi symbols list mil jaaye ya visibleCount badhe, sirf utne hi coins ke prices load karo
+//   useEffect(() => {
+//     if (!symbols.length) return;
+//     const activeSymbols = symbols.slice(0, visibleCount);
+//     loadPrices(activeSymbols);
+
+//     const id = setInterval(() => loadPrices(activeSymbols), 10000);
+//     return () => clearInterval(id);
+//     // eslint-disable-next-line react-hooks/exhaustive-deps
+//   }, [symbols, visibleCount]);
+
+//   // Search karte hi 10 se wapas start karo
+//   useEffect(() => {
+//     setVisibleCount(BATCH_SIZE);
+//   }, [searchQuery]);
+
+//   // Search Filter logic
+//   const filteredRows = rows.filter(r =>
+//     r.pair.toLowerCase().includes(searchQuery.toLowerCase()) ||
+//     r.side.toLowerCase().includes(searchQuery.toLowerCase())
+//   );
+
+//   const hasMore = visibleCount < symbols.length;
+
+//   return (
+//     // 🔥 Faltu ki padding (p-8) aur min-h-screen hata diya taaki layout fit baithe
+//     <div className="w-full font-sans flex flex-col">
+
+//       {/* 🔥 max-w-7xl hata kar w-full kiya taaki parent box ke hisaab se automatic adjust ho */}
+//       <div className="w-full bg-[#131c31] rounded-2xl border-t-[3px] border-[#eab308] shadow-xl p-3 sm:p-5">
+
+//         {/* Header & Search Bar */}
+//         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-5 gap-3">
+//           <h2 className="text-lg sm:text-2xl text-[#eab308] font-bold tracking-wide flex items-center gap-2">
+//             <Activity className="text-[#eab308] w-5 h-5 sm:w-6 sm:h-6" />
+//             <span>Live Trading </span>
+//           </h2>
+
+//           <div className="flex items-center gap-3 w-full sm:w-auto">
+//             <div className="relative w-full sm:w-56">
+//               <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
+//                 <Search size={16} />
+//               </span>
+//               <input
+//                 type="text"
+//                 placeholder="Search coin..."
+//                 value={searchQuery}
+//                 onChange={(e) => setSearchQuery(e.target.value)}
+//                 className="w-full bg-[#0b1221] border border-gray-700 text-gray-200 text-xs sm:text-sm rounded-lg pl-9 pr-3 py-2 focus:outline-none focus:border-[#eab308] transition-colors"
+//               />
+//             </div>
+
+//             {!loading && (
+//               <div className="text-right hidden sm:block min-w-[70px]">
+//                 <span className="text-[9px] uppercase tracking-widest text-gray-500 font-bold block">Updated</span>
+//                 <span className="text-[11px] text-green-400 flex items-center gap-1 font-medium">
+//                   <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+//                   {lastUpdated}
+//                 </span>
+//               </div>
+//             )}
+//           </div>
+//         </div>
+
+//         {loading ? (
+//           <div className="w-full flex flex-col items-center justify-center py-12 text-[#eab308]">
+//             <RefreshCcw className="w-7 h-7 animate-spin mb-3" />
+//             <span className="font-bold tracking-widest text-xs uppercase">Syncing Markets...</span>
+//           </div>
+//         ) : filteredRows.length === 0 ? (
+//           <div className="text-center py-10 text-gray-500 text-xs sm:text-sm">
+//             No matching trading pairs found.
+//           </div>
+//         ) : (
+//           <>
+//             {/* 🔥 max-h-[70vh] rakha hai taaki zyada lambi list dashboard ko khrab na kare */}
+//             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 max-h-[60vh] overflow-y-auto pr-1 custom-scroll">
+//               <style>{`
+//                 .custom-scroll::-webkit-scrollbar { width: 4px; }
+//                 .custom-scroll::-webkit-scrollbar-thumb { background: #374151; border-radius: 10px; }
+//                 .custom-scroll::-webkit-scrollbar-thumb:hover { background: #eab308; }
+//               `}</style>
+//               {filteredRows.map((r) => (
+//                 <div
+//                   key={r.symbol}
+//                   className="bg-[#1a253e] rounded-xl border border-gray-700 hover:border-gray-500 shadow-md overflow-hidden transition-all duration-300 relative group hover:-translate-y-1"
+//                 >
+//                   <div className={`h-1.5 w-full absolute top-0 left-0 ${r.isProfit ? 'bg-green-500' : 'bg-red-500'}`}></div>
+
+//                   <div className="p-3 sm:p-4 pt-4">
+//                     <div className="flex justify-between items-start mb-3">
+//                       <div>
+//                         <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-1.5">
+//                           {r.pair}
+//                           <Zap className="w-3.5 h-3.5 text-[#eab308]" />
+//                         </h3>
+//                         <div className="flex gap-1.5 mt-1">
+//                           <span className={`text-[8px] sm:text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${r.side === 'Long' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
+//                             {r.side}
+//                           </span>
+//                           <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-gray-700/30 text-gray-300 border border-gray-600/50">
+//                             {r.lev}x
+//                           </span>
+//                         </div>
+//                       </div>
+
+//                       <div className={`text-right px-2 py-1 rounded-lg border ${r.bgColor}`}>
+//                         <span className={`font-black text-sm sm:text-base flex items-center gap-1 ${r.color}`}>
+//                           {r.isProfit ? <TrendingUp className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> : <TrendingDown className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
+//                           {r.pnl}
+//                         </span>
+//                       </div>
+//                     </div>
+
+//                     <div className="grid grid-cols-2 gap-2 mt-2 pt-2 sm:pt-3 border-t border-gray-700/50">
+//                       <div>
+//                         <span className="text-[8px] sm:text-[9px] text-gray-500 font-bold uppercase tracking-widest block mb-0.5">Entry Price</span>
+//                         <span className="text-[11px] sm:text-xs text-gray-300 font-medium">
+//                           {r.entry ? `$${Number(r.entry).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "--"}
+//                         </span>
+//                       </div>
+//                       <div className="text-right">
+//                         <span className="text-[8px] sm:text-[9px] text-gray-500 font-bold uppercase tracking-widest block mb-0.5">Mark Price</span>
+//                         <span className="text-xs sm:text-sm text-white font-black">
+//                           {r.latest ? `$${Number(r.latest).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "--"}
+//                         </span>
+//                       </div>
+//                     </div>
+//                   </div>
+//                 </div>
+//               ))}
+//             </div>
+
+//             {/* 🔥 10-10 karke load - Load More button */}
+//             {hasMore && (
+//               <div className="flex justify-center mt-5">
+//                 <button
+//                   onClick={() => setVisibleCount((c) => c + BATCH_SIZE)}
+//                   className="px-5 py-2 rounded-lg bg-[#1a253e] border border-[#eab308]/40 text-[#eab308] text-[10px] sm:text-xs font-bold uppercase tracking-wider hover:bg-[#eab308]/10 hover:border-[#eab308] transition-colors"
+//                 >
+//                   Load 10 More 
+//                 </button>
+//               </div>
+//             )}
+//           </>
+//         )}
+//       </div>
+
+//       {/* Footer Link */}
+//       <div className="w-full text-center py-3">
+//         <a
+//           href="https://www.worldfinance24.online"
+//           target="_blank"
+//           rel="noopener noreferrer"
+//           className="text-gray-500 hover:text-[#eab308] text-xs font-semibold tracking-wider transition-colors"
+//         >
+//           www.worldfinance24.online
+//         </a>
+//       </div>
+
+//     </div>
+//   );
+// }
+
+
+
 import React, { useEffect, useState, useRef } from "react";
 import api from "../../api/axios";
-import { TrendingUp, TrendingDown, Activity, Zap, RefreshCcw, Search } from "lucide-react";
+import { Activity, RefreshCcw, Search } from "lucide-react";
 
-// Stable hash - har coin ko hamesha same Long/Short + leverage milta hai (har poll pe flip nahi hoga)
 function hashCode(str) {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -252,19 +532,18 @@ function hashCode(str) {
 }
 
 const LEVERAGES = [5, 10, 15, 20];
-const BATCH_SIZE = 10; // 🔥 10-10 karke load
+const BATCH_SIZE = 20; 
 
 export default function TradingStatusPanel() {
-  const [symbols, setSymbols] = useState([]);      // 🔥 real, backend-validated USDT pairs (BTC/USDT sabse upar)
+  const [symbols, setSymbols] = useState([]);      
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
 
-  const entriesRef = useRef({}); // pehli baar jo price mile wahi entry freeze ho jaati hai
+  const entriesRef = useRef({}); 
 
-  // 🔥 Step 1: backend se real validated symbols ki poori list (ek hi baar)
   async function loadSymbols() {
     try {
       const res = await api.get("/market/symbols");
@@ -275,7 +554,6 @@ export default function TradingStatusPanel() {
     }
   }
 
-  // 🔥 Step 2: sirf abhi jitne coins visible hain unhi ke live prices fetch karo (10-10 karke)
   async function loadPrices(activeSymbols) {
     if (!activeSymbols.length) {
       setLoading(false);
@@ -293,7 +571,6 @@ export default function TradingStatusPanel() {
         const latest = map.get(symbol);
         const pair = `${symbol.replace("USDT", "")}/USDT`;
 
-        // entry price sirf pehli baar freeze hoti hai, phir wahi rehti hai
         if (latest && !entriesRef.current[symbol]) {
           entriesRef.current[symbol] = latest;
         }
@@ -304,10 +581,9 @@ export default function TradingStatusPanel() {
         const lev = LEVERAGES[h % LEVERAGES.length];
 
         let pnl = "--";
-        let pnlValue = null; // 🔥 numeric PnL - isi se sahi sorting hogi, koi random nahi
+        let pnlValue = null; 
         let isProfit = false;
         let color = "text-gray-500";
-        let bgColor = "bg-gray-500/10";
 
         if (latest && entry) {
           const move = ((latest - entry) / entry) * 100;
@@ -317,30 +593,47 @@ export default function TradingStatusPanel() {
           isProfit = pnlPct >= 0;
           pnl = `${pnlPct > 0 ? "+" : ""}${pnlPct.toFixed(2)}%`;
           color = isProfit ? "text-green-400" : "text-red-400";
-          bgColor = isProfit ? "bg-green-500/10 border-green-500/20" : "bg-red-500/10 border-red-500/20";
         }
 
-        return { symbol, pair, entry, latest, side, lev, pnl, pnlValue, color, bgColor, isProfit };
+        return { symbol, pair, entry, latest, side, lev, pnl, pnlValue, color, isProfit };
       });
 
-      // pehle se load ho chuke rows ko preserve karke naye merge karo
       setRows((prev) => {
         const prevMap = new Map(prev.map((r) => [r.symbol, r]));
         merged.forEach((r) => prevMap.set(r.symbol, r));
 
         const all = symbols.filter((s) => prevMap.has(s)).map((s) => prevMap.get(s));
 
-        // 🔥 Sabse zyada REAL profit wala coin hamesha upar - koi fixed/random coin nahi.
-        // Jinka price abhi load nahi hua (pnlValue null) woh sabse neeche chale jaate hain.
-        return [...all].sort((a, b) => {
-          if (a.pnlValue == null && b.pnlValue == null) return 0;
-          if (a.pnlValue == null) return 1;
-          if (b.pnlValue == null) return -1;
-          return b.pnlValue - a.pnlValue;
-        });
+        const withData = all.filter(a => a.pnlValue !== null);
+        const withoutData = all.filter(a => a.pnlValue === null);
+
+        withData.sort((a, b) => b.pnlValue - a.pnlValue);
+
+        const profits = withData.filter(item => item.pnlValue >= 0);
+        const losses = withData.filter(item => item.pnlValue < 0);
+
+        const mixed = [];
+        let pIndex = 0;
+        let lIndex = 0;
+
+        // 🔥 NAYA LOGIC: Completely Random Mixing!
+        while (pIndex < profits.length || lIndex < losses.length) {
+          // 75% probability for profit, 25% for loss. Randomness ensures no fixed pattern.
+          const pickProfit = Math.random() < 0.75;
+
+          if (pIndex < profits.length && (pickProfit || lIndex >= losses.length)) {
+            mixed.push(profits[pIndex]);
+            pIndex++;
+          } else if (lIndex < losses.length) {
+            mixed.push(losses[lIndex]);
+            lIndex++;
+          }
+        }
+
+        return [...mixed, ...withoutData];
       });
 
-      setLastUpdated(new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute:'2-digit', second:'2-digit' }));
+      setLastUpdated(new Date().toISOString());
     } catch (e) {
       console.error("Failed to fetch market prices:", e);
     }
@@ -352,7 +645,6 @@ export default function TradingStatusPanel() {
     loadSymbols();
   }, []);
 
-  // jab bhi symbols list mil jaaye ya visibleCount badhe, sirf utne hi coins ke prices load karo
   useEffect(() => {
     if (!symbols.length) return;
     const activeSymbols = symbols.slice(0, visibleCount);
@@ -363,12 +655,10 @@ export default function TradingStatusPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [symbols, visibleCount]);
 
-  // Search karte hi 10 se wapas start karo
   useEffect(() => {
     setVisibleCount(BATCH_SIZE);
   }, [searchQuery]);
 
-  // Search Filter logic
   const filteredRows = rows.filter(r =>
     r.pair.toLowerCase().includes(searchQuery.toLowerCase()) ||
     r.side.toLowerCase().includes(searchQuery.toLowerCase())
@@ -377,138 +667,113 @@ export default function TradingStatusPanel() {
   const hasMore = visibleCount < symbols.length;
 
   return (
-    // 🔥 Faltu ki padding (p-8) aur min-h-screen hata diya taaki layout fit baithe
-    <div className="w-full font-sans flex flex-col">
+    <div className="w-full font-sans flex flex-col items-center">
+      
+      <div className="w-full bg-[#131c31] rounded-xl border-t-[4px] border-[#eab308] shadow-2xl p-2 sm:p-4 overflow-hidden">
+        
+        <div className="mb-3 px-1">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div>
+              <h2 className="text-lg sm:text-2xl text-[#eab308] font-bold tracking-wide flex items-center gap-2">
+                <Activity className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span>AI Trading Status</span>
+              </h2>
+              {!loading && (
+                <div className="text-[9px] text-gray-500 mt-1 tracking-widest uppercase">
+                  {lastUpdated}
+                </div>
+              )}
+            </div>
 
-      {/* 🔥 max-w-7xl hata kar w-full kiya taaki parent box ke hisaab se automatic adjust ho */}
-      <div className="w-full bg-[#131c31] rounded-2xl border-t-[3px] border-[#eab308] shadow-xl p-3 sm:p-5">
-
-        {/* Header & Search Bar */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-5 gap-3">
-          <h2 className="text-lg sm:text-2xl text-[#eab308] font-bold tracking-wide flex items-center gap-2">
-            <Activity className="text-[#eab308] w-5 h-5 sm:w-6 sm:h-6" />
-            <span>Live Positions ({symbols?.length || "1000+"} Pairs)</span>
-          </h2>
-
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            <div className="relative w-full sm:w-56">
-              <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
-                <Search size={16} />
+            <div className="relative w-full sm:w-64">
+              <span className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-gray-500">
+                <Search size={14} />
               </span>
               <input
                 type="text"
-                placeholder="Search coin..."
+                placeholder="Search Pair..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-[#0b1221] border border-gray-700 text-gray-200 text-xs sm:text-sm rounded-lg pl-9 pr-3 py-2 focus:outline-none focus:border-[#eab308] transition-colors"
+                className="w-full bg-[#0b1221] border border-gray-700 text-gray-200 text-xs rounded-md pl-8 pr-3 py-1.5 focus:outline-none focus:border-[#eab308] transition-colors"
               />
             </div>
-
-            {!loading && (
-              <div className="text-right hidden sm:block min-w-[70px]">
-                <span className="text-[9px] uppercase tracking-widest text-gray-500 font-bold block">Updated</span>
-                <span className="text-[11px] text-green-400 flex items-center gap-1 font-medium">
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                  {lastUpdated}
-                </span>
-              </div>
-            )}
           </div>
         </div>
 
-        {loading ? (
-          <div className="w-full flex flex-col items-center justify-center py-12 text-[#eab308]">
-            <RefreshCcw className="w-7 h-7 animate-spin mb-3" />
-            <span className="font-bold tracking-widest text-xs uppercase">Syncing Markets...</span>
-          </div>
-        ) : filteredRows.length === 0 ? (
-          <div className="text-center py-10 text-gray-500 text-xs sm:text-sm">
-            No matching trading pairs found.
-          </div>
-        ) : (
-          <>
-            {/* 🔥 max-h-[70vh] rakha hai taaki zyada lambi list dashboard ko khrab na kare */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 max-h-[60vh] overflow-y-auto pr-1 custom-scroll">
-              <style>{`
-                .custom-scroll::-webkit-scrollbar { width: 4px; }
-                .custom-scroll::-webkit-scrollbar-thumb { background: #374151; border-radius: 10px; }
-                .custom-scroll::-webkit-scrollbar-thumb:hover { background: #eab308; }
-              `}</style>
-              {filteredRows.map((r) => (
-                <div
-                  key={r.symbol}
-                  className="bg-[#1a253e] rounded-xl border border-gray-700 hover:border-gray-500 shadow-md overflow-hidden transition-all duration-300 relative group hover:-translate-y-1"
-                >
-                  <div className={`h-1.5 w-full absolute top-0 left-0 ${r.isProfit ? 'bg-green-500' : 'bg-red-500'}`}></div>
-
-                  <div className="p-3 sm:p-4 pt-4">
-                    <div className="flex justify-between items-start mb-3">
-                      <div>
-                        <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-1.5">
-                          {r.pair}
-                          <Zap className="w-3.5 h-3.5 text-[#eab308]" />
-                        </h3>
-                        <div className="flex gap-1.5 mt-1">
-                          <span className={`text-[8px] sm:text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${r.side === 'Long' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
-                            {r.side}
-                          </span>
-                          <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-gray-700/30 text-gray-300 border border-gray-600/50">
-                            {r.lev}x
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className={`text-right px-2 py-1 rounded-lg border ${r.bgColor}`}>
-                        <span className={`font-black text-sm sm:text-base flex items-center gap-1 ${r.color}`}>
-                          {r.isProfit ? <TrendingUp className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> : <TrendingDown className="w-3 h-3 sm:w-3.5 sm:h-3.5" />}
-                          {r.pnl}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 mt-2 pt-2 sm:pt-3 border-t border-gray-700/50">
-                      <div>
-                        <span className="text-[8px] sm:text-[9px] text-gray-500 font-bold uppercase tracking-widest block mb-0.5">Entry Price</span>
-                        <span className="text-[11px] sm:text-xs text-gray-300 font-medium">
-                          {r.entry ? `$${Number(r.entry).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "--"}
-                        </span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-[8px] sm:text-[9px] text-gray-500 font-bold uppercase tracking-widest block mb-0.5">Mark Price</span>
-                        <span className="text-xs sm:text-sm text-white font-black">
-                          {r.latest ? `$${Number(r.latest).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "--"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
+        <div className="w-full rounded-lg border border-gray-800">
+          {loading ? (
+            <div className="w-full flex flex-col items-center justify-center py-10 text-[#eab308]">
+              <RefreshCcw className="w-5 h-5 animate-spin mb-2" />
+              <span className="font-bold tracking-widest text-[9px] uppercase">Syncing Markets...</span>
             </div>
+          ) : filteredRows.length === 0 ? (
+            <div className="text-center py-8 text-gray-500 text-xs">
+              No matching trading pairs found.
+            </div>
+          ) : (
+            <table className="w-full text-left border-collapse table-fixed">
+              <thead className="bg-[#1a253e] border-b border-gray-700">
+                <tr className="text-[8px] sm:text-[10px] text-gray-400 uppercase tracking-widest">
+                  <th className="py-2 px-1 sm:px-3 font-bold w-[22%]">Pair</th>
+                  <th className="py-2 px-1 sm:px-3 font-bold w-[20%]">Side</th>
+                  <th className="py-2 px-1 sm:px-3 font-bold w-[23%]">Entry</th>
+                  <th className="py-2 px-1 sm:px-3 font-bold w-[23%]">Latest</th>
+                  <th className="py-2 px-1 sm:px-3 font-bold text-right w-[12%]">PnL</th>
+                </tr>
+              </thead>
 
-            {/* 🔥 10-10 karke load - Load More button */}
-            {hasMore && (
-              <div className="flex justify-center mt-5">
-                <button
-                  onClick={() => setVisibleCount((c) => c + BATCH_SIZE)}
-                  className="px-5 py-2 rounded-lg bg-[#1a253e] border border-[#eab308]/40 text-[#eab308] text-[10px] sm:text-xs font-bold uppercase tracking-wider hover:bg-[#eab308]/10 hover:border-[#eab308] transition-colors"
-                >
-                  Load 10 More ({rows.length}/{symbols.length})
-                </button>
-              </div>
-            )}
-          </>
+              <tbody className="bg-[#131c31]">
+                {filteredRows.map((r, index) => (
+                  <tr 
+                    key={r.symbol} 
+                    className={`border-b border-gray-800/50 hover:bg-gray-800/40 transition-colors ${index % 2 !== 0 ? 'bg-[#151e32]' : ''}`}
+                  >
+                    <td className="py-1.5 px-1 sm:px-3 text-[9px] sm:text-xs font-bold text-white truncate">
+                      {r.pair}
+                    </td>
+
+                    <td className={`py-1.5 px-1 sm:px-3 text-[9px] sm:text-xs font-semibold whitespace-nowrap ${r.side === 'Long' ? 'text-green-400' : 'text-red-400'}`}>
+                      {r.side} {r.lev}X
+                    </td>
+
+                    <td className="py-1.5 px-1 sm:px-3 text-[9px] sm:text-xs font-medium text-gray-300 truncate">
+                      {r.entry ? Number(r.entry).toFixed(6) : "--"}
+                    </td>
+
+                    <td className="py-1.5 px-1 sm:px-3 text-[9px] sm:text-xs font-medium text-gray-300 truncate">
+                      {r.latest ? Number(r.latest).toFixed(6) : "--"}
+                    </td>
+
+                    <td className={`py-1.5 px-1 sm:px-3 text-[9px] sm:text-xs font-bold text-right ${r.color}`}>
+                      {r.pnl}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {hasMore && !loading && (
+          <div className="flex justify-center mt-3">
+            <button
+              onClick={() => setVisibleCount((c) => c + BATCH_SIZE)}
+              className="px-5 py-1.5 rounded-md bg-[#1a253e] border border-[#eab308]/40 text-[#eab308] text-[9px] font-bold uppercase tracking-widest hover:bg-[#eab308]/10 hover:border-[#eab308] transition-colors"
+            >
+              Load More
+            </button>
+          </div>
         )}
       </div>
 
-      {/* Footer Link */}
       <div className="w-full text-center py-3">
         <a
           href="https://www.worldfinance24.online"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-gray-500 hover:text-[#eab308] text-xs font-semibold tracking-wider transition-colors"
+          className="text-gray-600 hover:text-[#eab308] text-[9px] font-bold tracking-widest transition-colors"
         >
-          www.worldfinance24.online
+                  www.worldfinance24.online
         </a>
       </div>
 

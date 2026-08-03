@@ -31,8 +31,8 @@ exports.getUserById = async (req, res) => {
     // Frontend ko user data, real count, aur fake count ek sath bhejo
     res.json({
       success: true,
-      user: sanitizeUser(user),
-      totalRealUsers: totalRealUsers, 
+ user: { ...sanitizeUser(user), createdAt: user.createdAt },
+       totalRealUsers: totalRealUsers, 
       globalFakeCount: globalFakeCount 
     });
   } catch (err) {

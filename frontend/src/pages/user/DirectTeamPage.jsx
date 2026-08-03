@@ -152,8 +152,7 @@ const DirectTeamPage = () => {
                 <th className="p-4 border-r border-gray-700/50 font-bold cursor-pointer">Reference ID <span className="text-[10px] text-gray-500 ml-1">♦</span></th>
                 <th className="p-4 border-r border-gray-700/50 font-bold cursor-pointer">Name <span className="text-[10px] text-gray-500 ml-1">♦</span></th>
                 <th className="p-4 border-r border-gray-700/50 font-bold cursor-pointer">Amount <span className="text-[10px] text-gray-500 ml-1">♦</span></th>
-                <th className="p-4 border-r border-gray-700/50 font-bold cursor-pointer">Point BV <span className="text-[10px] text-gray-500 ml-1">♦</span></th>
-                <th className="p-4 border-r border-gray-700/50 font-bold cursor-pointer">Status <span className="text-[10px] text-gray-500 ml-1">♦</span></th>
+                 <th className="p-4 border-r border-gray-700/50 font-bold cursor-pointer">Status <span className="text-[10px] text-gray-500 ml-1">♦</span></th>
                 <th className="p-4 font-bold cursor-pointer">Activation Date</th>
               </tr>
             </thead>
@@ -185,8 +184,7 @@ const DirectTeamPage = () => {
                       <td className="p-4 border-r border-gray-700/50">{member.sponsorId || user?.userId}</td>
                       <td className="p-4 border-r border-gray-700/50">{member.name || "-"}</td>
                       <td className="p-4 border-r border-gray-700/50 font-semibold text-[#eab308]">{displayAmount}</td>
-                      <td className="p-4 border-r border-gray-700/50">{member.pointBV || 0}</td>
-                      <td className="p-4 border-r border-gray-700/50 capitalize font-medium">
+                       <td className="p-4 border-r border-gray-700/50 capitalize font-medium">
                         <span className={statusColor}>{status}</span>
                       </td>
                       <td className="p-4">

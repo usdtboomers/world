@@ -237,6 +237,7 @@ import { useAuth } from '../../context/AuthContext';
 function UserProfile() {
   const { user } = useAuth();
 
+ 
   if (!user) {
     return (
         <div className="min-h-screen bg-[#0b1221] text-[#eab308] flex justify-center items-center font-bold text-xl">
