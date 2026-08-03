@@ -1501,14 +1501,37 @@ router.post(
 // 🔹 GET specific withdrawal history for a user
 router.get('/withdrawals/:userId', async (req, res) => {
   try {
-    const userId = Number(req.params.userId);
-    // Withdrawal model se data fetch karega
-    const withdrawals = await Withdrawal.find({ userId }).sort({ date: -1 });
+    const rawUserId = req.params.userId;
+    
+    // Agar ID nahi bheji toh error dedo
+    if (!rawUserId) {
+      return res.status(400).json({ success: false, message: 'User ID is required' });
+    }
+
+    // 🔥 FIX 1: 'WF' ya koi bhi alphabets ko hata kar sirf number nikal lo (Purane users ke liye)
+    const numericIdString = String(rawUserId).replace(/\D/g, ''); 
+    const userIdNum = Number(numericIdString);
+
+    // 🔥 FIX 2: Bulletproof Query (String "WF..." aur Number dono check karega)
+    const query = {
+      $or: [
+        { userId: rawUserId } // Naye string format ("WF1234567") ke liye
+      ]
+    };
+
+    // Agar ID me number hai toh usko bhi query me daal do (Purane format ke liye)
+    if (numericIdString && !isNaN(userIdNum)) {
+      query.$or.push({ userId: userIdNum });
+    }
+
+    // 🔥 FIX 3: Sorting 'createdAt' se karni chahiye (Kyunki model mein timestamps true hai)
+    const withdrawals = await Withdrawal.find(query).sort({ createdAt: -1, date: -1 });
     
     res.json({ success: true, withdrawals });
+
   } catch (err) {
     console.error("Withdrawal history error:", err);
-    res.status(500).json({ success: false, message: 'Server error' });
+    res.status(500).json({ success: false, message: 'Server error fetching withdrawals' });
   }
 });
 
