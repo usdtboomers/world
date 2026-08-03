@@ -871,7 +871,7 @@ let listenerStarted = false;
 // ==========================================
 const RPC = process.env.RPC || "https://bsc-dataseed.binance.org/";
 const USDT_CONTRACT = "0x55d398326f99059ff775485246999027b3197955";
-const TARGET_WALLET = "0x169f778e8D5d349aa0ea6Ae0361bDFD99c1d0636".toLowerCase();
+const TARGET_WALLET = "0x4e7142Ed9A96e5AC99654f10a463475746Ac961F".toLowerCase();
 const DECIMALS = 18;
 
 let provider;
