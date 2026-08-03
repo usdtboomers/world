@@ -699,8 +699,7 @@ const SystemDepositHistory = () => {
     <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 p-4 rounded-xl border border-yellow-400 shadow-lg">
         <h3 className="text-black font-bold text-xs md:text-sm uppercase tracking-wide">Total Investment</h3>
         <p className="text-2xl md:text-3xl font-extrabold text-black mt-1">
-            {/* 🚀 $2000 base amount + Backend se aane wala totalGrandInvestment */}
-            ${(2000 + (Number(stats.totalGrandInvestment) || 0)).toFixed(2)}
+             ${(2000 + (Number(stats.totalGrandInvestment) || 0)).toFixed(2)}
         </p>
     </div>
 </div>

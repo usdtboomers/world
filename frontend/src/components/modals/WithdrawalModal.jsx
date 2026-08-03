@@ -129,27 +129,29 @@ const WithdrawalModal = ({ onClose }) => {
           </div>
 
           {/* 🔥 DIRECT INCOME BOX */}
+         
+
           <div className="bg-[#1e2536] p-3.5 rounded-lg border border-[#2d3748] shadow-sm">
-            <div className="flex justify-between items-center mb-2.5">
-              <span className="text-[#e4c568] text-xs font-bold flex items-center gap-1.5"><Zap size={14}/> DIRECT INCOME</span>
-              {/* 🔥 FIX: toFixed hatakar formatExact lagaya */}
-              <span className="text-gray-400 text-[11px] font-semibold">Earned: ${formatExact(walletData.directIncome)}</span>
-            </div>
-            <div className="flex items-center gap-2 bg-[#0b101e] border border-[#2d3748] rounded px-3 py-2.5 focus-within:border-[#e4c568] transition-colors">
-              <span className="text-[#e4c568] font-bold">$</span>
-              <input 
-                type="number" value={directAmount} onChange={(e) => setDirectAmount(e.target.value)} 
-                className="bg-transparent outline-none text-white w-full text-sm font-semibold" placeholder="0.00" 
-              />
-            </div>
-          </div>
+  <div className="flex justify-between items-center mb-2.5">
+    <span className="text-[#e4c568] text-xs font-bold flex items-center gap-1.5"><Zap size={14}/> DIRECT INCOME</span>
+    {/* 🔥 Green color, increased text size, and bright white font */}
+    <span className="text-green-400 text-sm sm:text-base font-extrabold">Earned: ${formatExact(walletData.directIncome)}</span>
+  </div>
+  <div className="flex items-center gap-2 bg-[#0b101e] border border-[#2d3748] rounded px-3 py-2.5 focus-within:border-[#e4c568] transition-colors">
+    <span className="text-[#e4c568] font-bold">$</span>
+    <input 
+      type="number" value={directAmount} onChange={(e) => setDirectAmount(e.target.value)} 
+      className="bg-transparent outline-none text-white w-full text-sm font-semibold" placeholder="0.00" 
+    />
+  </div>
+</div>
 
           {/* 🔥 LEVEL INCOME BOX */}
+         {/* 🔥 LEVEL INCOME BOX */}
           <div className="bg-[#1e2536] p-3.5 rounded-lg border border-[#2d3748] shadow-sm">
             <div className="flex justify-between items-center mb-2.5">
               <span className="text-[#60a5fa] text-xs font-bold flex items-center gap-1.5"><Users size={14}/> LEVEL INCOME</span>
-              {/* 🔥 FIX: toFixed hatakar formatExact lagaya */}
-              <span className="text-gray-400 text-[11px] font-semibold">Earned: ${formatExact(walletData.levelIncome)}</span>
+              <span className="text-green-400 text-sm sm:text-base font-extrabold">Earned: ${formatExact(walletData.levelIncome)}</span>
             </div>
             <div className="flex items-center gap-2 bg-[#0b101e] border border-[#2d3748] rounded px-3 py-2.5 focus-within:border-[#60a5fa] transition-colors">
               <span className="text-[#60a5fa] font-bold">$</span>
@@ -163,9 +165,8 @@ const WithdrawalModal = ({ onClose }) => {
           {/* 🔥 ROI INCOME BOX */}
           <div className="bg-[#1e2536] p-3.5 rounded-lg border border-[#2d3748] shadow-sm">
             <div className="flex justify-between items-center mb-2.5">
-              <span className="text-[#c084fc] text-xs font-bold flex items-center gap-1.5"><RefreshCcw size={14}/> ROI INCOME</span>
-              {/* 🔥 FIX: toFixed hatakar formatExact lagaya */}
-              <span className="text-gray-400 text-[11px] font-semibold">Earned: ${formatExact(walletData.roiIncome)}</span>
+              <span className="text-[#c084fc] text-xs font-bold flex items-center gap-1.5"><RefreshCcw size5={14}/> ROI INCOME</span>
+              <span className="text-green-400 text-sm sm:text-base font-extrabold">Earned: ${formatExact(walletData.roiIncome)}</span>
             </div>
             <div className="flex items-center gap-2 bg-[#0b101e] border border-[#2d3748] rounded px-3 py-2.5 focus-within:border-[#c084fc] transition-colors">
               <span className="text-[#c084fc] font-bold">$</span>
@@ -210,10 +211,16 @@ const WithdrawalModal = ({ onClose }) => {
           </button>
 
           {/* Terms and Conditions */}
-          <div className="mt-4 text-[#6b7280] text-[10px] leading-relaxed font-medium text-center px-2">
+          {/* <div className="mt-4 text-[#6b7280] text-[10px] leading-relaxed font-medium text-center px-2">
             <p>Minimum withdrawal is $2. Timing: 10:00 AM to 12:00 PM.</p>
             <p>Withdrawal Fees 0%. Payments processed via USDT BEP20.</p>
-          </div>
+          </div> */}
+
+          <div className="mt-4 text-[#9ca3af] text-sm sm:text-base font-bold text-center px-2 space-y-1">
+  <p>Minimum withdrawal is $2. Timing: 10:00 AM to 12:00 PM.</p>
+  <p>Withdrawal receive time: 10:00 PM to 12:00 AM.</p>
+  <p>Withdrawal Fees 0%. Payments processed via USDT BEP20.</p>
+</div>
 
         </div>
       </div>

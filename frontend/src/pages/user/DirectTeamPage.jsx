@@ -149,8 +149,7 @@ const DirectTeamPage = () => {
               <tr>
                 <th className="p-4 border-r border-gray-700/50 font-bold cursor-pointer"># <span className="text-[10px] text-gray-500 ml-1">♦</span></th>
                 <th className="p-4 border-r border-gray-700/50 font-bold cursor-pointer">Member ID <span className="text-[10px] text-gray-500 ml-1">♦</span></th>
-                <th className="p-4 border-r border-gray-700/50 font-bold cursor-pointer">Reference ID <span className="text-[10px] text-gray-500 ml-1">♦</span></th>
-                <th className="p-4 border-r border-gray-700/50 font-bold cursor-pointer">Name <span className="text-[10px] text-gray-500 ml-1">♦</span></th>
+                 <th className="p-4 border-r border-gray-700/50 font-bold cursor-pointer">Name <span className="text-[10px] text-gray-500 ml-1">♦</span></th>
                 <th className="p-4 border-r border-gray-700/50 font-bold cursor-pointer">Amount <span className="text-[10px] text-gray-500 ml-1">♦</span></th>
                  <th className="p-4 border-r border-gray-700/50 font-bold cursor-pointer">Status <span className="text-[10px] text-gray-500 ml-1">♦</span></th>
                 <th className="p-4 font-bold cursor-pointer">Activation Date</th>
@@ -181,8 +180,7 @@ const DirectTeamPage = () => {
                     <tr key={member._id || index} className="border-b border-gray-700 hover:bg-[#1a253e] transition-colors">
                       <td className="p-4 border-r border-gray-700/50">{indexOfFirst + index + 1}</td>
                       <td className="p-4 border-r border-gray-700/50 font-medium text-white">{member.userId}</td>
-                      <td className="p-4 border-r border-gray-700/50">{member.sponsorId || user?.userId}</td>
-                      <td className="p-4 border-r border-gray-700/50">{member.name || "-"}</td>
+                       <td className="p-4 border-r border-gray-700/50">{member.name || "-"}</td>
                       <td className="p-4 border-r border-gray-700/50 font-semibold text-[#eab308]">{displayAmount}</td>
                        <td className="p-4 border-r border-gray-700/50 capitalize font-medium">
                         <span className={statusColor}>{status}</span>
