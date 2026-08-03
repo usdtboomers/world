@@ -45,14 +45,20 @@ const WithdrawalModal = ({ onClose }) => {
   const totalSelection = (Number(directAmount) || 0) + (Number(levelAmount) || 0) + (Number(roiAmount) || 0);
 
   // 🔥 YEH FUNCTION EXACT 4 DECIMALS DIKHAYEGA BINA ROUND OFF KIYE
+  // const formatExact = (num) => {
+  //   if (!num) return "0";
+  //   const str = Number(num).toString(); 
+  //   if (str.includes('.')) {
+  //     const parts = str.split('.');
+  //     return `${parts[0]}.${parts[1].substring(0, 4)}`; // Point ke baad max 4 digits
+  //   }
+  //   return str;
+  // };
+
+  // 🔥 YEH FUNCTION DUST (E-16) VALUES KO BHI PROPERLY HANDLE KAREGA
   const formatExact = (num) => {
-    if (!num) return "0";
-    const str = Number(num).toString(); 
-    if (str.includes('.')) {
-      const parts = str.split('.');
-      return `${parts[0]}.${parts[1].substring(0, 4)}`; // Point ke baad max 4 digits
-    }
-    return str;
+    if (!num) return "0.0000";
+    return Number(num).toFixed(4); 
   };
 
   const handleSubmit = async () => {

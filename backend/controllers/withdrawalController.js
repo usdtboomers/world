@@ -200,11 +200,12 @@ exports.withdrawFunds = async (req, res) => {
         }
 
         // 8. ACTUAL BALANCE DEDUCTION
-        if (directReq > 0) user.directIncome -= directReq;
-        if (levelReq > 0) user.levelIncome -= levelReq;
-        if (roiReq > 0) user.roiIncome -= roiReq;
+       // 8. ACTUAL BALANCE DEDUCTION (🔥 FIX: Rounding applied to prevent e-16 bug)
+        if (directReq > 0) user.directIncome = Math.round((user.directIncome - directReq) * 10000) / 10000;
+        if (levelReq > 0) user.levelIncome = Math.round((user.levelIncome - levelReq) * 10000) / 10000;
+        if (roiReq > 0) user.roiIncome = Math.round((user.roiIncome - roiReq) * 10000) / 10000;
         
-        user.totalWithdrawal = (user.totalWithdrawal || 0) + reqAmount;
+        user.totalWithdrawal = Math.round(((user.totalWithdrawal || 0) + reqAmount) * 10000) / 10000;
         await user.save();
 
         // 9. Transaction Model ke liye (User History ke liye)
@@ -291,14 +292,12 @@ exports.creditToWallet = async (req, res) => {
         }
 
         // 5. ACTUAL BALANCE DEDUCTION & WALLET CREDIT
-        if (directReq > 0) user.directIncome -= directReq;
-        if (levelReq > 0) user.levelIncome -= levelReq;
-        if (roiReq > 0) user.roiIncome -= roiReq;
+        if (directReq > 0) user.directIncome = Math.round((user.directIncome - directReq) * 10000) / 10000;
+        if (levelReq > 0) user.levelIncome = Math.round((user.levelIncome - levelReq) * 10000) / 10000;
+        if (roiReq > 0) user.roiIncome = Math.round((user.roiIncome - roiReq) * 10000) / 10000;
         
-        // Main wallet me paisa add kar rahe hain (Taaki user aage upgrade/topup kar sake)
-        user.walletBalance = (user.walletBalance || 0) + reqAmount;
+        user.walletBalance = Math.round(((user.walletBalance || 0) + reqAmount) * 10000) / 10000;
         await user.save();
-
         // 6. Transaction Record
         await Transaction.create({
             userId: user.userId,

@@ -827,10 +827,23 @@ process.on('unhandledRejection', (reason) => console.log("⚠️ Unhandled Rejec
 // ==========================================
 // 🟢 HELPER: Strict Local Date Formatter (YYYY-MM-DD)
 // ==========================================
+// const getFormattedDate = (d = new Date()) => {
+//     return d.getFullYear() + "-" +
+//            String(d.getMonth() + 1).padStart(2, '0') + "-" +
+//            String(d.getDate()).padStart(2, '0');
+// };
+
+// ==========================================
+// 🟢 HELPER: Strict IST Date Formatter (YYYY-MM-DD)
+// ==========================================
 const getFormattedDate = (d = new Date()) => {
-    return d.getFullYear() + "-" +
-           String(d.getMonth() + 1).padStart(2, '0') + "-" +
-           String(d.getDate()).padStart(2, '0');
+    // Ye line kisi bhi date ko exactly Indian Time me convert kar degi
+    const istTimeStr = new Date(d).toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+    const istDate = new Date(istTimeStr);
+    
+    return istDate.getFullYear() + "-" +
+           String(istDate.getMonth() + 1).padStart(2, '0') + "-" +
+           String(istDate.getDate()).padStart(2, '0');
 };
 
 // ==========================================
@@ -1044,17 +1057,42 @@ function restartListener() {
 // ==========================================
 // 5. SLOW RELEASE LOOPS (FIXED: ID GENERATION HAPPENS HERE)
 // ==========================================
-const getDepositDelay = () => {
-    const hourString = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata", hour: 'numeric', hour12: false });
-    const currentHour = parseInt(hourString);
+// const getDepositDelay = () => {
+//     const hourString = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata", hour: 'numeric', hour12: false });
+//     const currentHour = parseInt(hourString);
 
-    if (currentHour >= 9 && currentHour < 23) {
-        return Math.floor(Math.random() * (240000 - 120000 + 1)) + 120000;
+//     if (currentHour >= 9 && currentHour < 23) {
+//         return Math.floor(Math.random() * (240000 - 120000 + 1)) + 120000;
         
+//     } else {
+//         return Math.floor(Math.random() * (720000 - 480000 + 1)) + 480000;
+//     }
+// };
+
+
+// ==========================================
+// 🔥 STRICT IST COOLDOWN (Server Chahe Kahi Bhi Ho)
+// ==========================================
+const getDepositDelay = () => {
+    // Ye line hamesha India ka exact date aur time banayegi
+    const istTimeStr = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+    const istDate = new Date(istTimeStr);
+    
+    // .getHours() ab strictly India ka ghanta (0 se 23) dega
+    const currentHour = istDate.getHours();
+
+    if (currentHour >= 8 && currentHour < 23) {
+        // ☀️ Din ka Time (India: Subah 9:00 baje se Raat 10:59 baje tak)
+        // Delay: 2 min (120000ms) se 4 min (240000ms) ke beech
+        return Math.floor(Math.random() * (240000 - 120000 + 1)) + 120000;
     } else {
-        return Math.floor(Math.random() * (720000 - 480000 + 1)) + 480000;
+        // 🌙 Raat ka Time (India: Raat 11:00 baje se Subah 8:59 baje tak)
+      // 🌙 Raat ka Time - Delay: 15 min (900000ms) se 20 min (1200000ms) ke beech
+return Math.floor(Math.random() * (1200000 - 900000 + 1)) + 900000;
     }
 };
+
+
 const getWithdrawalDelay = () => Math.floor(Math.random() * (60000 - 35000 + 1)) + 35000;
 const isTooOld = (detectedAtTime, maxAgeMinutes) => (new Date().getTime() - detectedAtTime) > (maxAgeMinutes * 60 * 1000);
 
@@ -1263,16 +1301,31 @@ router.get("/deposits/live-feed", authMiddleware, async (req, res) => {
             status: { $regex: /^success$|^completed$/i } 
         });
 
+        // let totalRealAmount = 0;
+        // let todayRealAmount = 0;
+        // const startOfToday = new Date(todayStr); 
+        // startOfToday.setHours(0, 0, 0, 0);
+
+        // realTxns.forEach(tx => {
+        //     const amt = Number(tx.amount) || 0;
+        //     totalRealAmount += amt;
+        //     const txDate = new Date(tx.createdAt || tx.date);
+        //     if (txDate >= startOfToday) {
+        //         todayRealAmount += amt;
+        //     }
+        // });
+
+
         let totalRealAmount = 0;
         let todayRealAmount = 0;
-        const startOfToday = new Date(todayStr); 
-        startOfToday.setHours(0, 0, 0, 0);
 
         realTxns.forEach(tx => {
             const amt = Number(tx.amount) || 0;
             totalRealAmount += amt;
-            const txDate = new Date(tx.createdAt || tx.date);
-            if (txDate >= startOfToday) {
+            
+            // Transaction ki date ko bhi IST string me convert karke compare karenge
+            const txDateStr = getFormattedDate(new Date(tx.createdAt || tx.date));
+            if (txDateStr === todayStr) {
                 todayRealAmount += amt;
             }
         });
