@@ -873,7 +873,24 @@ router.get("/symbols", async (req, res) => {
       .map((p) => p.symbol);
 
     // 3. BTC aur ETH ko alag nikal lo, kyunki inhe hamesha top par rakhna hai
-    const topCoins = ["BTCUSDT", "ETHUSDT"];
+// Top coins ki list jo hamesha fix rahengi (Shuffle nahi hongi)
+const topCoins = [
+  "BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT", "ADAUSDT", 
+  "DOGEUSDT", "TRXUSDT", "LINKUSDT", "DOTUSDT", "MATICUSDT", "LTCUSDT", 
+  "SHIBUSDT", "AVAXUSDT", "UNIUSDT", "ATOMUSDT", "XMRUSDT", "NEARUSDT", 
+  "FILUSDT", "VETUSDT", "ICPUSDT", "GRTUSDT", "APEUSDT", "ALGOUSDT", 
+  "SANDUSDT", "MANAUSDT", "THETAUSDT", "AXSUSDT", "XTZUSDT", "EOSUSDT", 
+  "AAVEUSDT", "EGLDUSDT", "FLOWUSDT", "QNTUSDT", "CHZUSDT", "GALAUSDT", 
+  "NEOUSDT", "CRVUSDT", "ENJUSDT", "DASHUSDT", "ZECUSDT", "MKRUSDT", 
+  "BATUSDT", "ZILUSDT", "RUNEUSDT", "KSMUSDT", "CAKEUSDT", "FTMUSDT", 
+  "ARUSDT", "COMPUSDT", "LRCUSDT", "YFIUSDT", "1INCHUSDT", "SNXUSDT", 
+  "HOTUSDT", "IOTXUSDT", "RVNUSDT", "AUDIOUSDT", "KAVAUSDT", "SUSHIUSDT", 
+  "ANKRUSDT", "ROSEUSDT", "CELOUSDT", "OCEANUSDT", "LPTUSDT", "GTCUSDT", 
+  "DYDXUSDT", "ENSUSDT", "LDOUSDT", "OPUSDT", "APTUSDT", "ARBUSDT", 
+  "INJUSDT", "FETUSDT", "RNDRUSDT", "STXUSDT", "AGIXUSDT", "PEPEUSDT", 
+  "SUIUSDT", "SEIUSDT", "TIAUSDT", "ORDIUSDT", "WLDUSDT", "PYTHUSDT", 
+  "JUPUSDT", "BONKUSDT", "FLOKIUSDT", "BOMEUSDT", "WIFUSDT", "STRKUSDT"
+];
     symbols = symbols.filter((s) => !topCoins.includes(s));
 
     // 4. Baaki sab coins ko random mix (shuffle) kar do taaki 'A' se shuru hone wale coins bar-bar na dikhein
