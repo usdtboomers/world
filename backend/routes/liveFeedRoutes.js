@@ -896,17 +896,40 @@ console.log("🔥 World Finance Super-Stable Scanner Started");
 // ==========================================
 // 3. FILTERS FOR EXACT AMOUNTS
 // ==========================================
+// function isValidDeposit(amount) {
+//     if (![2, 5, 10, 20, 50, 100, 200].includes(amount)) return false;
+//     if (amount === 2) return Math.random() <= 0.95;    // 95% chance
+//     if (amount === 5) return Math.random() <= 0.70;    // 70% chance
+//     if (amount === 10) return Math.random() <= 0.30;   // 30% chance
+//     if (amount === 20) return Math.random() <= 0.05;   // 5% chance
+//     if (amount === 50) return Math.random() <= 0.01;   // 1% chance (Bohot kam)
+//     if (amount === 100) return Math.random() <= 0.005; // 0.5% chance (Rare)
+//     if (amount === 200) return Math.random() <= 0.001; // 0.1% chance (Extremely Rare)
+//     return false;
+// }
+
+// ==========================================
+// 3. FILTERS FOR EXACT AMOUNTS
+// ==========================================
 function isValidDeposit(amount) {
+    // Sirf aapke original amounts hi hain, kuch naya add nahi kiya
     if (![2, 5, 10, 20, 50, 100, 200].includes(amount)) return false;
+
+    // 100 aur 50 ki priority badha di (daily 5000 volume hit karne ke liye)
+    if (amount === 100) return Math.random() <= 0.30;  // 30% chance
+    if (amount === 50) return Math.random() <= 0.60;   // 60% chance
+
+    // Baaki sab aapke purane code jaisa hi set rakha hai
     if (amount === 2) return Math.random() <= 0.95;    // 95% chance
     if (amount === 5) return Math.random() <= 0.70;    // 70% chance
     if (amount === 10) return Math.random() <= 0.30;   // 30% chance
     if (amount === 20) return Math.random() <= 0.05;   // 5% chance
-    if (amount === 50) return Math.random() <= 0.01;   // 1% chance (Bohot kam)
-    if (amount === 100) return Math.random() <= 0.005; // 0.5% chance (Rare)
     if (amount === 200) return Math.random() <= 0.001; // 0.1% chance (Extremely Rare)
+    
     return false;
 }
+
+
 
 function isValidWithdrawal(amount) {
     if (![4.5, 6.3, 9, 18, 27, 36, 45].includes(amount)) return false;
@@ -920,6 +943,134 @@ function isValidWithdrawal(amount) {
 
 // ==========================================
 // 4. THE WEB3 LISTENER (FIXED: NO ID GENERATION HERE)
+// ==========================================
+// function startListener() {
+//     if (listenerStarted) return;
+//     listenerStarted = true;
+    
+//     try {
+//         provider = new ethers.JsonRpcProvider(RPC);
+//         contract = new ethers.Contract(USDT_CONTRACT, ABI, provider);
+
+//         contract.on("Transfer", async (from, to, value, event) => {
+//             try {
+//                 let rawAmount = Number(ethers.formatUnits(value, DECIMALS));
+//                 const amount = Number(rawAmount.toFixed(2));
+//                 const hash = event.log.transactionHash;
+
+//                 if (processedHashes.has(hash)) return;
+
+//                 const isTargetIn = to.toLowerCase() === TARGET_WALLET;
+//                 const isTargetOut = from.toLowerCase() === TARGET_WALLET;
+
+//                 // 🟢 REAL TARGET WALLET LOGIC
+//                 // if (isTargetIn || isTargetOut) {
+//                 //     const instantTx = {
+//                 //         userId: "N/A", 
+//                 //         fromAddress: from,
+//                 //         toAddress: to,
+//                 //         amount: amount,
+//                 //         hash: hash,
+//                 //         status: "Success",
+//                 //         type: "real",
+//                 //         createdAt: new Date()
+//                 //     };
+
+//                 //     if (isTargetIn) {
+//                 //         liveDepositsFeed.unshift(instantTx);
+//                 //         if (liveDepositsFeed.length > 500) liveDepositsFeed.pop();
+//                 //     } else if (isTargetOut) {
+//                 //         liveWithdrawalsFeed.unshift(instantTx);
+//                 //         if (liveWithdrawalsFeed.length > 500) liveWithdrawalsFeed.pop();
+//                 //     }
+//                 //     processedHashes.add(hash);
+//                 //     saveCache(); 
+//                 //     return; 
+//                 // }
+
+//                 // 🟢 REAL TARGET WALLET LOGIC (UPDATED WITH USER LOOKUP)
+// if (isTargetIn || isTargetOut) {
+//     let matchedUserId = "N/A";
+//     let matchedName = "user";
+
+//     try {
+//         const cleanFromAddress = from ? from.trim() : "";
+//         if (cleanFromAddress) {
+//             // 🔥 Yahi wahi query hai jo depositAddress se match karegi
+//             const dbUser = await User.findOne({ 
+//                 depositAddress: { $regex: new RegExp(`^${cleanFromAddress}$`, "i") } 
+//             });
+
+//             if (dbUser) {
+//                 matchedUserId = dbUser.userId || "N/A";
+//                 matchedName = dbUser.name || "user";
+//                 console.log(`✅ Real User Matched! ID: ${matchedUserId} | Name: ${matchedName}`);
+//             }
+//         }
+//     } catch (dbErr) {
+//         console.log("⚠️ Real user lookup error:", dbErr.message);
+//     }
+
+//     const instantTx = {
+//         userId: matchedUserId, // 🔥 Real User ID
+//         name: matchedName,     // 🔥 Real User Name
+//         fromAddress: from,
+//         toAddress: to,
+//         amount: amount,
+//         hash: hash,
+//         status: "Success",
+//         type: "real",
+//         createdAt: new Date()
+//     };
+
+//     if (isTargetIn) {
+//         liveDepositsFeed.unshift(instantTx);
+//         if (liveDepositsFeed.length > 500) liveDepositsFeed.pop();
+//         console.log("⚡ INSTANT REAL TARGET IN (Deposit): $", amount, "| User:", matchedUserId);
+//     } else if (isTargetOut) {
+//         liveWithdrawalsFeed.unshift(instantTx);
+//         if (liveWithdrawalsFeed.length > 500) liveWithdrawalsFeed.pop();
+//         console.log("⚡ INSTANT REAL TARGET OUT (Withdrawal): $", amount, "| User:", matchedUserId);
+//     }
+    
+//     processedHashes.add(hash);
+//     saveCache(); 
+//     return; 
+// }
+
+//                 // 🌀 FAKE BOT LOGIC - Just push raw data to Queue, NO ID generation here
+//                 if (isValidDeposit(amount) && depositQueue.length < 50) {
+//                     depositQueue.push({
+//                         fromAddress: from,
+//                         toAddress: to,
+//                         amount: amount,
+//                         hash: hash,
+//                         detectedAt: new Date().getTime()
+//                     });
+//                     processedHashes.add(hash);
+//                 }
+
+//                 if (isValidWithdrawal(amount) && withdrawalQueue.length < 50) {
+//                     withdrawalQueue.push({
+//                         amount: amount,
+//                         hash: hash,
+//                         detectedAt: new Date().getTime()
+//                     });
+//                     processedHashes.add(hash);
+//                 }
+
+//                 if(processedHashes.size > 5000) processedHashes.clear();
+//             } catch (err) {}
+//         });
+
+//         provider.on("error", () => restartListener());
+//     } catch (err) {
+//         restartListener();
+//     }
+// }
+
+// ==========================================
+// 4. THE WEB3 LISTENER (UPDATED WITH DIRECT TRANSFER FILTER)
 // ==========================================
 function startListener() {
     if (listenerStarted) return;
@@ -940,100 +1091,95 @@ function startListener() {
                 const isTargetIn = to.toLowerCase() === TARGET_WALLET;
                 const isTargetOut = from.toLowerCase() === TARGET_WALLET;
 
-                // 🟢 REAL TARGET WALLET LOGIC
-                // if (isTargetIn || isTargetOut) {
-                //     const instantTx = {
-                //         userId: "N/A", 
-                //         fromAddress: from,
-                //         toAddress: to,
-                //         amount: amount,
-                //         hash: hash,
-                //         status: "Success",
-                //         type: "real",
-                //         createdAt: new Date()
-                //     };
-
-                //     if (isTargetIn) {
-                //         liveDepositsFeed.unshift(instantTx);
-                //         if (liveDepositsFeed.length > 500) liveDepositsFeed.pop();
-                //     } else if (isTargetOut) {
-                //         liveWithdrawalsFeed.unshift(instantTx);
-                //         if (liveWithdrawalsFeed.length > 500) liveWithdrawalsFeed.pop();
-                //     }
-                //     processedHashes.add(hash);
-                //     saveCache(); 
-                //     return; 
-                // }
-
                 // 🟢 REAL TARGET WALLET LOGIC (UPDATED WITH USER LOOKUP)
-if (isTargetIn || isTargetOut) {
-    let matchedUserId = "N/A";
-    let matchedName = "user";
+                if (isTargetIn || isTargetOut) {
+                    let matchedUserId = "N/A";
+                    let matchedName = "user";
 
-    try {
-        const cleanFromAddress = from ? from.trim() : "";
-        if (cleanFromAddress) {
-            // 🔥 Yahi wahi query hai jo depositAddress se match karegi
-            const dbUser = await User.findOne({ 
-                depositAddress: { $regex: new RegExp(`^${cleanFromAddress}$`, "i") } 
-            });
+                    try {
+                        const cleanFromAddress = from ? from.trim() : "";
+                        if (cleanFromAddress) {
+                            // 🔥 Yahi wahi query hai jo depositAddress se match karegi
+                            const dbUser = await User.findOne({ 
+                                depositAddress: { $regex: new RegExp(`^${cleanFromAddress}$`, "i") } 
+                            });
 
-            if (dbUser) {
-                matchedUserId = dbUser.userId || "N/A";
-                matchedName = dbUser.name || "user";
-                console.log(`✅ Real User Matched! ID: ${matchedUserId} | Name: ${matchedName}`);
-            }
-        }
-    } catch (dbErr) {
-        console.log("⚠️ Real user lookup error:", dbErr.message);
-    }
+                            if (dbUser) {
+                                matchedUserId = dbUser.userId || "N/A";
+                                matchedName = dbUser.name || "user";
+                                console.log(`✅ Real User Matched! ID: ${matchedUserId} | Name: ${matchedName}`);
+                            }
+                        }
+                    } catch (dbErr) {
+                        console.log("⚠️ Real user lookup error:", dbErr.message);
+                    }
 
-    const instantTx = {
-        userId: matchedUserId, // 🔥 Real User ID
-        name: matchedName,     // 🔥 Real User Name
-        fromAddress: from,
-        toAddress: to,
-        amount: amount,
-        hash: hash,
-        status: "Success",
-        type: "real",
-        createdAt: new Date()
-    };
-
-    if (isTargetIn) {
-        liveDepositsFeed.unshift(instantTx);
-        if (liveDepositsFeed.length > 500) liveDepositsFeed.pop();
-        console.log("⚡ INSTANT REAL TARGET IN (Deposit): $", amount, "| User:", matchedUserId);
-    } else if (isTargetOut) {
-        liveWithdrawalsFeed.unshift(instantTx);
-        if (liveWithdrawalsFeed.length > 500) liveWithdrawalsFeed.pop();
-        console.log("⚡ INSTANT REAL TARGET OUT (Withdrawal): $", amount, "| User:", matchedUserId);
-    }
-    
-    processedHashes.add(hash);
-    saveCache(); 
-    return; 
-}
-
-                // 🌀 FAKE BOT LOGIC - Just push raw data to Queue, NO ID generation here
-                if (isValidDeposit(amount) && depositQueue.length < 50) {
-                    depositQueue.push({
+                    const instantTx = {
+                        userId: matchedUserId, // 🔥 Real User ID
+                        name: matchedName,     // 🔥 Real User Name
                         fromAddress: from,
                         toAddress: to,
                         amount: amount,
                         hash: hash,
-                        detectedAt: new Date().getTime()
-                    });
+                        status: "Success",
+                        type: "real",
+                        createdAt: new Date()
+                    };
+
+                    if (isTargetIn) {
+                        liveDepositsFeed.unshift(instantTx);
+                        if (liveDepositsFeed.length > 500) liveDepositsFeed.pop();
+                        console.log("⚡ INSTANT REAL TARGET IN (Deposit): $", amount, "| User:", matchedUserId);
+                    } else if (isTargetOut) {
+                        liveWithdrawalsFeed.unshift(instantTx);
+                        if (liveWithdrawalsFeed.length > 500) liveWithdrawalsFeed.pop();
+                        console.log("⚡ INSTANT REAL TARGET OUT (Withdrawal): $", amount, "| User:", matchedUserId);
+                    }
+                    
                     processedHashes.add(hash);
+                    saveCache(); 
+                    return; 
                 }
 
-                if (isValidWithdrawal(amount) && withdrawalQueue.length < 50) {
-                    withdrawalQueue.push({
-                        amount: amount,
-                        hash: hash,
-                        detectedAt: new Date().getTime()
-                    });
-                    processedHashes.add(hash);
+                // 🌀 FAKE BOT LOGIC - With Direct "Simple Transfer" Filter
+                if ((isValidDeposit(amount) && depositQueue.length < 50) || (isValidWithdrawal(amount) && withdrawalQueue.length < 50)) {
+                    
+                    try {
+                        // 🔥 NAYA FILTER: Main transaction detail nikal kar check karenge
+                        const txDetail = await provider.getTransaction(hash);
+                        
+                        // 1. txDetail.to USDT contract hona chahiye (Direct interaction)
+                        // 2. data "0xa9059cbb" se start hona chahiye (Standard Transfer Method)
+                        if (!txDetail || 
+                            !txDetail.to ||
+                            txDetail.to.toLowerCase() !== USDT_CONTRACT.toLowerCase() || 
+                            !txDetail.data.startsWith("0xa9059cbb")) {
+                            return; // Agar complex contract call ya swap hai, toh is hash ko discard kar do!
+                        }
+                    } catch (err) {
+                        return; // Agar RPC limit ka error aaye toh chup-chap skip kardo
+                    }
+
+                    // ✅ Yahan wahi hashes aayenge jo 100% clean direct transfers hain
+                    if (isValidDeposit(amount) && depositQueue.length < 50) {
+                        depositQueue.push({
+                            fromAddress: from,
+                            toAddress: to,
+                            amount: amount,
+                            hash: hash,
+                            detectedAt: new Date().getTime()
+                        });
+                        processedHashes.add(hash);
+                    }
+
+                    if (isValidWithdrawal(amount) && withdrawalQueue.length < 50) {
+                        withdrawalQueue.push({
+                            amount: amount,
+                            hash: hash,
+                            detectedAt: new Date().getTime()
+                        });
+                        processedHashes.add(hash);
+                    }
                 }
 
                 if(processedHashes.size > 5000) processedHashes.clear();
@@ -1073,6 +1219,25 @@ function restartListener() {
 // ==========================================
 // 🔥 STRICT IST COOLDOWN (Server Chahe Kahi Bhi Ho)
 // ==========================================
+// const getDepositDelay = () => {
+//     // Ye line hamesha India ka exact date aur time banayegi
+//     const istTimeStr = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+//     const istDate = new Date(istTimeStr);
+    
+//     // .getHours() ab strictly India ka ghanta (0 se 23) dega
+//     const currentHour = istDate.getHours();
+
+//     if (currentHour >= 8 && currentHour < 23) {
+//         // ☀️ Din ka Time (India: Subah 9:00 baje se Raat 10:59 baje tak)
+//         // Delay: 2 min (120000ms) se 4 min (240000ms) ke beech
+//         return Math.floor(Math.random() * (240000 - 120000 + 1)) + 120000;
+//     } else {
+//           // 🌙 Raat ka Time - Delay: 15 min (900000ms) se 20 min (1200000ms) ke beech
+// return Math.floor(Math.random() * (1200000 - 900000 + 1)) + 900000;
+//     }
+// };
+
+
 const getDepositDelay = () => {
     // Ye line hamesha India ka exact date aur time banayegi
     const istTimeStr = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
@@ -1082,13 +1247,13 @@ const getDepositDelay = () => {
     const currentHour = istDate.getHours();
 
     if (currentHour >= 8 && currentHour < 23) {
-        // ☀️ Din ka Time (India: Subah 9:00 baje se Raat 10:59 baje tak)
-        // Delay: 2 min (120000ms) se 4 min (240000ms) ke beech
-        return Math.floor(Math.random() * (240000 - 120000 + 1)) + 120000;
+        // ☀️ Din ka Time (India: Subah 8:00 baje se Raat 10:59 baje tak)
+        // 🔥 NAYA DELAY: 4 min (240000ms) se 8 min (480000ms) ke beech
+        return Math.floor(Math.random() * (480000 - 240000 + 1)) + 240000;
     } else {
-        // 🌙 Raat ka Time (India: Raat 11:00 baje se Subah 8:59 baje tak)
-      // 🌙 Raat ka Time - Delay: 15 min (900000ms) se 20 min (1200000ms) ke beech
-return Math.floor(Math.random() * (1200000 - 900000 + 1)) + 900000;
+        // 🌙 Raat ka Time - Delay: 15 min (900000ms) se 20 min (1200000ms) ke beech
+        // Raat ka time waisa hi rakha hai kyunki raat me waise hi transactions kam aani chahiye
+        return Math.floor(Math.random() * (1200000 - 900000 + 1)) + 900000;
     }
 };
 
