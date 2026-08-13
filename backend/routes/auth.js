@@ -302,6 +302,20 @@ const generateTransactionPassword = () => {
 // });
 
 
+// 🔥 NAYA ROUTE: Sponsor ka naam fetch karne ke liye (Live Check)
+router.get('/check-sponsor/:id', async (req, res) => {
+    try {
+        const sponsor = await User.findOne({ userId: req.params.id });
+        if (!sponsor) {
+            return res.status(404).json({ message: "❌ Invalid Sponsor ID" });
+        }
+        res.json({ name: sponsor.name });
+    } catch (err) {
+        res.status(500).json({ message: "Server error" });
+    }
+});
+
+
 router.post('/register', checkFeature('allowRegistrations'), async (req, res) => {
   try {
     // 🔥 YAHAN walletAddress ADD KIYA HAI
@@ -439,8 +453,35 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
 });
 
 
+// router.post('/login', async (req, res) => {
+//     // ... (Login API purani wali hi rahegi, koi change nahi)
+//     try {
+//         const { userId, password, deviceId } = req.body;
+//         const userIP = getClientIP(req);
+        
+//         // Ensure userId search is case-insensitive for 'WF'
+//         const user = await User.findOne({ userId: new RegExp('^' + userId + '$', 'i') });
+        
+//         // 👇 YEH ADD KARO 👇
+ 
+//         if (!user) return res.status(401).json({ message: 'Invalid credentials' });
+//         if (password !== user.password) return res.status(401).json({ message: 'Invalid credentials' });
+        
+//         // ... (Baaki saara IP block logic purana wala waisa hi rakhein) ...
+//         const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '50m' });
+//         res.json({ message: 'Login successful', token, user: sanitizeUser(user) });
+//     } catch (err) {
+//         res.status(500).json({ message: 'Server error' });
+//     }
+// });
+
+ // ====================== FORGOT PASSWORD ======================
+// ====================== FORGOT PASSWORD ======================
+
+
+
+
 router.post('/login', async (req, res) => {
-    // ... (Login API purani wali hi rahegi, koi change nahi)
     try {
         const { userId, password, deviceId } = req.body;
         const userIP = getClientIP(req);
@@ -448,21 +489,28 @@ router.post('/login', async (req, res) => {
         // Ensure userId search is case-insensitive for 'WF'
         const user = await User.findOne({ userId: new RegExp('^' + userId + '$', 'i') });
         
-        // 👇 YEH ADD KARO 👇
- 
         if (!user) return res.status(401).json({ message: 'Invalid credentials' });
+
+        // 👇 YEH ACCOUNT BLOCK CHECK ADD KIYA HAI 👇
+        if (user.isBlocked) {
+            return res.status(403).json({ 
+                message:'' 
+            });
+        }
+        // 👆 ---------------------------------- 👆
+
         if (password !== user.password) return res.status(401).json({ message: 'Invalid credentials' });
         
         // ... (Baaki saara IP block logic purana wala waisa hi rakhein) ...
+        
         const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '50m' });
         res.json({ message: 'Login successful', token, user: sanitizeUser(user) });
     } catch (err) {
+        console.error("Login Error:", err);
         res.status(500).json({ message: 'Server error' });
     }
 });
 
- // ====================== FORGOT PASSWORD ======================
-// ====================== FORGOT PASSWORD ======================
 router.post('/forgot-password', checkFeature(), async (req, res) => {
   const { userId } = req.body;
 

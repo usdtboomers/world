@@ -229,11 +229,11 @@ const UserLogin = () => {
             <h3 style={{ color: '#fff', fontWeight: '600', fontSize: '20px', margin: 0 }}>Sign Into Your Account</h3>
           </div>
 
-          {error && (
+          {/* {error && (
             <div style={{ background: 'rgba(255, 60, 60, 0.2)', color: '#ffb3b3', padding: '12px', marginBottom: '20px', fontSize: '13px', borderRadius: '6px', border: '1px solid rgba(255,0,0,0.3)', textAlign: 'center' }}>
               ⚠️ {error}
             </div>
-          )}
+          )} */}
 
           <form onSubmit={handleLogin}>
             
