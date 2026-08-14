@@ -78,8 +78,18 @@ const WalletTransferModal = ({ onClose }) => {
           </div>
 
           <div className="mt-4 space-y-3">
-            <input type="text" value={receiverId} onChange={(e) => setReceiverId(e.target.value)} placeholder="Enter Receiver User ID" className="w-full bg-[#131927] border border-[#2d3748] text-white px-3 py-2.5 rounded outline-none focus:border-[#e4c568] focus:ring-1 focus:ring-[#e4c568] placeholder-gray-500 text-sm" />
+            {/* <input type="text" value={receiverId} onChange={(e) => setReceiverId(e.target.value)} placeholder="Enter Receiver User ID" className="w-full bg-[#131927] border border-[#2d3748] text-white px-3 py-2.5 rounded outline-none focus:border-[#e4c568] focus:ring-1 focus:ring-[#e4c568] placeholder-gray-500 text-sm" /> */}
             
+            <input 
+    type="text" 
+    value={receiverId} 
+    // 🔥 YAHAN CHANGE KIYA HAI: .toUpperCase() add kiya hai
+    onChange={(e) => setReceiverId(e.target.value.toUpperCase())} 
+    placeholder="Enter Receiver User ID" 
+    // 🔥 YAHAN CHANGE KIYA HAI: End me 'uppercase' class add ki hai
+    className="w-full bg-[#131927] border border-[#2d3748] text-white px-3 py-2.5 rounded outline-none focus:border-[#e4c568] focus:ring-1 focus:ring-[#e4c568] placeholder-gray-500 text-sm uppercase" 
+/>
+
             <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Enter Transfer Amount ($)" className="w-full bg-[#131927] border border-[#2d3748] text-white px-3 py-2.5 rounded outline-none focus:border-[#e4c568] focus:ring-1 focus:ring-[#e4c568] placeholder-gray-500 text-sm" />
             
             <div className="flex gap-2">

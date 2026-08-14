@@ -1698,11 +1698,12 @@ function isValidDeposit(amount) {
     if (amount === 50) return Math.random() <= 0.60;   // 60% chance
 
     // Baaki sab aapke purane code jaisa hi set rakha hai
-    if (amount === 2) return Math.random() <= 0.95;    // 95% chance
+    if (amount === 2) return Math.random() <= 0.60;    // 95% chance
     if (amount === 5) return Math.random() <= 0.70;    // 70% chance
     if (amount === 10) return Math.random() <= 0.30;   // 30% chance
-    if (amount === 20) return Math.random() <= 0.05;   // 5% chance
-    if (amount === 200) return Math.random() <= 0.05; // 5% chance 
+    if (amount === 20) return Math.random() <= 0.20;   // 5% chance
+    if (amount === 200) return Math.random() <= 0.10; // 5% chance 
+    if (amount === 500) return Math.random() <= 0.05; // 5% chance 
     
     return false;
 }

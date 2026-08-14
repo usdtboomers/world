@@ -240,15 +240,17 @@ const UserLogin = () => {
             {/* User ID Field */}
             <div style={inputGroupStyle} ref={inputRef}>
               <i className="fa fa-envelope-o" style={iconStyle}></i>
-              <input
-                type="text"
-                placeholder="USER ID"
-                value={userId}
-                onChange={(e) => setUserId(e.target.value)}
-                onFocus={() => setDropdownOpen(true)}
-                required
-                style={inputStyle}
-              />
+             <input
+  type="text"
+  placeholder="USER ID"
+  value={userId}
+  // 🔥 YAHAN CHANGE KIYA HAI: e.target.value.toUpperCase()
+  onChange={(e) => setUserId(e.target.value.toUpperCase())}
+  onFocus={() => setDropdownOpen(true)}
+  required
+  // 🔥 YAHAN CHANGE KIYA HAI: style mein textTransform add kar diya
+  style={{ ...inputStyle, textTransform: 'uppercase' }}
+/>
               {/* Dropdown for saved users */}
               {dropdownOpen && filteredUsers.length > 0 && (
                 <div style={dropdownStyle}>

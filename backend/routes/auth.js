@@ -457,14 +457,41 @@ const generateTransactionPassword = () => {
 
 
 
+// router.get('/check-sponsor/:id', async (req, res) => {
+//     try {
+//         const sponsor = await User.findOne({ userId: req.params.id });
+//         if (!sponsor) {
+//             return res.status(404).json({ message: "❌ Invalid Sponsor ID" });
+//         }
+//         res.json({ name: sponsor.name });
+//     } catch (err) {
+//         res.status(500).json({ message: "Server error" });
+//     }
+// });
+
+
+
 router.get('/check-sponsor/:id', async (req, res) => {
     try {
-        const sponsor = await User.findOne({ userId: req.params.id });
+        const searchId = new RegExp('^' + req.params.id + '$', 'i'); // Case insensitive search taaki wf aur WF dono chal jaye
+
+        // 1. Pehle REAL User database me check karo
+        let sponsor = await User.findOne({ userId: searchId });
+
+        // 2. Agar Real User nahi mila, toh DUMMY User database me check karo
+        if (!sponsor) {
+            sponsor = await DummyUser.findOne({ userId: searchId });
+        }
+
+        // 3. Agar dono me nahi mila, tabhi Invalid error do
         if (!sponsor) {
             return res.status(404).json({ message: "❌ Invalid Sponsor ID" });
         }
+
+        // 4. Agar mil gaya (Real ya Dummy koi bhi), toh uska naam wapas bhej do
         res.json({ name: sponsor.name });
     } catch (err) {
+        console.error("Check Sponsor Error:", err);
         res.status(500).json({ message: "Server error" });
     }
 });

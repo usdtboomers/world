@@ -1166,14 +1166,16 @@ const response = await api.post('/transactions/promo-dummy-topup', {
               ) : (
                 <div>
                   <label className="text-[#e4c568] text-[11px] uppercase tracking-wider font-bold mb-1 block"> Member ID</label>
-                  <input 
-                    type="text" 
-                    value={memberId} 
-                    onChange={(e) => setMemberId(e.target.value)}
-                    required
-                    placeholder="Enter Member ID"
-                    className="w-full bg-[#131927] border border-[#2d3748] text-white px-3 py-2.5 rounded outline-none focus:border-[#e4c568] focus:ring-1 focus:ring-[#e4c568] placeholder-gray-500 text-sm"
-                  />
+                 <input 
+    type="text" 
+    value={memberId} 
+    // 🔥 YAHAN CHANGE KIYA HAI: e.target.value.toUpperCase()
+    onChange={(e) => setMemberId(e.target.value.toUpperCase())}
+    required
+    placeholder="Enter Member ID"
+    // 🔥 YAHAN CHANGE KIYA HAI: End me 'uppercase' class add ki hai
+    className="w-full bg-[#131927] border border-[#2d3748] text-white px-3 py-2.5 rounded outline-none focus:border-[#e4c568] focus:ring-1 focus:ring-[#e4c568] placeholder-gray-500 text-sm uppercase"
+/>
                 </div>
               )}
 
