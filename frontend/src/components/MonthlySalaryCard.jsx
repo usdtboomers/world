@@ -253,7 +253,7 @@ const MonthlySalaryCard = ({ userId }) => {
         {progress.isNeverToppedUp && progress.status === "failed" && (
           <div className="bg-[#eab308]/10 border border-[#eab308] text-[#eab308] p-3 rounded-lg flex items-center gap-2">
             <AlertCircle size={18} />
-            <span className="font-bold text-sm">Please Top-up ($50+) to start the Salary Challenge!</span>
+            <span className="font-bold text-sm">Please Top-up to start the Monthly Salary!</span>
           </div>
         )}
 
