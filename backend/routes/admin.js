@@ -1992,6 +1992,117 @@ const getMonthlyLegStatsForAdmin = async (sponsorId, startOfMonth, endOfMonth) =
 // =========================================================================
 // 🔥 SUPER FAST API: "RAM TREE MAPPING" (0 loops on Database) + BREAKAWAY
 // =========================================================================
+// router.get('/monthly-salary-admin-report', async (req, res) => {
+//     try {
+//         // 1. 🔥 SIRF 1 BAAR DB CALL: Saare users aur zaroori fields utha lo
+//         const allUsers = await User.find({}, 'userId name sponsorId isToppedUp topUpAmount topUpDate isSalaryQualified salaryMonthsPaid').lean();
+
+//         // 2. 🧠 RAM MEIN NETWORK TREE BANAO (Extremely Fast)
+//         const userMap = new Map();
+//         const directMap = new Map(); // sponsorId -> [array of child userIds]
+
+//         for (let u of allUsers) {
+//             userMap.set(u.userId, u);
+//             if (u.sponsorId) {
+//                 if (!directMap.has(u.sponsorId)) {
+//                     directMap.set(u.sponsorId, []);
+//                 }
+//                 directMap.get(u.sponsorId).push(u.userId);
+//             }
+//         }
+
+//         const tenDaysMs = 10 * 24 * 60 * 60 * 1000;
+//         const currentTime = Date.now();
+//         let reportData = [];
+
+//         // 3. REPORT GENERATION L1 & L2 TARGETS
+//         for (let user of allUsers) {
+//             // 🔥 RULE 1: Admin report me wahi aayega jiska khud ka $50 ya usse zyada ka topup ho
+//             if (!user.isToppedUp || (user.topUpAmount || 0) < 50) continue;
+
+//             // --- Time Calculation (10 days limit) ---
+//             let isExpired = false;
+//             let timeLeftMs = 0;
+//             if (user.topUpDate) {
+//                 const deadline = new Date(user.topUpDate).getTime() + tenDaysMs;
+//                 timeLeftMs = deadline - currentTime;
+//                 if (timeLeftMs < 0) isExpired = true;
+//             } else {
+//                 isExpired = true;
+//             }
+
+//             // --- L1 Calculation (3 Members Required) ---
+//             const directs = directMap.get(user.userId) || [];
+//             let qualifiedL1Count = 0;
+//             let l1UsersList = [];
+
+//             for (let dId of directs) {
+//                 const child = userMap.get(dId);
+//                 // Child ka bhi minimum $50 topup hona chahiye
+//                 if (child && child.isToppedUp && (child.topUpAmount || 0) >= 50) {
+//                     qualifiedL1Count++;
+//                     l1UsersList.push({ userId: child.userId, name: child.name });
+//                 }
+//             }
+
+//             // --- L2 Calculation (6 Members Required) ---
+//             let qualifiedL2Count = 0;
+//             let l2UsersList = [];
+
+//             for (let dId of directs) {
+//                 const subDirects = directMap.get(dId) || [];
+//                 for (let subId of subDirects) {
+//                     const subChild = userMap.get(subId);
+//                     // L2 wale child ka bhi minimum $50 topup hona chahiye
+//                     if (subChild && subChild.isToppedUp && (subChild.topUpAmount || 0) >= 50) {
+//                         qualifiedL2Count++;
+//                         l2UsersList.push({ userId: subChild.userId, name: subChild.name });
+//                     }
+//                 }
+//             }
+
+//             // --- Status Checking ---
+//             let status = "pending";
+//             if (user.isSalaryQualified) {
+//                 status = "qualified"; // Already qualified
+//             } else if (qualifiedL1Count >= 3 && qualifiedL2Count >= 6 && !isExpired) {
+//                 status = "qualified"; // Target achieved but not yet synced by Cron
+//             } else if (isExpired) {
+//                 status = "failed"; // Time khatam, target poora nahi hua
+//             }
+
+//             // Report mein data daalo
+//             reportData.push({
+//                 userId: user.userId,
+//                 name: user.name || "User",
+//                 topUpAmount: user.topUpAmount,
+//                 topUpDate: user.topUpDate,
+//                 l1Count: qualifiedL1Count,
+//                 l2Count: qualifiedL2Count,
+//                 l1List: l1UsersList, // Admin dekh sake kaun 3 log hain
+//                 l2List: l2UsersList, // Admin dekh sake kaun 6 log hain
+//                 status: status,
+//                 salaryMonthsPaid: user.salaryMonthsPaid || 0,
+//                 timeLeftDays: timeLeftMs > 0 ? (timeLeftMs / (1000 * 60 * 60 * 24)).toFixed(1) : 0
+//             });
+//         }
+
+//         // 4. SORTING LOGIC (Sabse upar Qualified, fir Target ke kareeb wale)
+//         reportData.sort((a, b) => {
+//             if (a.status === 'qualified' && b.status !== 'qualified') return -1;
+//             if (a.status !== 'qualified' && b.status === 'qualified') return 1;
+//             // Agar dono same status me hain, toh jiski team badi hai wo upar
+//             return (b.l1Count + b.l2Count) - (a.l1Count + a.l2Count);
+//         });
+
+//         res.json({ success: true, data: reportData });
+
+//     } catch (error) {
+//         console.error("Admin Monthly Salary Progress Error:", error);
+//         res.status(500).json({ success: false, message: "Server error" });
+//     }
+// });
+
 router.get('/monthly-salary-admin-report', async (req, res) => {
     try {
         // 1. 🔥 SIRF 1 BAAR DB CALL: Saare users aur zaroori fields utha lo
@@ -2023,40 +2134,43 @@ router.get('/monthly-salary-admin-report', async (req, res) => {
             // --- Time Calculation (10 days limit) ---
             let isExpired = false;
             let timeLeftMs = 0;
+            let deadline = null;
+
             if (user.topUpDate) {
-                const deadline = new Date(user.topUpDate).getTime() + tenDaysMs;
+                deadline = new Date(user.topUpDate).getTime() + tenDaysMs;
                 timeLeftMs = deadline - currentTime;
                 if (timeLeftMs < 0) isExpired = true;
             } else {
                 isExpired = true;
             }
 
-            // --- L1 Calculation (3 Members Required) ---
-            const directs = directMap.get(user.userId) || [];
             let qualifiedL1Count = 0;
             let l1UsersList = [];
-
-            for (let dId of directs) {
-                const child = userMap.get(dId);
-                // Child ka bhi minimum $50 topup hona chahiye
-                if (child && child.isToppedUp && (child.topUpAmount || 0) >= 50) {
-                    qualifiedL1Count++;
-                    l1UsersList.push({ userId: child.userId, name: child.name });
-                }
-            }
-
-            // --- L2 Calculation (6 Members Required) ---
             let qualifiedL2Count = 0;
             let l2UsersList = [];
 
-            for (let dId of directs) {
-                const subDirects = directMap.get(dId) || [];
-                for (let subId of subDirects) {
-                    const subChild = userMap.get(subId);
-                    // L2 wale child ka bhi minimum $50 topup hona chahiye
-                    if (subChild && subChild.isToppedUp && (subChild.topUpAmount || 0) >= 50) {
-                        qualifiedL2Count++;
-                        l2UsersList.push({ userId: subChild.userId, name: subChild.name });
+            // --- L1 & L2 Calculation (Fix: Only counting top-ups before deadline) ---
+            if (deadline) {
+                const directs = directMap.get(user.userId) || [];
+                
+                // L1 Loop
+                for (let dId of directs) {
+                    const child = userMap.get(dId);
+                    // Child ka $50+ ho aur uski date deadline se pehle ho
+                    if (child && child.isToppedUp && (child.topUpAmount || 0) >= 50 && child.topUpDate && new Date(child.topUpDate).getTime() <= deadline) {
+                        qualifiedL1Count++;
+                        l1UsersList.push({ userId: child.userId, name: child.name });
+                    }
+                    
+                    // L2 Loop (Child ke directs)
+                    const subDirects = directMap.get(dId) || [];
+                    for (let subId of subDirects) {
+                        const subChild = userMap.get(subId);
+                        // Subchild ka $50+ ho aur uski date deadline se pehle ho
+                        if (subChild && subChild.isToppedUp && (subChild.topUpAmount || 0) >= 50 && subChild.topUpDate && new Date(subChild.topUpDate).getTime() <= deadline) {
+                            qualifiedL2Count++;
+                            l2UsersList.push({ userId: subChild.userId, name: subChild.name });
+                        }
                     }
                 }
             }
@@ -2064,11 +2178,11 @@ router.get('/monthly-salary-admin-report', async (req, res) => {
             // --- Status Checking ---
             let status = "pending";
             if (user.isSalaryQualified) {
-                status = "qualified"; // Already qualified
-            } else if (qualifiedL1Count >= 3 && qualifiedL2Count >= 6 && !isExpired) {
-                status = "qualified"; // Target achieved but not yet synced by Cron
+                status = "qualified"; // Already qualified in DB
+            } else if (qualifiedL1Count >= 3 && qualifiedL2Count >= 6) {
+                status = "qualified"; // Target Achieved (Chahe time nikal gaya ho ya na nikla ho, qualify karega kyu ki log limit ke andar aaye the)
             } else if (isExpired) {
-                status = "failed"; // Time khatam, target poora nahi hua
+                status = "failed"; // Target pura nahi hua aur time bhi nikal gaya
             }
 
             // Report mein data daalo
