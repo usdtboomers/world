@@ -763,9 +763,9 @@ const Dashboard = ({ modalState, setModalState }) => {
 
         {/* 🚀 NAYA: MONTHLY SALARY TRACKER BOX (High Visibility) */}
         {/* Ise upar rakha hai taaki user sabse pehle apna time left aur target dekhe */}
-        <div className="mt-2 mb-4">
+        {/* <div className="mt-2 mb-4">
            <MonthlySalaryCard userId={user.userId} />
-        </div>
+        </div> */}
 
         {/* 1. REFERRAL LINK BOX */}
         <ReferralLink link={referralLink} />
