@@ -1390,7 +1390,13 @@ const generateUserId = async () => {
 // ====================================================
  
 
+// backend/routes/userRoutes.js (ya equivalent file)
 
+// 1. Pehle controller ko import karo
+const { getSalaryProgress } = require('../controllers/salaryController'); 
+
+// 2. Phir ye route add kar do
+router.get('/salary-progress/:userId', getSalaryProgress);
 
 
  

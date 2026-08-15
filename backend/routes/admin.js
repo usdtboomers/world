@@ -1992,21 +1992,12 @@ const getMonthlyLegStatsForAdmin = async (sponsorId, startOfMonth, endOfMonth) =
 // =========================================================================
 // 🔥 SUPER FAST API: "RAM TREE MAPPING" (0 loops on Database) + BREAKAWAY
 // =========================================================================
-router.get('/monthly-reward-progress', async (req, res) => {
+router.get('/monthly-salary-admin-report', async (req, res) => {
     try {
-        // 1. Date calculation
-        let targetDate = new Date();
-        if (req.query.date) {
-            const [year, month] = req.query.date.split('-');
-            targetDate = new Date(year, month - 1, 1);
-        }
-        let startOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);
-        let endOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0, 23, 59, 59);
+        // 1. 🔥 SIRF 1 BAAR DB CALL: Saare users aur zaroori fields utha lo
+        const allUsers = await User.find({}, 'userId name sponsorId isToppedUp topUpAmount topUpDate isSalaryQualified salaryMonthsPaid').lean();
 
-        // 2. 🔥 SIRF 1 BAAR DATABASE CALL: Saare users + 'role' fetch kar lo
-        const allUsers = await User.find({}, 'userId sponsorId name isToppedUp topUpDate role').lean();
-
-        // 3. 🧠 SERVER KI RAM MEIN NETWORK TREE BANAO (Extremely Fast)
+        // 2. 🧠 RAM MEIN NETWORK TREE BANAO (Extremely Fast)
         const userMap = new Map();
         const directMap = new Map(); // sponsorId -> [array of child userIds]
 
@@ -2020,111 +2011,94 @@ router.get('/monthly-reward-progress', async (req, res) => {
             }
         }
 
-        // 4. IN-MEMORY CALCULATION HELPER WITH BREAKAWAY
-        const getLegStatsRAM = (sponsorId) => {
-            const directs = directMap.get(sponsorId) || [];
-            let legsData = [];
-
-            for (let directId of directs) {
-                let currentLegUsers = [];
-
-                // BFS loop in RAM (No database calls here = 1000x faster)
-                let queue = [directId];
-                while (queue.length > 0) {
-                    const currentId = queue.shift();
-                    const currentObj = userMap.get(currentId);
-
-                    // 🔥 ABSOLUTE BREAKAWAY WALL 🔥
-                    // Agar current banda Leader hai, toh iski team queue mein add nahi hogi!
-                    // Iske neeche ki poori chain yahi par block ho jayegi.
-                    if (currentObj && currentObj.role === 'leader') {
-                        continue; 
-                    }
-
-                    const downlines = directMap.get(currentId) || [];
-                    
-                    for (let childId of downlines) {
-                        const childObj = userMap.get(childId);
-                        // Agar child user required month me topup hua hai toh list me daalo
-                        if (childObj && childObj.isToppedUp && childObj.topUpDate >= startOfMonth && childObj.topUpDate <= endOfMonth) {
-                            currentLegUsers.push({ userId: childObj.userId, name: childObj.name });
-                        }
-                        queue.push(childId);
-                    }
-                }
-
-                legsData.push({ size: currentLegUsers.length, usersList: currentLegUsers });
-            }
-
-            legsData.sort((a, b) => b.size - a.size);
-
-            let strongLegCount = 0;
-            let strongLegUsers = [];
-            let otherLegsCount = 0;
-            let otherLegUsers = [];
-
-            if (legsData.length > 0) {
-                strongLegCount = legsData[0].size;
-                strongLegUsers = legsData[0].usersList;
-            }
-            if (legsData.length > 1) {
-                for (let i = 1; i < legsData.length; i++) {
-                    otherLegsCount += legsData[i].size;
-                    otherLegUsers = otherLegUsers.concat(legsData[i].usersList);
-                }
-            }
-
-            return {
-                strongLeg: strongLegCount,
-                otherLegs: otherLegsCount,
-                totalTeam: strongLegCount + otherLegsCount,
-                strongLegList: strongLegUsers,
-                otherLegList: otherLegUsers
-            };
-        };
-
-        // 5. REPORT GENERATION
+        const tenDaysMs = 10 * 24 * 60 * 60 * 1000;
+        const currentTime = Date.now();
         let reportData = [];
-        const activeUsers = allUsers.filter(u => u.isToppedUp);
 
-        for (let user of activeUsers) {
-            // Memory me bane function ko call kar rahe hain (Very fast)
-            const stats = getLegStatsRAM(user.userId);
-            
-            if (stats.totalTeam > 0) {
-                let achieved = null;
-                let nextTarget = REWARD_MILESTONES[0]; 
+        // 3. REPORT GENERATION L1 & L2 TARGETS
+        for (let user of allUsers) {
+            // 🔥 RULE 1: Admin report me wahi aayega jiska khud ka $50 ya usse zyada ka topup ho
+            if (!user.isToppedUp || (user.topUpAmount || 0) < 50) continue;
 
-                for (let i = 0; i < REWARD_MILESTONES.length; i++) {
-                    const m = REWARD_MILESTONES[i];
-                    if (stats.strongLeg >= m.strongLeg && stats.otherLegs >= m.otherLegs) {
-                        achieved = m;
-                        nextTarget = REWARD_MILESTONES[i + 1] || m; 
+            // --- Time Calculation (10 days limit) ---
+            let isExpired = false;
+            let timeLeftMs = 0;
+            if (user.topUpDate) {
+                const deadline = new Date(user.topUpDate).getTime() + tenDaysMs;
+                timeLeftMs = deadline - currentTime;
+                if (timeLeftMs < 0) isExpired = true;
+            } else {
+                isExpired = true;
+            }
+
+            // --- L1 Calculation (3 Members Required) ---
+            const directs = directMap.get(user.userId) || [];
+            let qualifiedL1Count = 0;
+            let l1UsersList = [];
+
+            for (let dId of directs) {
+                const child = userMap.get(dId);
+                // Child ka bhi minimum $50 topup hona chahiye
+                if (child && child.isToppedUp && (child.topUpAmount || 0) >= 50) {
+                    qualifiedL1Count++;
+                    l1UsersList.push({ userId: child.userId, name: child.name });
+                }
+            }
+
+            // --- L2 Calculation (6 Members Required) ---
+            let qualifiedL2Count = 0;
+            let l2UsersList = [];
+
+            for (let dId of directs) {
+                const subDirects = directMap.get(dId) || [];
+                for (let subId of subDirects) {
+                    const subChild = userMap.get(subId);
+                    // L2 wale child ka bhi minimum $50 topup hona chahiye
+                    if (subChild && subChild.isToppedUp && (subChild.topUpAmount || 0) >= 50) {
+                        qualifiedL2Count++;
+                        l2UsersList.push({ userId: subChild.userId, name: subChild.name });
                     }
                 }
-
-                reportData.push({
-                    userId: user.userId,
-                    name: user.name || "User",
-                    strongLeg: stats.strongLeg,
-                    otherLegs: stats.otherLegs,
-                    totalTeam: stats.totalTeam,
-                    strongLegList: stats.strongLegList,
-                    otherLegList: stats.otherLegList,
-                    achievedReward: achieved ? achieved.reward : 0,
-                    achievedTitle: achieved ? achieved.title : "Not Qualified",
-                    nextTargetReward: nextTarget.reward,
-                    nextTargetStrong: nextTarget.strongLeg,
-                    nextTargetOther: nextTarget.otherLegs
-                });
             }
+
+            // --- Status Checking ---
+            let status = "pending";
+            if (user.isSalaryQualified) {
+                status = "qualified"; // Already qualified
+            } else if (qualifiedL1Count >= 3 && qualifiedL2Count >= 6 && !isExpired) {
+                status = "qualified"; // Target achieved but not yet synced by Cron
+            } else if (isExpired) {
+                status = "failed"; // Time khatam, target poora nahi hua
+            }
+
+            // Report mein data daalo
+            reportData.push({
+                userId: user.userId,
+                name: user.name || "User",
+                topUpAmount: user.topUpAmount,
+                topUpDate: user.topUpDate,
+                l1Count: qualifiedL1Count,
+                l2Count: qualifiedL2Count,
+                l1List: l1UsersList, // Admin dekh sake kaun 3 log hain
+                l2List: l2UsersList, // Admin dekh sake kaun 6 log hain
+                status: status,
+                salaryMonthsPaid: user.salaryMonthsPaid || 0,
+                timeLeftDays: timeLeftMs > 0 ? (timeLeftMs / (1000 * 60 * 60 * 24)).toFixed(1) : 0
+            });
         }
 
-        reportData.sort((a, b) => b.totalTeam - a.totalTeam);
+        // 4. SORTING LOGIC (Sabse upar Qualified, fir Target ke kareeb wale)
+        reportData.sort((a, b) => {
+            if (a.status === 'qualified' && b.status !== 'qualified') return -1;
+            if (a.status !== 'qualified' && b.status === 'qualified') return 1;
+            // Agar dono same status me hain, toh jiski team badi hai wo upar
+            return (b.l1Count + b.l2Count) - (a.l1Count + a.l2Count);
+        });
+
         res.json({ success: true, data: reportData });
 
     } catch (error) {
-        console.error("Admin Monthly Reward Progress Error:", error);
+        console.error("Admin Monthly Salary Progress Error:", error);
         res.status(500).json({ success: false, message: "Server error" });
     }
 });

@@ -1,8 +1,47 @@
-// C:\Users\HP\Desktop\worldfinance24\frontend\src\pages\admin\MonthlyRewardReport.jsx
-
 import React, { useState, useEffect, useMemo } from 'react';
 import api from '../../api/axios'; 
-import { Trophy, Search, Users, ArrowUpCircle, Calendar, DollarSign, Award, Copy, LogIn, X, Target, Network } from 'lucide-react';
+import { Trophy, Search, Users, ArrowUpCircle, Calendar, DollarSign, Award, Copy, LogIn, X, Target, Network, Clock, CheckCircle, XCircle } from 'lucide-react';
+
+// 🔥 NAYA COMPONENT: Live Timer ke liye (Taki har second page bina hang hue timer chalaye)
+const LiveTimer = ({ topUpDate }) => {
+  const [timeDisplay, setTimeDisplay] = useState("");
+
+  useEffect(() => {
+    if (!topUpDate) return;
+
+    const tenDaysMs = 10 * 24 * 60 * 60 * 1000;
+    const deadline = new Date(topUpDate).getTime() + tenDaysMs;
+
+    const updateTimer = () => {
+      const now = Date.now();
+      const diff = deadline - now;
+
+      if (diff <= 0) {
+        setTimeDisplay("Expired");
+        return;
+      }
+
+      const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+      const m = Math.floor((diff / 1000 / 60) % 60);
+      const s = Math.floor((diff / 1000) % 60);
+
+      setTimeDisplay(`${d}d ${h}h ${m}m ${s}s`);
+    };
+
+    updateTimer(); // Pehli baar turant call karne ke liye
+    const interval = setInterval(updateTimer, 1000); // Har second update
+    
+    return () => clearInterval(interval);
+  }, [topUpDate]);
+
+  return (
+    <span className="text-[10px] text-gray-500 font-bold">
+      Time Left: {timeDisplay || "Calculating..."}
+    </span>
+  );
+};
+
 
 const MonthlyRewardReport = () => {
   const [report, setReport] = useState([]);
@@ -21,7 +60,8 @@ const MonthlyRewardReport = () => {
     const fetchProgress = async () => {
       try {
         setLoading(true);
-        const res = await api.get(`/admin/monthly-reward-progress?date=${selectedMonth}`); 
+        // 🔥 Updated endpoint for the new Salary Plan Logic
+        const res = await api.get('/admin/monthly-salary-admin-report'); 
         
         // Ensure data is array
         const rawData = Array.isArray(res.data?.data) ? res.data.data : (Array.isArray(res.data) ? res.data : []);
@@ -53,22 +93,20 @@ const MonthlyRewardReport = () => {
     });
   }, [report, search]);
 
-  // 🔥 MEMOIZED TOTALS
+  // 🔥 MEMOIZED TOTALS (Updated for $100 Salary Plan)
   const totals = useMemo(() => {
     let qualifiedCount = 0;
-    let payoutSum = 0;
     
     for (let i = 0; i < report.length; i++) {
-      if (report[i].achievedReward > 0) {
+      if (report[i].status === 'qualified') {
         qualifiedCount++;
-        payoutSum += report[i].achievedReward;
       }
     }
     
     return {
       runners: report.length,
       qualified: qualifiedCount,
-      estimatedPayout: payoutSum
+      estimatedPayout: qualifiedCount * 100 // $100 per qualified user
     };
   }, [report]);
 
@@ -84,30 +122,10 @@ const MonthlyRewardReport = () => {
   const handlePrev = () => { if (validCurrentPage > 1) setCurrentPage(prev => prev - 1); };
   const handleEntriesChange = (e) => { setItemsPerPage(Number(e.target.value)); };
 
-  // const handleLoginAsUser = async (targetUserId) => {
-  //   try {
-  //     const adminToken = localStorage.getItem('adminToken');
-  //     if (!adminToken) return alert("Admin not authorized");
-
-  //     const res = await api.post('/admin/impersonate', { userId: targetUserId }, {
-  //       headers: { Authorization: `Bearer ${adminToken}` }
-  //     });
-
-  //     const { token: userToken, user: impersonatedUser } = res.data;
-  //     const userDataStr = encodeURIComponent(JSON.stringify(impersonatedUser));
-      
-  //     let targetBaseUrl = window.location.hostname.includes("localhost") || window.location.hostname === "127.0.0.1" 
-  //                         ? "http://localhost:5173" 
-  //                         : "https://worldfinance24.online"; 
-
-  //     const mainWebsiteUrl = `${targetBaseUrl}/login?token=${userToken}&user=${userDataStr}`;
-  //     window.open(mainWebsiteUrl, '_blank', 'noopener,noreferrer');
-      
-  //   } catch (err) {
-  //     console.error("Impersonation failed:", err);
-  //     alert(err.response?.data?.message || "Failed to login as this user.");
-  //   }
-  // };
+  // Kept empty to avoid crash since JSX button uses it
+  const handleLoginAsUser = async (targetUserId) => {
+    alert("Login as User function is currently disabled in code.");
+  };
 
   const handleCopy = (text) => {
     navigator.clipboard.writeText(text);
@@ -132,7 +150,7 @@ const MonthlyRewardReport = () => {
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
       `}</style>
 
-      {/* 🔥 MODAL POPUP FOR LEG USERS */}
+      {/* 🔥 MODAL POPUP FOR L1 / L2 USERS */}
       {legModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200">
@@ -147,7 +165,7 @@ const MonthlyRewardReport = () => {
             
             <div className="p-5">
               <div className="flex items-center justify-between bg-indigo-50 border border-indigo-100 px-4 py-2 rounded-xl mb-4">
-                 <span className="text-xs font-bold text-indigo-800 uppercase tracking-widest">Qualified Downline Count:</span>
+                 <span className="text-xs font-bold text-indigo-800 uppercase tracking-widest">Qualified ($50+) Downline Count:</span>
                  <span className="text-lg font-black text-indigo-600">{legModal.count}</span>
               </div>
               
@@ -187,9 +205,9 @@ const MonthlyRewardReport = () => {
       {/* Header */}
       <div className="mb-6 mt-4">
         <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-          <Trophy className="text-yellow-500" size={28} /> Reward Progress Report
+          <Trophy className="text-yellow-500" size={28} /> Salary Progress Report
         </h2>
-        <p className="text-gray-500 text-sm mt-1">Track monthly team business and expected payouts based on downline top-ups.</p>
+        <p className="text-gray-500 text-sm mt-1">Track monthly team business (Level 1 & 2 targets) for $100 Salary qualification.</p>
       </div>
 
       {/* Summary Boxes */}
@@ -211,7 +229,7 @@ const MonthlyRewardReport = () => {
          <div className="bg-white p-4 rounded shadow border border-gray-200 flex items-center gap-4">
             <div className="bg-yellow-100 p-3 rounded text-yellow-600"><DollarSign size={24}/></div>
             <div>
-               <p className="text-xs font-bold text-gray-500 uppercase">Est. Payout</p>
+               <p className="text-xs font-bold text-gray-500 uppercase">Est. Monthly Payout</p>
                <h3 className="text-xl font-bold text-gray-800">${totals.estimatedPayout.toFixed(2)}</h3>
             </div>
          </div>
@@ -226,12 +244,6 @@ const MonthlyRewardReport = () => {
             placeholder="Search UserID or Name"
             value={search}
             onChange={(e) => { setSearch(e.target.value); }}
-          />
-          <input 
-            type="month" 
-            className="border text-black border-gray-300 rounded px-3 py-2 w-full md:w-48 outline-none focus:ring-2 focus:ring-indigo-400"
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
           />
           <select 
             className="border border-gray-300 text-black rounded px-3 py-2 bg-white cursor-pointer outline-none focus:ring-2 focus:ring-indigo-400"
@@ -260,22 +272,23 @@ const MonthlyRewardReport = () => {
               <th className="px-4 py-3 border-r text-center w-12">Sr.</th>
               <th className="px-4 py-3 border-r text-center w-32">User ID</th>
               <th className="px-4 py-3 border-r">Name</th>
-              <th className="px-4 py-3 border-r text-center">Downline Team Details</th>
-              <th className="px-4 py-3 border-r text-center">Rank / Status</th>
+              <th className="px-4 py-3 border-r text-center">L1 & L2 Targets ($50+)</th>
+              <th className="px-4 py-3 border-r text-center">Status</th>
               <th className="px-4 py-3">Next Target Progress</th>
             </tr>
           </thead>
           
           <tbody>
             {loading ? (
-              <tr><td colSpan="6" className="text-center py-16 text-indigo-600 font-black uppercase tracking-widest text-lg bg-indigo-50/50 animate-pulse">⏳ Calculating Team Business... Please Wait.</td></tr>
+              <tr><td colSpan="6" className="text-center py-16 text-indigo-600 font-black uppercase tracking-widest text-lg bg-indigo-50/50 animate-pulse">⏳ Loading Salary Plans... Please Wait.</td></tr>
             ) : currentItems.length === 0 ? (
-              <tr><td colSpan="6" className="text-center py-10 font-bold text-gray-500 uppercase tracking-widest bg-gray-50">No data found for this month / search.</td></tr>
+              <tr><td colSpan="6" className="text-center py-10 font-bold text-gray-500 uppercase tracking-widest bg-gray-50">No data found.</td></tr>
             ) : (
               currentItems.map((user, idx) => {
-                const strongProgress = Math.min((user.strongLeg / user.nextTargetStrong) * 100, 100) || 0;
-                const otherProgress = Math.min((user.otherLegs / user.nextTargetOther) * 100, 100) || 0;
-                const averageProgress = (strongProgress + otherProgress) / 2;
+                // Calculation based on L1 (target 3) and L2 (target 6)
+                const l1Progress = Math.min((user.l1Count / 3) * 100, 100) || 0;
+                const l2Progress = Math.min((user.l2Count / 6) * 100, 100) || 0;
+                const averageProgress = (l1Progress + l2Progress) / 2;
 
                 return (
                   <tr key={user.userId} className="hover:bg-gray-50 border-b border-gray-200 group">
@@ -299,7 +312,6 @@ const MonthlyRewardReport = () => {
                            <button 
                               onClick={() => handleLoginAsUser(user.userId)} 
                               className="text-indigo-600 hover:text-indigo-800 transition-colors"
-                             // title="Login as User"
                            >
                               <LogIn size={14} />
                            </button>
@@ -314,41 +326,53 @@ const MonthlyRewardReport = () => {
                       </div>
                     </td>
                     
-                    {/* Clickable Leg Details */}
+                    {/* Clickable Level Details */}
                     <td className="px-4 py-2 border-r text-center">
                       <div className="flex flex-col gap-2 items-center justify-center">
                           <button 
-                             onClick={() => openLegModal(user.name, 'Strong Leg Downlines', user.strongLeg, user.strongLegList)}
+                             onClick={() => openLegModal(user.name, 'Level 1 Users', user.l1Count, user.l1List)}
                              className="flex items-center justify-between text-xs font-semibold text-gray-600 bg-white hover:bg-green-50 px-2 py-1 rounded border border-gray-300 w-32 transition-colors cursor-pointer shadow-sm"
                           >
-                             <span className="flex items-center gap-1"><ArrowUpCircle className="text-green-500" size={12} /> Str:</span>
-                             <span className="text-green-600 font-bold">{user.strongLeg}</span>
+                             <span className="flex items-center gap-1"><ArrowUpCircle className="text-green-500" size={12} /> L1:</span>
+                             <span className="text-green-600 font-bold">{user.l1Count} / 3</span>
                           </button>
                           <button 
-                             onClick={() => openLegModal(user.name, 'Other Legs Downlines', user.otherLegs, user.otherLegList)}
+                             onClick={() => openLegModal(user.name, 'Level 2 Users', user.l2Count, user.l2List)}
                              className="flex items-center justify-between text-xs font-semibold text-gray-600 bg-white hover:bg-blue-50 px-2 py-1 rounded border border-gray-300 w-32 transition-colors cursor-pointer shadow-sm"
                           >
-                             <span className="flex items-center gap-1"><Users className="text-blue-500" size={12} /> Oth:</span>
-                             <span className="text-blue-600 font-bold">{user.otherLegs}</span>
+                             <span className="flex items-center gap-1"><Users className="text-blue-500" size={12} /> L2:</span>
+                             <span className="text-blue-600 font-bold">{user.l2Count} / 6</span>
                           </button>
                       </div>
                     </td>
                     
-                    {/* Rank / Status */}
+                    {/* Status Column with 🔥 LIVE TIMER 🔥 */}
                     <td className="px-4 py-2 border-r text-center">
-                       {user.achievedReward > 0 ? (
+                       {user.status === 'qualified' ? (
                           <div className="flex flex-col items-center gap-1">
-                              <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs font-bold uppercase border border-green-200">
-                                  {user.achievedTitle}
+                              <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs font-bold uppercase border border-green-200 flex items-center gap-1">
+                                  <CheckCircle size={12}/> QUALIFIED
                               </span>
-                              <span className="text-sm font-bold text-gray-800 flex items-center gap-1">
-                                  <Trophy size={14} className="text-yellow-500"/> ${user.achievedReward}
+                              <span className="text-xs font-bold text-gray-800 flex items-center gap-1">
+                                  <DollarSign size={12} className="text-yellow-500"/> $100 / month
                               </span>
+                              <span className="text-[10px] text-gray-500 font-bold">Paid: {user.salaryMonthsPaid}/6</span>
+                          </div>
+                       ) : user.status === 'failed' ? (
+                          <div className="flex flex-col items-center gap-1">
+                              <span className="bg-red-100 text-red-800 px-2 py-0.5 rounded text-xs font-bold uppercase border border-red-200 flex items-center gap-1">
+                                  <XCircle size={12}/> FAILED
+                              </span>
+                              <span className="text-[10px] text-gray-500 font-bold">Time limit expired</span>
                           </div>
                        ) : (
-                          <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs font-bold border border-gray-200">
-                              Running
-                          </span>
+                          <div className="flex flex-col items-center gap-1">
+                              <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs font-bold uppercase border border-blue-200 flex items-center gap-1">
+                                  <Clock size={12}/> PENDING
+                              </span>
+                              {/* 🔥 Yahan LiveTimer component laga diya hai */}
+                              <LiveTimer topUpDate={user.topUpDate} />
+                          </div>
                        )}
                     </td>
                     
@@ -356,7 +380,7 @@ const MonthlyRewardReport = () => {
                     <td className="px-4 py-2">
                        <div className="w-full min-w-[200px]">
                           <div className="flex justify-between text-[10px] font-bold uppercase text-gray-500 mb-1">
-                              <span>Target: ${user.nextTargetReward}</span>
+                              <span>Target: $100 Salary</span>
                               <span>{averageProgress.toFixed(0)}%</span>
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden relative">
@@ -366,8 +390,8 @@ const MonthlyRewardReport = () => {
                              ></div>
                           </div>
                           <div className="flex justify-between mt-1 text-[10px] text-gray-400">
-                              <span>Str Req: {user.nextTargetStrong}</span>
-                              <span>Oth Req: {user.nextTargetOther}</span>
+                              <span>Req L1: 3 Users</span>
+                              <span>Req L2: 6 Users</span>
                           </div>
                        </div>
                     </td>

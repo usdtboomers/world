@@ -100,6 +100,18 @@ const userSchema = new mongoose.Schema({
   pendingWithdrawals: { type: Number, default: 0 }, 
   totalWithdrawn: { type: Number, default: 0 },     
   
+
+
+
+
+  // ==========================================
+  // 🏆 MONTHLY SALARY PLAN TRACKING
+  // ==========================================
+  isSalaryQualified: { type: Boolean, default: false }, // Kya user 10 din me qualify hua?
+  salaryMonthsPaid: { type: Number, default: 0 },       // Kitne mahine (max 6) salary mil chuki?
+  salaryTotalIncome: { type: Number, default: 0 },      // Total Salary Income ($600 max)
+
+  
   // ==========================================
   // 🔐 WALLET ADDRESS SECURITY
   // ==========================================
