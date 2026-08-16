@@ -820,7 +820,7 @@ import SpinnerOverlay from "../../components/common/SpinnerOverlay";
 import TotalEarningBox from "../../components/dashboard/TotalEarningBox"; 
 // 🚀 NAYA IMPORT: Monthly Salary Card (Yahan import kiya hai)
 import MonthlySalaryCard from "../../components/MonthlySalaryCard"; 
-
+import UserInfoBoxes from "../../components/dashboard/UserInfoBoxes";
 // Packages component
 import Packages from "../../components/Packages"; 
 import UserPackages from "../../pages/user/UserPackages";
@@ -898,11 +898,16 @@ const Dashboard = ({ modalState, setModalState }) => {
       {/* Main container with standard gap */}
       <div className="space-y-4 max-w-4xl mx-auto px-2 sm:px-0">
         
+
+        {/* 👇 YAHAN LAGA DIYA NAYA COMPONENT 👇 */}
+      <UserInfoBoxes />
+      
         {/* 🚀 TOP STATS BOXES (Clickable) */}
         <div 
           className="grid grid-cols-2 gap-3 cursor-pointer hover:scale-[1.01] transition-transform duration-200"
           onClick={() => navigate("/system-live-feed")} 
         >
+
           {/* Yellow Box - Grand Total */}
           <div className="bg-[#d89814] p-4 rounded-xl border border-yellow-600 shadow-lg flex flex-col justify-center min-h-[95px]">
             <h3 className="text-black font-bold text-[10px] sm:text-xs uppercase tracking-wide">
