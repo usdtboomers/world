@@ -3484,6 +3484,37 @@ router.get('/deposits', verifyAdmin, async (req, res) => {
 // C:\Users\HP\Desktop\worldfinance24\backend\routes\admin.js
 
 // 🔥 SUPER FAST DEPOSITS API
+// router.get('/all-deposits-fast', verifyAdmin, async (req, res) => {
+//     try {
+//         // 1. Sirf deposits aur manual_credits fetch karo, lean() se query 5x fast ho jayegi
+//         const deposits = await Transaction.find({ 
+//             type: { $in: ['deposit', 'manual_credit'] } 
+//         }).sort({ createdAt: -1 }).lean();
+
+//         // 2. Unik User IDs nikalo taaki database pe baar-baar call na jaye
+//         const uniqueUserIds = [...new Set(deposits.map(d => Number(d.userId)))];
+
+//         // 3. Ek hi baar mein saare users ke naam utha lo
+//         const users = await User.find({ userId: { $in: uniqueUserIds } }, 'userId name').lean();
+        
+//         // 4. Memory (RAM) mein Map banao
+//         const userMap = {};
+//         users.forEach(u => userMap[u.userId] = u.name);
+
+//         // 5. Final data merge karke bhej do
+//         const finalData = deposits.map(d => ({
+//             ...d,
+//             name: userMap[Number(d.userId)] || 'Unknown',
+//             amount: d.amount && d.amount.$numberDecimal ? Number(d.amount.$numberDecimal) : Number(d.amount),
+//         }));
+
+//         res.json({ success: true, data: finalData });
+//     } catch (error) {
+//         console.error('Fast Deposits Fetch Error:', error);
+//         res.status(500).json({ success: false, message: 'Server Error' });
+//     }
+// });
+
 router.get('/all-deposits-fast', verifyAdmin, async (req, res) => {
     try {
         // 1. Sirf deposits aur manual_credits fetch karo, lean() se query 5x fast ho jayegi
@@ -3491,20 +3522,20 @@ router.get('/all-deposits-fast', verifyAdmin, async (req, res) => {
             type: { $in: ['deposit', 'manual_credit'] } 
         }).sort({ createdAt: -1 }).lean();
 
-        // 2. Unik User IDs nikalo taaki database pe baar-baar call na jaye
-        const uniqueUserIds = [...new Set(deposits.map(d => Number(d.userId)))];
+        // 2. Unik User IDs nikalo (🔥 ERROR FIXED: Number() ki jagah String() lagaya)
+        const uniqueUserIds = [...new Set(deposits.map(d => String(d.userId)))];
 
         // 3. Ek hi baar mein saare users ke naam utha lo
         const users = await User.find({ userId: { $in: uniqueUserIds } }, 'userId name').lean();
         
         // 4. Memory (RAM) mein Map banao
         const userMap = {};
-        users.forEach(u => userMap[u.userId] = u.name);
+        users.forEach(u => userMap[String(u.userId)] = u.name); // 🔥 ERROR FIXED
 
         // 5. Final data merge karke bhej do
         const finalData = deposits.map(d => ({
             ...d,
-            name: userMap[Number(d.userId)] || 'Unknown',
+            name: userMap[String(d.userId)] || 'Unknown', // 🔥 ERROR FIXED
             amount: d.amount && d.amount.$numberDecimal ? Number(d.amount.$numberDecimal) : Number(d.amount),
         }));
 
@@ -3514,7 +3545,6 @@ router.get('/all-deposits-fast', verifyAdmin, async (req, res) => {
         res.status(500).json({ success: false, message: 'Server Error' });
     }
 });
-
 
 
 
