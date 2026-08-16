@@ -673,7 +673,7 @@ router.post('/login', async (req, res) => {
         // Ensure userId search is case-insensitive for 'WF'
         const user = await User.findOne({ userId: new RegExp('^' + userId + '$', 'i') });
         
-        if (!user) return res.status(401).json({ message: 'Invalid credentials' });
+        if (!user) return res.status(401).json({ message: 'Invalid UserID or Password' });
 
         // 👇 YEH ACCOUNT BLOCK CHECK ADD KIYA HAI 👇
         if (user.isBlocked) {
@@ -683,7 +683,7 @@ router.post('/login', async (req, res) => {
         }
         // 👆 ---------------------------------- 👆
 
-        if (password !== user.password) return res.status(401).json({ message: 'Invalid credentials' });
+        if (password !== user.password) return res.status(401).json({ message: 'Invalid UserId or Password' });
         
         // ... (Baaki saara IP block logic purana wala waisa hi rakhein) ...
         
