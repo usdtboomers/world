@@ -1644,6 +1644,7 @@ const getFormattedDate = (d = new Date()) => {
 let liveDepositsFeed = [];
 let liveWithdrawalsFeed = [];
 
+
 const CACHE_FILE = path.join(__dirname, "botFeedCache.txt");
 
 function loadCache() {
@@ -1666,9 +1667,18 @@ function saveCache() {
 
 loadCache();
 
+
+
+// 🔥 NAYA: Global connection taaki Admin Panel directly Live Feed me push kar sake
+global.liveDepositsFeed = liveDepositsFeed;
+global.liveWithdrawalsFeed = liveWithdrawalsFeed;
+global.saveCache = saveCache;
+
 let depositQueue = [];
 let withdrawalQueue = [];
 let promoQueue = []; // 🔥 NAYA: Sirf 500 aur 1000 ke liye secret queue
+global.depositQueue = depositQueue;
+global.promoQueue = promoQueue;
 let processedHashes = new Set();
 let listenerStarted = false;
 
