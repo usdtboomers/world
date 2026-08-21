@@ -746,7 +746,7 @@ router.post('/login', async (req, res) => {
 
         // 9. Generate Token and Response
         const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '50m' });
-        res.json({ message: 'Login successful', token, user: sanitizeUser(user) });
+        res.json({ message: 'Login successfull', token, user: sanitizeUser(user) });
         
     } catch (err) {
         console.error("Login Error:", err);
