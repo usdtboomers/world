@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const loginHistorySchema = new mongoose.Schema({
-  userId: { type: Number, required: true },
+  userId: { type: String, required: true }, // 🔥 String kar diya taaki "WF..." IDs bina error save hon
   name: { type: String },
   mobile: { type: String }, 
   ipAddress: { type: String }

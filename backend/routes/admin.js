@@ -915,9 +915,76 @@ router.post('/execute-sponsor-change', verifyAdmin, async (req, res) => {
  
 
 // 🔹 GET /login-stats (For Advanced Login Analytics)
- router.get("/login-stats", verifyAdmin, async (req, res) => {
+//  router.get("/login-stats", verifyAdmin, async (req, res) => {
+//   try {
+//     const { fromDate, toDate } = req.query; // NAYA: Range filters
+    
+//     let matchStage = {};
+    
+//     if (fromDate || toDate) {
+//       matchStage.createdAt = {}; // 🔥 FIX 1: loginTime ko createdAt kiya
+      
+//       if (fromDate) {
+//         const start = new Date(fromDate);
+//         start.setHours(0, 0, 0, 0);
+//         matchStage.createdAt.$gte = start; // 🔥 FIX 2
+//       }
+      
+//       if (toDate) {
+//         const end = new Date(toDate);
+//         end.setHours(23, 59, 59, 999);
+//         matchStage.createdAt.$lte = end; // 🔥 FIX 3
+//       }
+//     } else {
+//       // Default: Only today
+//       const today = new Date();
+//       today.setHours(0, 0, 0, 0);
+//       matchStage = { createdAt: { $gte: today } }; // 🔥 FIX 4
+//     }
+
+//     const userLogins = await LoginHistory.aggregate([
+//       { $match: matchStage },
+//       {
+//         $group: {
+//           _id: "$userId", 
+//           name: { $first: "$name" },
+//           mobile: { $first: "$mobile" }, 
+//           loginCount: { $sum: 1 }, 
+//           lastLoginTime: { $max: "$createdAt" } // 🔥 FIX 5: loginTime ko $createdAt kiya
+//         }
+//       },
+//       {
+//         $project: {
+//           userId: "$_id",
+//           name: 1,
+//           mobile: 1, 
+//           loginCount: 1,
+//           lastLoginTime: 1,
+//           _id: 0
+//         }
+//       },
+//       { $sort: { loginCount: -1 } } 
+//     ]);
+
+//     const totalLoginAttempts = userLogins.reduce((acc, user) => acc + user.loginCount, 0);
+//     const uniqueUsers = userLogins.length;
+
+//     res.json({
+//       success: true,
+//       summary: { totalLoginAttempts, uniqueUsers },
+//       userLogins
+//     });
+
+//   } catch (error) {
+//     console.error("Error in /login-stats:", error);
+//     res.status(500).json({ success: false, message: "Error fetching login stats" });
+//   }
+// });
+
+
+router.get("/login-stats", verifyAdmin, async (req, res) => {
   try {
-    const { fromDate, toDate } = req.query; // NAYA: Range filters
+    const { fromDate, toDate } = req.query; // Range filters
     
     let matchStage = {};
     
@@ -927,35 +994,35 @@ router.post('/execute-sponsor-change', verifyAdmin, async (req, res) => {
       if (fromDate) {
         const start = new Date(fromDate);
         start.setHours(0, 0, 0, 0);
-        matchStage.createdAt.$gte = start; // 🔥 FIX 2
+        matchStage.createdAt.$gte = start; 
       }
       
       if (toDate) {
         const end = new Date(toDate);
         end.setHours(23, 59, 59, 999);
-        matchStage.createdAt.$lte = end; // 🔥 FIX 3
+        matchStage.createdAt.$lte = end; 
       }
     } else {
       // Default: Only today
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      matchStage = { createdAt: { $gte: today } }; // 🔥 FIX 4
+      matchStage = { createdAt: { $gte: today } }; 
     }
 
     const userLogins = await LoginHistory.aggregate([
       { $match: matchStage },
       {
         $group: {
-          _id: "$userId", 
+          _id: "$userId", // String format wale userId ke basis par group banega
           name: { $first: "$name" },
           mobile: { $first: "$mobile" }, 
           loginCount: { $sum: 1 }, 
-          lastLoginTime: { $max: "$createdAt" } // 🔥 FIX 5: loginTime ko $createdAt kiya
+          lastLoginTime: { $max: "$createdAt" } 
         }
       },
       {
         $project: {
-          userId: "$_id",
+          userId: { $toString: "$_id" }, // 🔥 NAYA FIX: Strictly String mein convert kar diya
           name: 1,
           mobile: 1, 
           loginCount: 1,
@@ -980,7 +1047,6 @@ router.post('/execute-sponsor-change', verifyAdmin, async (req, res) => {
     res.status(500).json({ success: false, message: "Error fetching login stats" });
   }
 });
-
 // Admin reverses a transaction
  
 

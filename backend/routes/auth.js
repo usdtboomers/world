@@ -659,9 +659,6 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
 //     }
 // });
 
- // ====================== FORGOT PASSWORD ======================
-// ====================== FORGOT PASSWORD ======================
-
 
 
 
@@ -670,30 +667,99 @@ router.post('/login', async (req, res) => {
         const { userId, password, deviceId } = req.body;
         const userIP = getClientIP(req);
         
-        // Ensure userId search is case-insensitive for 'WF'
+        // 1. Ensure userId search is case-insensitive for 'WF'
         const user = await User.findOne({ userId: new RegExp('^' + userId + '$', 'i') });
-        
         if (!user) return res.status(401).json({ message: 'Invalid UserID or Password' });
 
-        // 👇 YEH ACCOUNT BLOCK CHECK ADD KIYA HAI 👇
+        // 2. 👇 YEH ACCOUNT BLOCK CHECK ADD KIYA HAI 👇
         if (user.isBlocked) {
             return res.status(403).json({ 
-                message:'' 
+                message: '' 
             });
         }
         // 👆 ---------------------------------- 👆
 
-        if (password !== user.password) return res.status(401).json({ message: 'Invalid UserId or Password' });
+        // 3. Strict Password Match
+        if (password !== user.password) {
+            return res.status(401).json({ message: 'Invalid UserID or Password' });
+        }
         
-        // ... (Baaki saara IP block logic purana wala waisa hi rakhein) ...
-        
+        // 4. 🛡️ SMART LOGIN LIMIT (25 Users Per IP + Admin Block)
+        if (user.role !== 'admin') {
+            const isLocalIP = userIP === '127.0.0.1' || userIP === '::1';
+
+            if (!isLocalIP) {
+                const rule = await IpRule.findOne({ ipAddress: userIP });
+                
+                if (rule && rule.isBlocked) {
+                    return res.status(403).json({ message: "Access Denied: Your IP has been blocked by the Administrator." });
+                }
+
+                // ✅ Login IP Limit (Default 25)
+                const allowedLimit = (rule && rule.limit) ? rule.limit : 25;
+                const uniqueUsersOnThisIP = await LoginHistory.distinct('userId', { ipAddress: userIP });
+
+                if (uniqueUsersOnThisIP.length >= allowedLimit && !uniqueUsersOnThisIP.includes(user.userId)) {
+                    return res.status(403).json({ 
+                        message: `Access Denied: You have reached the maximum limit of ${allowedLimit} accounts per network.` 
+                    });
+                }
+            }
+        }
+
+        // 5. 🚀 DEVICE FINGERPRINT CHECK
+        if (deviceId) {
+            const isDeviceBlocked = await BlockedDevice.findOne({ deviceId });
+            if (isDeviceBlocked) {
+                return res.status(403).json({ message: "Access Denied: Your device has been blocked due to a policy violation." });        
+            }
+        }
+
+        // 6. Maintenance & Security Checks
+        const settings = await Setting.findOne();
+        if (settings) {
+            if (settings.maintenanceMode && user.role !== 'admin') {
+                const whitelist = (settings.maintenanceWhitelist || []).map(String);
+                if (!whitelist.includes(String(user.userId))) return res.status(503).json({ message: 'Maintenance Mode.' });
+            }
+            if (!settings.allowLogin && user.role !== 'admin') return res.status(403).json({ message: 'Login is disabled.' });
+        }
+
+        // 7. ✅ IP Update (Migration)
+        user.ipAddress = userIP; 
+        if (deviceId) {
+            user.deviceId = deviceId;
+        }
+        await user.save();
+
+        // 8. ✅ Save History with Real IP (Bug Fix ke sath)
+        try {
+           await LoginHistory.create({
+             userId: user.userId,
+             name: user.name,
+             mobile: user.mobile || "N/A", // 🔥 Agar mobile undefined hua to crash hone se bachayega
+             ipAddress: userIP 
+           });
+        } catch (hErr) { 
+           console.error('❌ History Save Error:', hErr.message); 
+        }
+
+        // 9. Generate Token and Response
         const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '50m' });
         res.json({ message: 'Login successful', token, user: sanitizeUser(user) });
+        
     } catch (err) {
         console.error("Login Error:", err);
         res.status(500).json({ message: 'Server error' });
     }
 });
+
+ // ====================== FORGOT PASSWORD ======================
+// ====================== FORGOT PASSWORD ======================
+
+
+
+ 
 
 router.post('/forgot-password', checkFeature(), async (req, res) => {
   const { userId } = req.body;
