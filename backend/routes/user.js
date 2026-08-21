@@ -841,6 +841,47 @@ router.get('/all-team/:userId', async (req, res) => {
 
 
 
+// GET: Fetch Daily ROI Income for Logged-in User
+// =======================================================
+// 🔹 DAILY ROI INCOME ROUTE (User Dashboard ke liye)
+// =======================================================
+// =======================================================
+// 🔹 COMBINED DAILY ROI & LEVEL INCOME ROUTE 
+// =======================================================
+router.get('/roi-income', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.userId || req.user.id || req.user; 
+
+        // 🔥 DONO TYPES FETCH KAR RAHE HAIN
+        const transactions = await Transaction.find({
+            userId: userId,
+            type: { $in: ["daily_roi", "daily_level_income"] }
+        }).sort({ createdAt: -1, date: -1 }); 
+
+        // Backend pe hi dono ka total calculate kar lenge
+        let totalRoi = 0;
+        let totalLevel = 0;
+
+        transactions.forEach(txn => {
+            if (txn.type === "daily_roi") totalRoi += (txn.amount || 0);
+            if (txn.type === "daily_level_income") totalLevel += (txn.amount || 0);
+        });
+
+        res.status(200).json({ 
+            success: true, 
+            totalRoi: totalRoi,
+            totalLevel: totalLevel,
+            data: transactions 
+        });
+
+    } catch (error) {
+        console.error("Error fetching combined income:", error);
+        res.status(500).json({ success: false, message: "Server error while fetching income." });
+    }
+});
+
+
+
  
  
    

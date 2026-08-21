@@ -50,6 +50,7 @@ import Notifications from "./pages/user/Notifications.jsx";
 import UserLayout from "./components/layout/UserLayout.jsx";
 import TradingStatusPanel from './pages/user/TradingStatusPanel';
 import SystemDepositHistory from './pages/user/SystemDepositHistory';
+import RoiIncome from './pages/user/RoiIncome';
  
  import GlobalTeam from './pages/user/GlobalTeam';
 // 🔹 Admin Pages
@@ -259,7 +260,10 @@ function AppContent() {
     } 
 />
  
+ <Route path="/roi-income" element={<RequireUserAuth><UserLayout><RoiIncome /></UserLayout></RequireUserAuth>} />
 <Route path="/community-income" element={<RequireUserAuth><UserLayout><CommunityEarning /></UserLayout></RequireUserAuth>} />
+        <Route path="/level-income" element={<RequireUserAuth><UserLayout><LevelIncome /></UserLayout></RequireUserAuth>} />
+
              <Route path="/direct-income" element={<RequireUserAuth><UserLayout><DirectIncome /></UserLayout></RequireUserAuth>} />
 <Route path="/level-income" element={<RequireUserAuth><UserLayout><LevelIncome /></UserLayout></RequireUserAuth>} />
 <Route path="/staking-direct-income" element={<RequireUserAuth><UserLayout><StakingDirectIncome /></UserLayout></RequireUserAuth>} />
