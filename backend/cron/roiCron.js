@@ -126,7 +126,7 @@ const PackageActivation = require('../models/PackageActivation');
 const Transaction = require('../models/Transaction');
 
 // 🕛 Run everyday at 12:15 AM (IST - Indian Standard Time)
-cron.schedule('52 12 * * *', async () => {
+cron.schedule('48 03 * * *', async () => {
         console.log('⏳ Running Daily ROI Cron Job for World Finance at', new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
     
     try {
