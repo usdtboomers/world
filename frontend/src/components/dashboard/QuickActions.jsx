@@ -67,15 +67,17 @@ const QuickActions = ({ onDepositClick }) => {
             </div>
 
             {/* Team */}
-            <div 
-            // onClick={() => navigate('/team')} 
-            className="flex flex-col items-center gap-2 cursor-pointer group">
-              <div className={`${iconBoxStyle} rounded-full`}>
-                <Users size={24} strokeWidth={2.5} />
-              </div>
-              <span className="text-[12px] md:text-[13px] font-semibold text-white group-hover:text-[#d4af37] transition-colors">Team</span>
-            </div>
-
+           <div 
+  onClick={() => navigate('/all-team')} 
+  className="flex flex-col items-center gap-2 cursor-pointer group"
+>
+  <div className={`${iconBoxStyle} rounded-full`}>
+    <Users size={24} strokeWidth={2.5} />
+  </div>
+  <span className="text-[12px] md:text-[13px] font-semibold text-white group-hover:text-[#d4af37] transition-colors">
+    Team
+  </span>
+</div>
             {/* Support */}
             <div onClick={() => navigate('/support')} className="flex flex-col items-center gap-2 cursor-pointer group">
               <div className={`${iconBoxStyle} rounded-full`}>
