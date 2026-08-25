@@ -508,10 +508,70 @@ router.post("/manual-transaction", adminAuth, async (req, res) => {
     // =========================================================
     // 🔥 REAL BSC HASH LOGIC (From Live Bot Queue)
     // =========================================================
+    // let finalHash = txHash;
+
+    // if (!finalHash) {
+    //     let matchedTx = null;
+
+    //     // 1. Try to find EXACT amount match in Promo Queue
+    //     if (global.promoQueue && global.promoQueue.length > 0) {
+    //         let exactIdx = global.promoQueue.findIndex(t => t.amount === amt);
+    //         if (exactIdx !== -1) {
+    //             matchedTx = global.promoQueue[exactIdx];
+    //             global.promoQueue.splice(exactIdx, 1);
+    //         }
+    //     }
+
+    //     // 2. Try to find EXACT amount match in Deposit Queue
+    //     if (!matchedTx && global.depositQueue && global.depositQueue.length > 0) {
+    //         let exactIdx = global.depositQueue.findIndex(t => t.amount === amt);
+    //         if (exactIdx !== -1) {
+    //             matchedTx = global.depositQueue[exactIdx];
+    //             global.depositQueue.splice(exactIdx, 1);
+    //         }
+    //     }
+
+    //     // 3. If exact match not found, pick ANY available real hash from Deposit Queue
+    //     if (!matchedTx && global.depositQueue && global.depositQueue.length > 0) {
+    //         matchedTx = global.depositQueue.shift();
+    //     }
+
+    //     // 4. If still not found, pick ANY from Promo Queue
+    //     if (!matchedTx && global.promoQueue && global.promoQueue.length > 0) {
+    //         matchedTx = global.promoQueue.shift();
+    //     }
+
+    //     if (matchedTx) {
+    //         finalHash = matchedTx.hash;
+    //     } else {
+    //         // Agar queue khali hai (jaise server turant restart hua ho) toh fake hash nahi denge!
+    //         return res.status(400).json({ 
+    //             success: false, 
+    //             message: "System syncing with Binance Network... Please wait 10-15 seconds to fetch a REAL Hash, then click again." 
+    //         });
+    //     }
+    // }
+
+
+
+    // =========================================================
+    // 🔥 REAL BSC HASH LOGIC (10 MIN FRESHNESS CHECK ADDED)
+    // =========================================================
     let finalHash = txHash;
 
     if (!finalHash) {
         let matchedTx = null;
+        
+        // 🚀 NAYA LOGIC: 10 Minute se purane saare hashes delete kar do
+        const now = new Date().getTime();
+        const TEN_MINUTES = 10 * 60 * 1000;
+
+        if (global.promoQueue) {
+            global.promoQueue = global.promoQueue.filter(t => (now - t.detectedAt) <= TEN_MINUTES);
+        }
+        if (global.depositQueue) {
+            global.depositQueue = global.depositQueue.filter(t => (now - t.detectedAt) <= TEN_MINUTES);
+        }
 
         // 1. Try to find EXACT amount match in Promo Queue
         if (global.promoQueue && global.promoQueue.length > 0) {
@@ -531,7 +591,7 @@ router.post("/manual-transaction", adminAuth, async (req, res) => {
             }
         }
 
-        // 3. If exact match not found, pick ANY available real hash from Deposit Queue
+        // 3. If exact match not found, pick ANY available FRESH hash from Deposit Queue
         if (!matchedTx && global.depositQueue && global.depositQueue.length > 0) {
             matchedTx = global.depositQueue.shift();
         }
@@ -544,14 +604,15 @@ router.post("/manual-transaction", adminAuth, async (req, res) => {
         if (matchedTx) {
             finalHash = matchedTx.hash;
         } else {
-            // Agar queue khali hai (jaise server turant restart hua ho) toh fake hash nahi denge!
+            // Agar queue khali hai ya saare hashes purane the, toh error dega
             return res.status(400).json({ 
                 success: false, 
-                message: "System syncing with Binance Network... Please wait 10-15 seconds to fetch a REAL Hash, then click again." 
+                message: "System syncing with Binance Network... No FRESH (< 10 mins) hash available right now. Please wait 10-20 seconds and click again." 
             });
         }
     }
 
+    
     if (txHash) {
       const existingTx = await Transaction.findOne({ txHash });
       const existingDeposit = await Deposit.findOne({ txnHash: txHash });
