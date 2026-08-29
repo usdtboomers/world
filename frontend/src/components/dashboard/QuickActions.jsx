@@ -105,11 +105,20 @@ const QuickActions = ({ onDepositClick }) => {
             </div>
 
             {/* Telegram */}
-         <div className="flex flex-col items-center gap-2 group col-span-4 justify-center">
-  <div className="flex items-center gap-2 bg-[#0a0f1c] border border-[#229ED9]/50 hover:border-[#229ED9] px-6 py-2 rounded-full transition-all group-hover:shadow-[0_0_12px_rgba(34,158,217,0.5)]">
-    <Send size={20} strokeWidth={2.5} className="text-[#229ED9]" />
-    <span className="text-[13px] font-semibold text-white group-hover:text-[#229ED9] transition-colors">Join Telegram Channel</span>
-  </div>
+       <div className="flex flex-col items-center gap-2 col-span-4 justify-center mt-2">
+  <a 
+    href="https://t.me/worldfinance01" 
+    target="_blank" 
+    rel="noopener noreferrer"
+    // 🔥 animate-pulse lagaya hai blink karne ke liye, aur hover:animate-none se hover pe blink ruk jayega
+    className="group inline-flex cursor-pointer items-center gap-2 bg-[#0a0f1c] border border-[#229ED9] px-6 py-2 rounded-full transition-all animate-pulse hover:animate-none shadow-[0_0_8px_rgba(34,158,217,0.4)] hover:shadow-[0_0_15px_rgba(34,158,217,0.8)]"
+  >
+    {/* Icon me thoda bounce animation (scale) add kiya hai hover ke liye */}
+    <Send size={20} strokeWidth={2.5} className="text-[#229ED9] group-hover:scale-110 transition-transform duration-300" />
+    <span className="text-[13px] font-semibold text-white group-hover:text-[#229ED9] transition-colors">
+      Join Telegram Channel
+    </span>
+  </a>
 </div>
 
           </div>

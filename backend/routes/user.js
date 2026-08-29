@@ -12,7 +12,7 @@ const DummyTransaction = require('../models/DummyTransaction');
 const DummyUser = require('../models/DummyUser.js'); 
 const FastTrack = require('../models/FastTrack');
 const FakeUser = require('../models/FakeUser');
-
+const PackageActivation = require('../models/PackageActivation'); // 🔥 YE IMPORT ZAROORI HAI
 // Middleware & Utils
 const authMiddleware = require('../middleware/authMiddleware');
 const checkFeature = require("../middleware/checkFeatureEnabled");
@@ -118,8 +118,143 @@ const processGlobalTeamGrowth = async (excludeUserId) => {
     }
 };
 
+router.get('/check-sponsor/:id', async (req, res) => {
+    try {
+        const searchId = new RegExp('^' + req.params.id + '$', 'i'); // Case insensitive search taaki wf aur WF dono chal jaye
+
+        // 1. Pehle REAL User database me check karo
+        let sponsor = await User.findOne({ userId: searchId });
+
+        // 2. Agar Real User nahi mila, toh DUMMY User database me check karo
+        if (!sponsor) {
+            sponsor = await DummyUser.findOne({ userId: searchId });
+        }
+
+        // 3. Agar dono me nahi mila, tabhi Invalid error do
+        if (!sponsor) {
+            return res.status(404).json({ message: "❌ Invalid Sponsor ID" });
+        }
+
+        // 4. Agar mil gaya (Real ya Dummy koi bhi), toh uska naam wapas bhej do
+        res.json({ name: sponsor.name });
+    } catch (err) {
+        console.error("Check Sponsor Error:", err);
+        res.status(500).json({ message: "Server error" });
+    }
+});
 
 
+
+// =======================================================
+// 🚀 FIXED ROUTE: GET DOWNLINE BUSINESS (Using PackageActivation)
+// =======================================================
+router.get('/downline-business', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.userId || req.user.id || req.user;
+
+        let currentLevelIds = [userId];
+        let downlineMap = {}; 
+        let currentLevel = 1;
+
+        // 1. Downline Structure nikalo
+        while (currentLevelIds.length > 0 && currentLevel <= 12) {
+            const users = await User.find({ sponsorId: { $in: currentLevelIds } }).select("userId name");
+            let nextLevelIds = [];
+
+            users.forEach(u => {
+                downlineMap[u.userId] = { level: currentLevel, name: u.name || "User" };
+                nextLevelIds.push(u.userId);
+            });
+
+            currentLevelIds = nextLevelIds;
+            currentLevel++;
+        }
+
+        const downlineUserIds = Object.keys(downlineMap);
+
+        // 2. Fetch Active Packages
+        const topups = await PackageActivation.find({
+            userId: { $in: downlineUserIds },
+            status: 'active'
+        });
+
+        let totalDirect = 0, todayDirect = 0;
+        let totalLevel = 0, todayLevel = 0;
+        
+        const todayStr = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }).split(',')[0];
+
+        // 🔥 GROUP BY DATE LOGIC
+        let groupedByDate = {};
+
+        topups.forEach(pkg => {
+            const amt = Number(pkg.packageAmount) || 0;
+            const userLvl = downlineMap[pkg.userId].level;
+            
+            const txDate = new Date(pkg.startDate);
+            const txDateStr = txDate.toLocaleString("en-US", { timeZone: "Asia/Kolkata" }).split(',')[0];
+            const isToday = (txDateStr === todayStr);
+
+            // 4 Box Stats
+            if (userLvl === 1) {
+                totalDirect += amt;
+                if (isToday) todayDirect += amt;
+            } else if (userLvl >= 2 && userLvl <= 12) {
+                totalLevel += amt;
+                if (isToday) todayLevel += amt;
+            }
+
+            // Grouping Daily Business
+            if (userLvl <= 12) {
+                if (!groupedByDate[txDateStr]) {
+                    groupedByDate[txDateStr] = { dateStr: txDateStr, rawDate: txDate, direct: 0, team: 0 };
+                }
+                if (userLvl === 1) {
+                    groupedByDate[txDateStr].direct += amt;
+                } else {
+                    groupedByDate[txDateStr].team += amt;
+                }
+            }
+        });
+
+        // 🔥 Format Data for Frontend Table
+        let finalData = [];
+        let idCounter = 1;
+
+        Object.values(groupedByDate)
+            .sort((a, b) => new Date(b.rawDate) - new Date(a.rawDate)) // Latest first
+            .forEach(day => {
+                if (day.direct > 0) {
+                    finalData.push({
+                        _id: idCounter++,
+                        date: day.rawDate,
+                        type: "Direct Business",
+                        amount: day.direct
+                    });
+                }
+                if (day.team > 0) {
+                    finalData.push({
+                        _id: idCounter++,
+                        date: day.rawDate,
+                        type: "Team Business",
+                        amount: day.team
+                    });
+                }
+            });
+
+        res.status(200).json({
+            success: true,
+            stats: { 
+                totalDirect, todayDirect, 
+                totalLevel, todayLevel 
+            },
+            data: finalData
+        });
+
+    } catch (error) {
+        console.error("Error fetching downline business:", error);
+        res.status(500).json({ success: false, message: "Server Error while fetching business data" });
+    }
+});
 
 
 
@@ -1458,145 +1593,10 @@ router.get('/global-team-count/:userId', async (req, res) => {
 });
 
 
+ 
+ 
 
-
-
-// GET Downline Business
-// 🚀 UPDATED (SUPER FAST): Downline Business Route
-router.get("/downline-business/:userId", async (req, res) => {
-  try {
-    const userId = Number(req.params.userId);
-
-    // 1. Find main user
-    const user = await User.findOne({ userId });
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    // 2. Sirf 1 DB call mein saari downline team nikal lo (GraphLookup)
-    const teamResult = await User.aggregate([
-      { $match: { userId: userId } },
-      {
-        $graphLookup: {
-          from: "users",
-          startWith: "$userId",
-          connectFromField: "userId",
-          connectToField: "sponsorId",
-          as: "downline",
-          maxDepth: 15, // 15 level deep tak ki team fetch karega
-          depthField: "level"
-        }
-      }
-    ]);
-
-    // Agar downline nahi hai, toh empty data bhej do
-    if (!teamResult || teamResult.length === 0 || !teamResult[0].downline) {
-      return res.json({
-        totalTopup: 0,
-        totalWithdrawal: 0,
-        totalBusiness: 0,
-        totalTeamCount: 0,
-        directCount: 0,
-        indirectCount: 0,
-        team: []
-      });
-    }
-
-    const rawTeam = teamResult[0].downline;
-    // Saare downline users ki ID ek array mein nikal lo
-    const downlineUserIds = rawTeam.map(u => u.userId);
-
-    // 3. Poori team ki transactions sirf 1 DB call mein nikal lo (Yahan loop khatam ho gaya!)
-    const allTransactions = await Transaction.find({
-      userId: { $in: downlineUserIds },
-      type: { $in: ["topup", "withdrawal"] }
-    }).lean().sort({ date: -1 });
-
-    // 4. Transactions ko fast processing ke liye Map (Dictionary) mein daal lo
-    const txMap = {};
-    allTransactions.forEach(t => {
-      if (!txMap[t.userId]) txMap[t.userId] = [];
-      
-      // Amount format fix
-      let amt = t.amount;
-      if (amt && typeof amt === "object") {
-        amt = parseFloat(amt.toString());
-      } else {
-        amt = Number(amt || 0);
-      }
-
-      txMap[t.userId].push({
-        type: t.type,
-        amount: amt,
-        date: t.date
-      });
-    });
-
-    // 5. Final Calculations
-    let totalSystemTopup = 0;
-    let totalSystemWithdrawal = 0;
-    let totalSystemBusiness = 0;
-    let directCount = 0;
-    let indirectCount = 0;
-
-    const formattedTeam = rawTeam.map((u, idx) => {
-      const actualLevel = (u.level || 0) + 1; // GraphLookup 0 se start karta hai
-      
-      if (actualLevel === 1) directCount++;
-      else indirectCount++;
-
-      const userTxs = txMap[u.userId] || [];
-      
-      let totalTopup = 0;
-      let totalWithdrawal = 0;
-      let totalBusiness = 0;
-
-      userTxs.forEach(t => {
-        if (t.type === "topup") totalTopup += t.amount;
-        if (t.type === "withdrawal") totalWithdrawal += t.amount;
-        totalBusiness += t.amount;
-      });
-
-      totalSystemTopup += totalTopup;
-      totalSystemWithdrawal += totalWithdrawal;
-      totalSystemBusiness += totalBusiness;
-
-      return {
-        userId: u.userId,
-        name: u.name || "N/A",
-        level: actualLevel,
-        totalTopup,
-        totalWithdrawal,
-        totalBusiness,
-        transactions: userTxs
-      };
-    });
-
-    // Level ke hisaab se sort karo (Directs pehle aayenge)
-    formattedTeam.sort((a, b) => a.level - b.level);
-
-    // Frontend ke hisaab se srNo add karo
-    const finalTeam = formattedTeam.map((u, idx) => ({
-      srNo: idx + 1,
-      ...u
-    }));
-
-    // 6. Return response
-    res.json({
-      totalTopup: totalSystemTopup,
-      totalWithdrawal: totalSystemWithdrawal,
-      totalBusiness: totalSystemBusiness,
-      totalTeamCount: finalTeam.length,
-      directCount,
-      indirectCount,
-      team: finalTeam
-    });
-
-  } catch (err) {
-    console.error("Error fetching downline business:", err);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-
+ 
 
 
 // 🔥 ADMIN ROUTE: Purane Missed Rewards Dilane Ke Liye (Bas Ek Baar Chalana Hai)
