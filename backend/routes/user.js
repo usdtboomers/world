@@ -258,6 +258,227 @@ router.get('/downline-business', authMiddleware, async (req, res) => {
 
 
 
+// ==============================================================
+// 🏆 1. YE ROUTE SABSE UPAR HONA CHAHIYE (ID wale routes se pehle)
+// ==============================================================
+// router.get('/salary-achievers-list', authMiddleware, async (req, res) => {
+//     try {
+//         const realUsers = await User.find({ isSalaryQualified: true })
+//             .select('userId name topUpAmount createdAt').lean();
+
+//         let achievers = realUsers.map(u => ({
+//             userId: u.userId,
+//             name: u.name || "User",
+//             amount: u.topUpAmount || 50,
+//             type: 'Real Achiever'
+//         }));
+
+//         const fakeUsers = await DummyUser.find({ package: { $gte: 50 } })
+//             .sort({ _id: 1 }).limit(201).lean();
+
+//         const formattedFake = fakeUsers.map(u => ({
+//             userId: u.userId,
+//             name: u.name || "User",
+//             amount: u.package || 50,
+//             type: 'System Achiever'
+//         }));
+
+//         achievers = [...achievers, ...formattedFake];
+//         achievers.sort((a, b) => b.amount - a.amount);
+
+//         res.json({ success: true, totalAchievers: achievers.length, data: achievers });
+//     } catch (error) {
+//         console.error("Salary Achievers Error:", error);
+//         res.status(500).json({ success: false, message: "Server error" });
+//     }
+// });
+
+// ==========================================
+// 🏆 SALARY ACHIEVERS LIST (REAL + 201 FAKE)
+// ==========================================
+router.get('/salary-achievers-list', authMiddleware, async (req, res) => {
+    try {
+        // 1. GET REAL ACHIEVERS (Jinhone sach me target pura kiya hai)
+        const realUsers = await User.find({ isSalaryQualified: true })
+            .select('userId name topUpAmount createdAt')
+            .lean();
+
+        let achievers = realUsers.map(u => ({
+            userId: u.userId,
+            name: u.name || "User",
+            amount: u.topUpAmount || 50,
+            type: 'Real Achiever'
+        }));
+
+        // 2. GET FAKE ACHIEVERS (Pehle DB se uthao)
+        const fakeUsers = await DummyUser.find()
+            .sort({ _id: 1 }) 
+            .limit(201)
+            .lean();
+
+        let formattedFake = fakeUsers.map(u => {
+            // Har dummy user ko consistent amount dena
+            const charCode = u.userId ? u.userId.charCodeAt(u.userId.length - 1) : 0;
+            let fallbackAmt = 50;
+            if (charCode % 5 === 0) fallbackAmt = 500;
+            else if (charCode % 3 === 0) fallbackAmt = 100;
+            else if (charCode % 2 === 0) fallbackAmt = 200;
+
+            return {
+                userId: u.userId,
+                name: u.name || "User",
+                amount: (u.package && u.package >= 50) ? u.package : fallbackAmt,
+                type: 'System Achiever'
+            };
+        });
+
+        // 🔥 3. AUTO-GENERATE LOGIC: Agar 201 log nahi mile, toh khud bana lo!
+        if (formattedFake.length < 201) {
+            const needed = 201 - formattedFake.length;
+            const amounts = [50, 100, 50, 200, 50, 100, 500, 50]; // Random realistic amounts
+            const firstNames = ["Aarav", "Vikram", "Rohan", "Sneha", "Rahul", "Pooja", "Amit", "Karan", "Priya", "Suresh", "Neha", "Vikas"];
+            
+            for (let i = 0; i < needed; i++) {
+                const rAmt = amounts[i % amounts.length];
+                const rName = firstNames[i % firstNames.length] + " " + String.fromCharCode(65 + (i % 26)); // Example: Rahul M
+                
+                formattedFake.push({
+                    userId: `WF${800000 + i}`, // Fixed sequence IDs taaki real lagein
+                    name: rName,
+                    amount: rAmt,
+                    type: 'System Achiever'
+                });
+            }
+        }
+
+        // 4. COMBINE DONO LIST (Real + Fake)
+        achievers = [...achievers, ...formattedFake];
+
+        // 5. SORTING (Jiska bada package wo upar)
+        achievers.sort((a, b) => b.amount - a.amount);
+
+        res.json({ 
+            success: true, 
+            totalAchievers: achievers.length,
+            data: achievers 
+        });
+
+    } catch (error) {
+        console.error("Salary Achievers Error:", error);
+        res.status(500).json({ success: false, message: "Server error while fetching achievers" });
+    }
+});
+
+
+
+// router.get('/roi-income', authMiddleware, async (req, res) => {
+//     try {
+//         const userId = req.user.userId || req.user.id || req.user; 
+
+//         // 🔥 DONO TYPES FETCH KAR RAHE HAIN
+//         const transactions = await Transaction.find({
+//             userId: userId,
+//             type: { $in: ["daily_roi", "daily_level_income"] }
+//         }).sort({ createdAt: -1, date: -1 }); 
+
+//         // Backend pe hi dono ka total calculate kar lenge
+//         let totalRoi = 0;
+//         let totalLevel = 0;
+
+//         transactions.forEach(txn => {
+//             if (txn.type === "daily_roi") totalRoi += (txn.amount || 0);
+//             if (txn.type === "daily_level_income") totalLevel += (txn.amount || 0);
+//         });
+
+//         res.status(200).json({ 
+//             success: true, 
+//             totalRoi: totalRoi,
+//             totalLevel: totalLevel,
+//             data: transactions 
+//         });
+
+//     } catch (error) {
+//         console.error("Error fetching combined income:", error);
+//         res.status(500).json({ success: false, message: "Server error while fetching income." });
+//     }
+// });
+
+
+router.get('/roi-income', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user.userId || req.user.id || req.user; 
+
+        // 🔥 .lean() lagaya jisse query ekdum fast ho jayegi
+        const transactions = await Transaction.find({
+            userId: userId,
+            type: { $in: ["daily_roi", "daily_level_income"] }
+        }).sort({ createdAt: -1, date: -1 }).lean(); 
+
+        let totalRoi = 0;
+        let totalLevel = 0;
+        let todaySelf = 0;
+        let todayLevel = 0;
+
+        // Aaj ki date set kar rahe hain (IST)
+        const istTimeStr = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+        const todayStr = new Date(istTimeStr).toISOString().split('T')[0];
+
+        const levelIncomeGroups = {};
+        const selfIncomeList = [];
+
+        // Backend pe hi dono ka total aur Date grouping calculate kar lenge
+        transactions.forEach(txn => {
+            const amt = Number(txn.amount) || 0;
+            const txnDateObj = new Date(txn.createdAt || txn.date);
+            const txnDateStr = txnDateObj.toISOString().split('T')[0];
+
+            if (txn.type === "daily_roi") {
+                totalRoi += amt;
+                if (txnDateStr === todayStr) todaySelf += amt;
+                selfIncomeList.push(txn);
+            } 
+            
+            if (txn.type === "daily_level_income") {
+                totalLevel += amt;
+                if (txnDateStr === todayStr) todayLevel += amt;
+
+                // 🔥 MAGIC: Level Income ko Date ke hisaab se group kar rahe hain
+                if (!levelIncomeGroups[txnDateStr]) {
+                    levelIncomeGroups[txnDateStr] = {
+                        _id: `level_combined_${txnDateStr}`,
+                        userId: userId,
+                        type: "daily_level_income",
+                        description: "Total Team Level ROI for the Day",
+                        amount: 0,
+                        date: txnDateStr,
+                        createdAt: txnDateObj
+                    };
+                }
+                levelIncomeGroups[txnDateStr].amount += amt;
+            }
+        });
+
+        // Combined Level Array aur Self Array ko mix karke sort kiya
+        const combinedLevelArray = Object.values(levelIncomeGroups);
+        const finalData = [...selfIncomeList, ...combinedLevelArray].sort(
+            (a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date)
+        );
+
+        res.status(200).json({ 
+            success: true, 
+            totalSelfRoi: totalRoi,
+            totalLevelRoi: totalLevel,
+            todaySelfRoi: todaySelf,
+            todayLevelRoi: todayLevel,
+            totalCombined: totalRoi + totalLevel,
+            data: finalData 
+        });
+
+    } catch (error) {
+        console.error("Error fetching combined income:", error);
+        res.status(500).json({ success: false, message: "Server error while fetching income." });
+    }
+});
 
 
 // 📋 Get all users (Admin ke liye)
@@ -983,43 +1204,14 @@ router.get('/all-team/:userId', async (req, res) => {
 // =======================================================
 // 🔹 COMBINED DAILY ROI & LEVEL INCOME ROUTE 
 // =======================================================
-router.get('/roi-income', authMiddleware, async (req, res) => {
-    try {
-        const userId = req.user.userId || req.user.id || req.user; 
-
-        // 🔥 DONO TYPES FETCH KAR RAHE HAIN
-        const transactions = await Transaction.find({
-            userId: userId,
-            type: { $in: ["daily_roi", "daily_level_income"] }
-        }).sort({ createdAt: -1, date: -1 }); 
-
-        // Backend pe hi dono ka total calculate kar lenge
-        let totalRoi = 0;
-        let totalLevel = 0;
-
-        transactions.forEach(txn => {
-            if (txn.type === "daily_roi") totalRoi += (txn.amount || 0);
-            if (txn.type === "daily_level_income") totalLevel += (txn.amount || 0);
-        });
-
-        res.status(200).json({ 
-            success: true, 
-            totalRoi: totalRoi,
-            totalLevel: totalLevel,
-            data: transactions 
-        });
-
-    } catch (error) {
-        console.error("Error fetching combined income:", error);
-        res.status(500).json({ success: false, message: "Server error while fetching income." });
-    }
-});
 
 
 
  
+// ==========================================
+// 🏆 SALARY ACHIEVERS LIST (REAL + 201 FAKE)
+// ==========================================
  
-   
  
 
 

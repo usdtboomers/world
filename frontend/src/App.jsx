@@ -51,6 +51,7 @@ import UserLayout from "./components/layout/UserLayout.jsx";
 import TradingStatusPanel from './pages/user/TradingStatusPanel';
 import SystemDepositHistory from './pages/user/SystemDepositHistory';
 import RoiIncome from './pages/user/RoiIncome';
+import SalaryAchievers from './pages/user/SalaryAchievers'; // 👈 Ye naya import
  
  import GlobalTeam from './pages/user/GlobalTeam';
 // 🔹 Admin Pages
@@ -260,7 +261,9 @@ function AppContent() {
     } 
 />
  
+
  <Route path="/roi-income" element={<RequireUserAuth><UserLayout><RoiIncome /></UserLayout></RequireUserAuth>} />
+<Route path="/salary-achievers" element={<RequireUserAuth><UserLayout><SalaryAchievers /></UserLayout></RequireUserAuth>} /> {/* 👈 Ye naya route */}
 <Route path="/community-income" element={<RequireUserAuth><UserLayout><CommunityEarning /></UserLayout></RequireUserAuth>} />
         <Route path="/level-income" element={<RequireUserAuth><UserLayout><LevelIncome /></UserLayout></RequireUserAuth>} />
 

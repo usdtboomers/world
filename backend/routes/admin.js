@@ -2169,7 +2169,7 @@ const getMonthlyLegStatsForAdmin = async (sponsorId, startOfMonth, endOfMonth) =
 //     }
 // });
 
-router.get('/monthly-salary-admin-report', async (req, res) => {
+router.get('/monthly-salary-admin-report',verifyAdmin, async (req, res) => {
     try {
         // 1. 🔥 SIRF 1 BAAR DB CALL: Saare users aur zaroori fields utha lo
         const allUsers = await User.find({}, 'userId name sponsorId isToppedUp topUpAmount topUpDate isSalaryQualified salaryMonthsPaid').lean();
@@ -2739,6 +2739,7 @@ router.get('/monthly-salary-admin-report', async (req, res) => {
 //         res.status(500).json({ success: false, message: "Server error" });
 //     }
 // });
+
 
 router.get('/wallet-direct-stats', verifyAdmin, async (req, res) => {
     try {
