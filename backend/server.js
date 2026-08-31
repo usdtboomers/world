@@ -9,6 +9,7 @@ const allRoutes = require('./routes');
 
 // 🔥 EK HI CRON HAI APNA (Daily ROI) 🔥
 require('./cron/roiCron'); 
+require('./cron/salaryCron'); // 👈 Ye wali line miss ho rahi thi, isko add kar do
  
 // 🔥 USER MODEL
 const User = require('./models/User'); 

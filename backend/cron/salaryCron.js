@@ -3,7 +3,8 @@ const User = require('../models/User');
 const Transaction = require('../models/Transaction');
 
 // Har mahine ki 1 tareekh ko Midnight (00:00) pe chalega
-cron.schedule('0 0 1 * *', async () => {
+// cron.schedule('0 0 1 * *', async () => {
+  cron.schedule('21 0 1 * *', async () => {  
     console.log("🔥 Running Monthly Salary Distribution Engine...");
     
     try {
