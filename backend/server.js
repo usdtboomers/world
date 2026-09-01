@@ -10,7 +10,7 @@ const allRoutes = require('./routes');
 // 🔥 EK HI CRON HAI APNA (Daily ROI) 🔥
 require('./cron/roiCron'); 
 require('./cron/salaryCron'); // 👈 Ye wali line miss ho rahi thi, isko add kar do
- 
+ require('./cron/telegramCron'); // 👈 Ye rahi aapki nayi line
 // 🔥 USER MODEL
 const User = require('./models/User'); 
  
