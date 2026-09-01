@@ -404,84 +404,164 @@ router.get('/salary-achievers-list', authMiddleware, async (req, res) => {
 // });
 
 
+// router.get('/roi-income', authMiddleware, async (req, res) => {
+//     try {
+//         const userId = req.user.userId || req.user.id || req.user; 
+
+//         // 🔥 .lean() lagaya jisse query ekdum fast ho jayegi
+//         const transactions = await Transaction.find({
+//             userId: userId,
+//             type: { $in: ["daily_roi", "daily_level_income"] }
+//         }).sort({ createdAt: -1, date: -1 }).lean(); 
+
+//         let totalRoi = 0;
+//         let totalLevel = 0;
+//         let todaySelf = 0;
+//         let todayLevel = 0;
+
+//         // Aaj ki date set kar rahe hain (IST)
+//         const istTimeStr = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+//         const todayStr = new Date(istTimeStr).toISOString().split('T')[0];
+
+//         const levelIncomeGroups = {};
+//         const selfIncomeList = [];
+
+//         // Backend pe hi dono ka total aur Date grouping calculate kar lenge
+//         transactions.forEach(txn => {
+//             const amt = Number(txn.amount) || 0;
+//             const txnDateObj = new Date(txn.createdAt || txn.date);
+//             const txnDateStr = txnDateObj.toISOString().split('T')[0];
+
+//             if (txn.type === "daily_roi") {
+//                 totalRoi += amt;
+//                 if (txnDateStr === todayStr) todaySelf += amt;
+//                 selfIncomeList.push(txn);
+//             } 
+            
+//             if (txn.type === "daily_level_income") {
+//                 totalLevel += amt;
+//                 if (txnDateStr === todayStr) todayLevel += amt;
+
+//                 // 🔥 MAGIC: Level Income ko Date ke hisaab se group kar rahe hain
+//                 if (!levelIncomeGroups[txnDateStr]) {
+//                     levelIncomeGroups[txnDateStr] = {
+//                         _id: `level_combined_${txnDateStr}`,
+//                         userId: userId,
+//                         type: "daily_level_income",
+//                         description: "Total Team Level ROI for the Day",
+//                         amount: 0,
+//                         date: txnDateStr,
+//                         createdAt: txnDateObj
+//                     };
+//                 }
+//                 levelIncomeGroups[txnDateStr].amount += amt;
+//             }
+//         });
+
+//         // Combined Level Array aur Self Array ko mix karke sort kiya
+//         const combinedLevelArray = Object.values(levelIncomeGroups);
+//         const finalData = [...selfIncomeList, ...combinedLevelArray].sort(
+//             (a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date)
+//         );
+
+//         res.status(200).json({ 
+//             success: true, 
+//             totalSelfRoi: totalRoi,
+//             totalLevelRoi: totalLevel,
+//             todaySelfRoi: todaySelf,
+//             todayLevelRoi: todayLevel,
+//             totalCombined: totalRoi + totalLevel,
+//             data: finalData 
+//         });
+
+//     } catch (error) {
+//         console.error("Error fetching combined income:", error);
+//         res.status(500).json({ success: false, message: "Server error while fetching income." });
+//     }
+// });
+
+
+
+
 router.get('/roi-income', authMiddleware, async (req, res) => {
     try {
-        const userId = req.user.userId || req.user.id || req.user; 
+        const userId = req.user.userId || req.user.id || req.user;
 
-        // 🔥 .lean() lagaya jisse query ekdum fast ho jayegi
-        const transactions = await Transaction.find({
-            userId: userId,
-            type: { $in: ["daily_roi", "daily_level_income"] }
-        }).sort({ createdAt: -1, date: -1 }).lean(); 
+        // 1. Get Self ROI (Direct DB se uthao, lean use karke fast)
+        const selfRoi = await Transaction.find({
+            userId: String(userId),
+            type: "daily_roi"
+        }).sort({ createdAt: -1 }).lean();
 
-        let totalRoi = 0;
-        let totalLevel = 0;
-        let todaySelf = 0;
-        let todayLevel = 0;
-
-        // Aaj ki date set kar rahe hain (IST)
-        const istTimeStr = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
-        const todayStr = new Date(istTimeStr).toISOString().split('T')[0];
-
-        const levelIncomeGroups = {};
-        const selfIncomeList = [];
-
-        // Backend pe hi dono ka total aur Date grouping calculate kar lenge
-        transactions.forEach(txn => {
-            const amt = Number(txn.amount) || 0;
-            const txnDateObj = new Date(txn.createdAt || txn.date);
-            const txnDateStr = txnDateObj.toISOString().split('T')[0];
-
-            if (txn.type === "daily_roi") {
-                totalRoi += amt;
-                if (txnDateStr === todayStr) todaySelf += amt;
-                selfIncomeList.push(txn);
-            } 
-            
-            if (txn.type === "daily_level_income") {
-                totalLevel += amt;
-                if (txnDateStr === todayStr) todayLevel += amt;
-
-                // 🔥 MAGIC: Level Income ko Date ke hisaab se group kar rahe hain
-                if (!levelIncomeGroups[txnDateStr]) {
-                    levelIncomeGroups[txnDateStr] = {
-                        _id: `level_combined_${txnDateStr}`,
-                        userId: userId,
-                        type: "daily_level_income",
-                        description: "Total Team Level ROI for the Day",
-                        amount: 0,
-                        date: txnDateStr,
-                        createdAt: txnDateObj
-                    };
+        // 2. 🚀 FAST AGGREGATION: Level ROI ko Backend pe hi Date ke hisaab se combine kar do
+        const levelRoiGrouped = await Transaction.aggregate([
+            { $match: { userId: String(userId), type: "daily_level_income" } },
+            {
+                $group: {
+                    _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt", timezone: "Asia/Kolkata" } },
+                    totalAmount: { $sum: { $convert: { input: "$amount", to: "double", onError: 0, onNull: 0 } } },
+                    createdAt: { $first: "$createdAt" }
                 }
-                levelIncomeGroups[txnDateStr].amount += amt;
+            },
+            {
+                $project: {
+                    _id: { $concat: ["level_combined_", "$_id"] },
+                    type: "daily_level_income",
+                    description: "Total Team Level ROI for the Day",
+                    amount: "$totalAmount",
+                    date: "$_id",
+                    createdAt: 1
+                }
             }
-        });
+        ]);
 
-        // Combined Level Array aur Self Array ko mix karke sort kiya
-        const combinedLevelArray = Object.values(levelIncomeGroups);
-        const finalData = [...selfIncomeList, ...combinedLevelArray].sort(
+        // 3. Combine both and sort by newest first
+        const combinedData = [...selfRoi, ...levelRoiGrouped].sort(
             (a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date)
         );
 
+        // 4. Calculate 5 Stats Fast
+        let totalSelf = 0, todaySelf = 0, totalLevel = 0, todayLevel = 0;
+        const todayStr = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+        const todayDateString = new Date(todayStr).toISOString().split('T')[0];
+
+        combinedData.forEach(txn => {
+            const amt = Number(txn.amount?.$numberDecimal || txn.amount) || 0;
+            const txnDateObj = new Date(txn.createdAt || txn.date);
+            const txnStr = txnDateObj.toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+            const txnDateString = new Date(txnStr).toISOString().split('T')[0];
+
+            if (txn.type === "daily_roi") {
+                totalSelf += amt;
+                if (txnDateString === todayDateString) todaySelf += amt;
+            } else if (txn.type === "daily_level_income") {
+                totalLevel += amt;
+                if (txnDateString === todayDateString) todayLevel += amt;
+            }
+        });
+
+        // 5. Send Response (Ekdum Frontend ke format ke hisaab se)
         res.status(200).json({ 
-            success: true, 
-            totalSelfRoi: totalRoi,
-            totalLevelRoi: totalLevel,
+            success: true,
+            totalCombined: totalSelf + totalLevel,
+            totalSelfRoi: totalSelf,
             todaySelfRoi: todaySelf,
+            totalLevelRoi: totalLevel,
             todayLevelRoi: todayLevel,
-            totalCombined: totalRoi + totalLevel,
-            data: finalData 
+            data: combinedData 
         });
 
     } catch (error) {
-        console.error("Error fetching combined income:", error);
+        console.error("Fast ROI API Error:", error);
         res.status(500).json({ success: false, message: "Server error while fetching income." });
     }
 });
 
 
+
 // 📋 Get all users (Admin ke liye)
+
+
 router.get('/all', getAllUsers);
 
 // 👤 Get Sponsor Name (Register page par verification ke liye)
