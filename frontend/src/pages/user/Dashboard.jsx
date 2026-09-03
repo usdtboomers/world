@@ -1319,7 +1319,7 @@ import UserPackages from "../../pages/user/UserPackages";
 import TradingStatusPanel from "../../pages/user/TradingStatusPanel"; 
 import SystemDepositHistory from "../../pages/user/SystemDepositHistory";
 import SalaryAchievers from "../../pages/user/SalaryAchievers"; 
-import TelegramButton from "../../components/TelegramButton"; 
+//import TelegramButton from "../../components/TelegramButton"; 
 
 const Dashboard = ({ modalState, setModalState }) => {
   const { user, token, setUser, logout } = useAuth();
@@ -1461,7 +1461,7 @@ const Dashboard = ({ modalState, setModalState }) => {
 
       </div>
 
-      <TelegramButton />
+      {/* <TelegramButton /> */}
       
     </div>
   );
