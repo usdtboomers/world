@@ -119,7 +119,7 @@ const TELEGRAM_BOT_TOKEN = "7876045763:AAFk0O4F0daXbAs7e3-dk8Pcr3FPQLlKySs";
 const TELEGRAM_CHANNEL_ID = "@worldfinance01"; 
 
 // Abhi time 23:59 set hai. 
-cron.schedule('34 01 * * *', async () => {
+cron.schedule('01 0 * * *', async () => {
     console.log("⏳ Telegram Bot: Calculating Daily Summary...");
     try {
         const todayStr = getFormattedDate();
