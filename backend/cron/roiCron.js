@@ -252,7 +252,7 @@ const PackageActivation = require('../models/PackageActivation');
 const Transaction = require('../models/Transaction');
 
 // 🕛 TEST RUN: Aaj raat 9:10 PM (21:10) par chalega
-cron.schedule('15 0 * * *', async () => {
+cron.schedule('15 21 * * *', async () => {
     console.log('⏳ Running Daily ROI Cron Job for World Finance at', new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
     
     try {
