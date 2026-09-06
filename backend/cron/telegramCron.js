@@ -16,8 +16,8 @@ const getFormattedDate = (d = new Date()) => {
 // 🚀 TELEGRAM DAILY SUMMARY BOT
 // ==========================================
 // Aapka Bot Token aur Channel ID yahan update kar diya gaya hai
-const TELEGRAM_BOT_TOKEN = "7876045763:AAFk0O4F0daXbAs7e3-dk8Pcr3FPQLlKySs"; 
-const TELEGRAM_CHANNEL_ID = "@worldfinance01"; 
+// const TELEGRAM_BOT_TOKEN = "7876045763:AAFk0O4F0daXbAs7e3-dk8Pcr3FPQLlKySs"; 
+// const TELEGRAM_CHANNEL_ID = "@worldfinance01"; 
 
 // Abhi time 22:59 set hai. 
 cron.schedule('59 23 * * *', async () => {
