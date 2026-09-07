@@ -395,8 +395,14 @@ cron.schedule('15 0 * * *', async () => {
             daysCompleted: { $lt: 25 }
         });
 
-        const startOfToday = new Date();
-        startOfToday.setHours(0, 0, 0, 0);
+        // const startOfToday = new Date();
+        // startOfToday.setHours(0, 0, 0, 0);
+
+
+        // 🔥 INDIA TIME (IST) KE HISAAB SE AAJ RAAT 12 BAJE KA EXACT TIME
+const istDateString = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+const startOfToday = new Date(istDateString);
+startOfToday.setHours(0, 0, 0, 0);
 
         // 🔥 SPEED OPTIMIZATION: 100 Packages ek sath process honge
         const chunkSize = 100;
