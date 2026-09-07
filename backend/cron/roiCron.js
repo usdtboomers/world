@@ -426,9 +426,17 @@ cron.schedule('15 0 * * *', async () => {
 
                     // 2. User ko ROI do (Sirf roiIncome aur totalRoiIncome, NO walletBalance)
                     const roiAmount = pkg.dailyRoi; 
-                    user.roiIncome = (user.roiIncome || 0) + roiAmount;
-                    user.totalRoiIncome = (user.totalRoiIncome || 0) + roiAmount;
-                    await user.save();
+                    // user.roiIncome = (user.roiIncome || 0) + roiAmount;
+                    // user.totalRoiIncome = (user.totalRoiIncome || 0) + roiAmount;
+                    // await user.save();
+
+
+                    // Naya Code lagayein:
+await User.updateOne(
+    { _id: user._id }, 
+    { $inc: { roiIncome: roiAmount, totalRoiIncome: roiAmount } }
+);
+                    
 
                     // 3. Package days update
                     pkg.daysCompleted += 1;
@@ -475,9 +483,14 @@ cron.schedule('15 0 * * *', async () => {
                             const dailyLevelBonus = (roiAmount * percentage) / 100; 
 
                             if (dailyLevelBonus > 0) {
-                                upline.levelIncome = (upline.levelIncome || 0) + dailyLevelBonus;
-                                upline.totalLevelIncome = (upline.totalLevelIncome || 0) + dailyLevelBonus;
-                                await upline.save();
+                                // upline.levelIncome = (upline.levelIncome || 0) + dailyLevelBonus;
+                                // upline.totalLevelIncome = (upline.totalLevelIncome || 0) + dailyLevelBonus;
+                                // await upline.save();
+
+                                await User.updateOne(
+    { _id: upline._id }, 
+    { $inc: { levelIncome: dailyLevelBonus, totalLevelIncome: dailyLevelBonus } }
+);
 
                                 await Transaction.create({
                                     userId: upline.userId,
