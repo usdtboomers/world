@@ -2285,6 +2285,101 @@ router.get('/monthly-salary-admin-report',verifyAdmin, async (req, res) => {
 
 
 
+const LuckyWinner = require('../models/LuckyWinner');
+ const DummyUser = require('../models/DummyUser');
+
+// 🔴 ADMIN API: Manually Add Real User as Lucky Winner
+// TOP PAR YE LINE ZAROOR CHECK KAR LENA KI HAI YA NAHI
+ 
+// 🔴 ADMIN API: Manually Add Real User as Lucky Winner & Send Funds
+router.post('/add-lucky-winner', verifyAdmin, async (req, res) => {
+    try {
+        const { userId, amount, month } = req.body; // amount: 50 or 100, month: "2026-09"
+
+        // 1. User find karo
+        const user = await User.findOne({ userId });
+        if (!user) return res.status(404).json({ success: false, message: "User not found!" });
+
+        // 2. Condition check
+        if (!user.isToppedUp || (user.topUpAmount || 0) < 50) {
+            return res.status(400).json({ success: false, message: "User must have active $50+ Top-Up!" });
+        }
+
+        // 3. Existing check
+        const existing = await LuckyWinner.findOne({ userId, month });
+        if (existing) return res.status(400).json({ success: false, message: "User is already a winner this month!" });
+
+        // 4. Limit check
+        const currentWinners = await LuckyWinner.countDocuments({ amount, month });
+        if (currentWinners >= 50) return res.status(400).json({ success: false, message: `Already 50 real winners for $${amount} this month!` });
+
+        // ✅ STEP 5: LIST MEIN ADD KARO
+        await LuckyWinner.create({ userId: user.userId, name: user.name, amount, month });
+
+        // ✅ STEP 6: WALLET BALANCE BADHAO (Real Money Transfer)
+        await User.updateOne(
+            { _id: user._id },
+            { $inc: { walletBalance: amount } } // Wallet me $50 ya $100 add ho jayega
+        );
+
+        // ✅ STEP 7: TRANSACTION LOG BANAO (Taaki user ko passbook me dikhe)
+        await Transaction.create({
+            userId: user.userId,
+            type: "lucky_draw_reward",
+            source: "system",
+            amount: amount,
+            description: `Congratulations! Monthly Lucky Winner Reward for ${month}`,
+            status: "success",
+            date: new Date()
+        });
+
+        res.json({ success: true, message: `Winner Added & $${amount} Credited to Wallet Successfully!` });
+
+    } catch (error) {
+        console.error("Add Lucky Winner Error:", error);
+        res.status(500).json({ success: false, message: "Server Error" });
+    }
+});
+
+// 🟢 USER/ADMIN API: Get Mixed List (Real + Fake) 100 Fixed Users
+// GET: Shared Lucky Winners List
+router.get('/shared/lucky-winners-list', async (req, res) => {
+    try {
+        const month = req.query.month || new Date().toISOString().slice(0, 7); 
+
+        const realWinners = await LuckyWinner.find({ month }).lean();
+        const real50 = realWinners.filter(w => w.amount === 50).map(w => ({ ...w, type: 'Real Winner' }));
+        const real100 = realWinners.filter(w => w.amount === 100).map(w => ({ ...w, type: 'Real Winner' }));
+
+        const dummyUsers = await DummyUser.find().sort({ _id: 1 }).limit(100).lean();
+        
+        let fake50 = [];
+        let fake100 = [];
+
+        const needed50 = 50 - real50.length;
+        const needed100 = 50 - real100.length;
+
+        for(let i = 0; i < needed50; i++) {
+            if(dummyUsers[i]) {
+                fake50.push({ userId: dummyUsers[i].userId, name: dummyUsers[i].name || "User", amount: 50, type: 'System Winner' });
+            }
+        }
+
+        for(let i = needed50; i < needed50 + needed100; i++) {
+            if(dummyUsers[i]) {
+                fake100.push({ userId: dummyUsers[i].userId, name: dummyUsers[i].name || "User", amount: 100, type: 'System Winner' });
+            }
+        }
+
+        let allWinners = [...real100, ...fake100, ...real50, ...fake50];
+        
+        res.json({ success: true, total: allWinners.length, data: allWinners });
+
+    } catch (error) {
+        console.error("Lucky Winners Error:", error);
+        res.status(500).json({ success: false, message: "Server Error" });
+    }
+});
 
 
 // C:\Users\HP\Desktop\worldfinance24\backend\routes\admin.js

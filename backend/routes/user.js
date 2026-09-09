@@ -371,6 +371,54 @@ router.get('/salary-achievers-list', authMiddleware, async (req, res) => {
 
 
 
+const LuckyWinner = require('../models/LuckyWinner');
+// =================================================================
+router.get('/shared/lucky-winners-list', async (req, res) => {
+    try {
+        // Agar frontend se month na aaye, toh current month le lo (YYYY-MM)
+        const month = req.query.month || new Date().toISOString().slice(0, 7); 
+
+        // 1. DB se is mahine ke "Real Winners" nikal lo
+        const realWinners = await LuckyWinner.find({ month }).lean();
+        const real50 = realWinners.filter(w => w.amount === 50).map(w => ({ ...w, type: 'Real Winner' }));
+        const real100 = realWinners.filter(w => w.amount === 100).map(w => ({ ...w, type: 'Real Winner' }));
+
+        // 2. Dummy Users nikal lo (sort fix kiya hai taaki refresh karne par list change na ho)
+        const dummyUsers = await DummyUser.find().sort({ _id: 1 }).limit(100).lean();
+        
+        let fake50 = [];
+        let fake100 = [];
+
+        // 3. Calculation: Kitne fake users chahiye 50 ka target pura karne ke liye?
+        const needed50 = 50 - real50.length;
+        const needed100 = 50 - real100.length;
+
+        // Shuru ke dummy users ko $50 walo ki list me daal do
+        for(let i = 0; i < needed50; i++) {
+            if(dummyUsers[i]) {
+                fake50.push({ userId: dummyUsers[i].userId, name: dummyUsers[i].name || "User", amount: 50, type: 'System Winner' });
+            }
+        }
+
+        // Baki bache hue dummy users ko $100 walo ki list me daal do
+        for(let i = needed50; i < needed50 + needed100; i++) {
+            if(dummyUsers[i]) {
+                fake100.push({ userId: dummyUsers[i].userId, name: dummyUsers[i].name || "User", amount: 100, type: 'System Winner' });
+            }
+        }
+
+        // 4. Sabko ek Array mein jod do (Total humesha 100 aayega agar dummy list me 100 log hain toh)
+        let allWinners = [...real100, ...fake100, ...real50, ...fake50];
+        
+        res.json({ success: true, total: allWinners.length, data: allWinners });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: "Server Error" });
+    }
+});
+
+
 // router.get('/roi-income', authMiddleware, async (req, res) => {
 //     try {
 //         const userId = req.user.userId || req.user.id || req.user; 

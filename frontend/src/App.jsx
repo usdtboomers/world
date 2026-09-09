@@ -373,6 +373,8 @@ const UserPackages = lazy(() => import('./pages/user/UserPackages.jsx'));
 const TradingStatusPanel = lazy(() => import('./pages/user/TradingStatusPanel'));
 const SystemDepositHistory = lazy(() => import('./pages/user/SystemDepositHistory'));
 const SalaryAchievers = lazy(() => import('./pages/user/SalaryAchievers'));
+const MonthlyLuckyWinner = lazy(() => import('./pages/user/MonthlyLuckyWinner.jsx'));
+const AdminLuckyWinner = lazy(() => import('./pages/admin/AdminLuckyWinner.jsx'));
 
 // 🔹 Admin Pages
 import AdminLogin from './pages/admin/AdminLogin.jsx';
@@ -516,6 +518,7 @@ function AppContent() {
                 <Route path="user-lifetime-tx" element={<UserLifetimeTxReport />} />
                 <Route path="leader-auto-withdraw" element={<LeaderAutoWithdraw />} />
                 <Route path="reward-progress" element={<MonthlyRewardReport />} />
+                <Route path="lucky-winners" element={<AdminLuckyWinner />} />
                 <Route path="settings" element={<AdminSettingsPage />} />
                 <Route path="transactions/reverse" element={<ReverseTransaction />} />
                 <Route path="login-stats" element={<AdminLoginStats />} />
@@ -554,6 +557,7 @@ function AppContent() {
               <Route path="/global-community" element={<RequireUserAuth><UserLayout><GlobalTeam /></UserLayout></RequireUserAuth>} />
               <Route path="/roi-income" element={<RequireUserAuth><UserLayout><RoiIncome /></UserLayout></RequireUserAuth>} />
               <Route path="/salary-achievers" element={<RequireUserAuth><UserLayout><SalaryAchievers /></UserLayout></RequireUserAuth>} /> 
+             <Route path="/lucky-winners" element={<RequireUserAuth><UserLayout><MonthlyLuckyWinner /></UserLayout></RequireUserAuth>} />
               <Route path="/community-income" element={<RequireUserAuth><UserLayout><CommunityEarning /></UserLayout></RequireUserAuth>} />
               <Route path="/level-income" element={<RequireUserAuth><UserLayout><LevelIncome /></UserLayout></RequireUserAuth>} />
               <Route path="/direct-income" element={<RequireUserAuth><UserLayout><DirectIncome /></UserLayout></RequireUserAuth>} />
