@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const readline = require('readline');
-const fs = require('fs'); // 🔥 NAYA: File system module backup ke liye
+const fs = require('fs');
 const User = require('./models/User'); 
 const Transaction = require('./models/Transaction'); 
 require('dotenv').config();
@@ -10,99 +10,99 @@ const rl = readline.createInterface({
     output: process.stdout
 });
 
-async function recoverMissingFunds() {
+async function recoverTodayFunds() {
     try {
         console.log("⏳ Connecting to Database...");
         await mongoose.connect(process.env.MONGO_URI);
-        console.log("✅ DB Connected. Scanning 'daily_level_income' transactions...\n");
+        console.log("✅ DB Connected. Scanning ONLY TODAY'S 'daily_level_income'...\n");
 
-        // 1. Sirf 'daily_level_income' ka data nikalo 
-        const actualTotals = await Transaction.aggregate([
-            { $match: { type: "daily_level_income", status: { $in: ["success", "completed"] } } },
-            {
-                $group: {
-                    _id: "$userId",
-                    actualTotalLevel: { $sum: { $toDouble: "$amount" } }
-                }
-            }
-        ]);
+        // 🔥 INDIA TIME (IST) Exact Midnight Calculation
+        const istDateString = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+        const startOfToday = new Date(istDateString);
+        startOfToday.setHours(0, 0, 0, 0);
+
+        // Sirf Aaj ki transactions uthao
+        const todaysTransactions = await Transaction.find({
+            type: "daily_level_income",
+            createdAt: { $gte: startOfToday },
+            status: { $in: ["success", "completed"] }
+        }).sort({ createdAt: 1 }).lean();
+
+        // Har user ki aaj ki transactions ko ek list me dalo
+        const userMap = {};
+        for (const tx of todaysTransactions) {
+            if (!userMap[tx.userId]) userMap[tx.userId] = [];
+            userMap[tx.userId].push(Number(tx.amount));
+        }
 
         let usersToFix = [];
         let totalMissingGlobal = 0;
 
-        console.log(`🔍 Total users with Level Income transactions: ${actualTotals.length}`);
-        console.log("⏳ Comparing with User Wallet Balances...\n");
+        // Race condition wahi hoti hai jahan 1 se zyada transaction ek sath aayein
+        for (const [userId, amounts] of Object.entries(userMap)) {
+            if (amounts.length > 1) {
+                const totalSum = amounts.reduce((a, b) => a + b, 0);
+                // Race condition me aam-taur par aakhri transaction hi save hoti hai
+                const survivedAmount = amounts[amounts.length - 1]; 
+                const missing = Number((totalSum - survivedAmount).toFixed(4));
 
-        // 2. Compare Actual vs Current
-        for (const data of actualTotals) {
-            const user = await User.findOne({ userId: data._id }).lean();
-            if (!user) continue;
-
-            const currentTotalLevel = user.totalLevelIncome || 0;
-            const missingLevel = Number((data.actualTotalLevel - currentTotalLevel).toFixed(4));
-
-            if (missingLevel > 0.01) {
-                usersToFix.push({
-                    id: user._id,
-                    userId: user.userId,
-                    hasNow: currentTotalLevel,
-                    shouldHave: data.actualTotalLevel,
-                    missing: missingLevel,
-                    timestamp: new Date().toISOString()
-                });
-                totalMissingGlobal += missingLevel;
+                if (missing > 0.01) {
+                    usersToFix.push({
+                        userId: userId,
+                        txnCount: amounts.length,
+                        todayTotalShouldBe: totalSum,
+                        estimatedMissing: missing
+                    });
+                    totalMissingGlobal += missing;
+                }
             }
         }
 
-        // 3. Agar sab theek hai
         if (usersToFix.length === 0) {
-            console.log("🎉 All users have perfect Level Income balances! Nothing to fix.");
+            console.log("🎉 No missing funds detected for TODAY! Everything is perfect.");
             mongoose.connection.close();
             process.exit(0);
         }
 
-        // 4. Proper Table List Dikhao
         console.log("===================================================================");
-        console.log("⚠️  USERS WITH MISSING LEVEL INCOME (RACE CONDITION) ⚠️");
+        console.log("⚠️  USERS AFFECTED BY TODAY'S RACE CONDITION BUG ⚠️");
         console.log("===================================================================");
         
         console.table(
             usersToFix.map(u => ({
                 "User ID": u.userId,
-                "Current Balance": `$${u.hasNow.toFixed(4)}`,
-                "Should Have": `$${u.shouldHave.toFixed(4)}`,
-                "Missing (To Add)": `+$${u.missing.toFixed(4)}`
+                "Today's Txn Count": u.txnCount,
+                "Should Have Earned Today": `$${u.todayTotalShouldBe.toFixed(4)}`,
+                "Missing Amount (To Add)": `+$${u.estimatedMissing.toFixed(4)}`
             }))
         );
 
         console.log("===================================================================");
-        console.log(`🚨 Total Affected Users: ${usersToFix.length}`);
+        console.log(`🚨 Total Affected Users Today: ${usersToFix.length}`);
         console.log(`💰 Total Missing Amount to Distribute: $${totalMissingGlobal.toFixed(4)}`);
         console.log("===================================================================\n");
 
-        // 5. YES / NO Prompt for Confirmation
-        rl.question("❓ Do you want to add the missing amount to these users? (Y/N): ", async (answer) => {
+        rl.question("❓ Do you want to add this missing amount to these users? (Y/N): ", async (answer) => {
             if (answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes') {
                 
-                // 🔥 BACKUP SYSTEM: Update karne se pehle data save karo
-                const backupFileName = `recovery_backup_${Date.now()}.json`;
+                const backupFileName = `today_recovery_backup_${Date.now()}.json`;
                 fs.writeFileSync(backupFileName, JSON.stringify(usersToFix, null, 2));
-                console.log(`\n💾 [BACKUP SAVED] Changes ki ek copy '${backupFileName}' me save kar li gayi hai!`);
+                console.log(`\n💾 [BACKUP SAVED] Changes saved to '${backupFileName}'!`);
                 console.log("🚀 Starting Database Update...\n");
                 
                 let fixedCount = 0;
                 for (const u of usersToFix) {
                     await User.updateOne(
-                        { _id: u.id },
+                        { userId: u.userId }, // ID ki jagah userId use kiya for safety
                         { 
                             $inc: { 
-                                levelIncome: u.missing,
-                                totalLevelIncome: u.missing
+                                levelIncome: u.estimatedMissing,
+                                totalLevelIncome: u.estimatedMissing
                             }
                         }
                     );
                     fixedCount++;
-                    console.log(`✅ Fixed ${u.userId} (+ $${u.missing})`);
+                    console.log(`✅ Fixed ${u.userId} (+ $${u.estimatedMissing})`);
                 }
                 console.log(`\n🎉 Recovery Complete! Successfully fixed ${fixedCount} users.`);
             } else {
@@ -120,4 +120,4 @@ async function recoverMissingFunds() {
     }
 }
 
-recoverMissingFunds();
+recoverTodayFunds();
