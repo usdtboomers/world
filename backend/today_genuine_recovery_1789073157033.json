@@ -1,0 +1,32 @@
+[
+  {
+    "userId": "WF2196379",
+    "txnCountToday": 12,
+    "missingAmount": 0.2575
+  },
+  {
+    "userId": "WF1757652",
+    "txnCountToday": 20,
+    "missingAmount": 0.5485
+  },
+  {
+    "userId": "WF9272743",
+    "txnCountToday": 14,
+    "missingAmount": 0.42
+  },
+  {
+    "userId": "WF6346425",
+    "txnCountToday": 8,
+    "missingAmount": 0.3675
+  },
+  {
+    "userId": "WF6923712",
+    "txnCountToday": 5,
+    "missingAmount": 0.225
+  },
+  {
+    "userId": "WF1450538",
+    "txnCountToday": 3,
+    "missingAmount": 0.375
+  }
+]
