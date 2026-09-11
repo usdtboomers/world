@@ -2343,44 +2343,122 @@ router.post('/add-lucky-winner', verifyAdmin, async (req, res) => {
 
 // 🟢 USER/ADMIN API: Get Mixed List (Real + Fake) 100 Fixed Users
 // GET: Shared Lucky Winners List
+// router.get('/shared/lucky-winners-list', async (req, res) => {
+//     try {
+//         const month = req.query.month || new Date().toISOString().slice(0, 7); 
+
+//         const realWinners = await LuckyWinner.find({ month }).lean();
+//         const real50 = realWinners.filter(w => w.amount === 50).map(w => ({ ...w, type: 'Real Winner' }));
+//         const real100 = realWinners.filter(w => w.amount === 100).map(w => ({ ...w, type: 'Real Winner' }));
+
+//         const dummyUsers = await DummyUser.find().sort({ _id: 1 }).limit(100).lean();
+        
+//         let fake50 = [];
+//         let fake100 = [];
+
+//         const needed50 = 50 - real50.length;
+//         const needed100 = 50 - real100.length;
+
+//         for(let i = 0; i < needed50; i++) {
+//             if(dummyUsers[i]) {
+//                 fake50.push({ userId: dummyUsers[i].userId, name: dummyUsers[i].name || "User", amount: 50, type: 'System Winner' });
+//             }
+//         }
+
+//         for(let i = needed50; i < needed50 + needed100; i++) {
+//             if(dummyUsers[i]) {
+//                 fake100.push({ userId: dummyUsers[i].userId, name: dummyUsers[i].name || "User", amount: 100, type: 'System Winner' });
+//             }
+//         }
+
+//         let allWinners = [...real100, ...fake100, ...real50, ...fake50];
+        
+//         res.json({ success: true, total: allWinners.length, data: allWinners });
+
+//     } catch (error) {
+//         console.error("Lucky Winners Error:", error);
+//         res.status(500).json({ success: false, message: "Server Error" });
+//     }
+// });
 router.get('/shared/lucky-winners-list', async (req, res) => {
     try {
+        // Agar frontend se month na aaye, toh current month le lo (YYYY-MM)
         const month = req.query.month || new Date().toISOString().slice(0, 7); 
 
+        // 🔥 SEEDED RANDOM GENERATOR SETUP 🔥
+        // 'month' string se ek unique number (seed) banayenge
+        let seed = 0;
+        for (let i = 0; i < month.length; i++) {
+            seed += month.charCodeAt(i) * (i + 1);
+        }
+
+        // Yeh function ek unique seed par humesha ek hi jaisa random number deta hai
+        function seededRandom(a) {
+            return function() {
+              var t = a += 0x6D2B79F5;
+              t = Math.imul(t ^ t >>> 15, t | 1);
+              t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+              return ((t ^ t >>> 14) >>> 0) / 4294967296;
+            }
+        }
+        const randomFunc = seededRandom(seed); // Initialize randomizer
+
+        // Ek array shuffler function banaya jo hamare 'randomFunc' ko use karega
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(randomFunc() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // 1. DB se is mahine ke "Real Winners" nikal lo
         const realWinners = await LuckyWinner.find({ month }).lean();
         const real50 = realWinners.filter(w => w.amount === 50).map(w => ({ ...w, type: 'Real Winner' }));
         const real100 = realWinners.filter(w => w.amount === 100).map(w => ({ ...w, type: 'Real Winner' }));
 
-        const dummyUsers = await DummyUser.find().sort({ _id: 1 }).limit(100).lean();
+        // 2. Dummy Users nikal lo (Zyada nikal rahe hain taaki random pool bada ho)
+        let dummyUsers = await DummyUser.find().limit(500).lean();
         
+        // 🔥 MAGIC 1: Dummy users ko shuffle kar diya
+        // Isse har mahine alag-alag dummy users select honge, par ek mahine tak list same rahegi
+        dummyUsers = shuffleArray(dummyUsers);
+
         let fake50 = [];
         let fake100 = [];
 
+        // 3. Calculation: Kitne fake users chahiye?
         const needed50 = 50 - real50.length;
         const needed100 = 50 - real100.length;
 
+        // Shuru ke random dummy users ko $50 me dalo
         for(let i = 0; i < needed50; i++) {
             if(dummyUsers[i]) {
                 fake50.push({ userId: dummyUsers[i].userId, name: dummyUsers[i].name || "User", amount: 50, type: 'System Winner' });
             }
         }
 
+        // Uske aage ke random dummy users ko $100 me dalo
         for(let i = needed50; i < needed50 + needed100; i++) {
             if(dummyUsers[i]) {
                 fake100.push({ userId: dummyUsers[i].userId, name: dummyUsers[i].name || "User", amount: 100, type: 'System Winner' });
             }
         }
 
+        // 4. Sabko ek Array mein jod do
         let allWinners = [...real100, ...fake100, ...real50, ...fake50];
+
+        // 🔥 MAGIC 2: Final List ko Jumble/Shuffle kar diya
+        // Isse Real aur Fake, $50 aur $100 wale sab mix ho jayenge ekdum naturally
+        allWinners = shuffleArray(allWinners);
         
         res.json({ success: true, total: allWinners.length, data: allWinners });
 
     } catch (error) {
-        console.error("Lucky Winners Error:", error);
+        console.error(error);
         res.status(500).json({ success: false, message: "Server Error" });
     }
 });
-
 
 // C:\Users\HP\Desktop\worldfinance24\backend\routes\admin.js
 
