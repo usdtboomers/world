@@ -270,7 +270,7 @@ const Sidebar = ({ user, isOpen, setIsOpen }) => {
         { label: "Team Business", icon: Layers, path: "/downline-business" },
         { label: "Salary Achievers", icon: Trophy, path: "/salary-achievers" },
         // 👇 NAYA ADD KIYA: Lucky Winners 👇
-       // { label: "Lucky Winners", icon: Gift, path: "/lucky-winners" },
+        { label: "Lucky Winners", icon: Gift, path: "/lucky-winners" },
       ]
     },
     {
