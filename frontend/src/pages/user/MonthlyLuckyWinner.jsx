@@ -45,18 +45,7 @@ const MonthlyLuckyWinner = () => {
     return (
         <div className="w-full min-h-screen bg-[#0b1221] p-4 md:p-8 font-sans pb-24 relative">
             
-            {/* 🔥 POPUP BANNER */}
-            {showPopup && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-                    <div className="bg-[#131c31] border-2 border-[#eab308] rounded-2xl p-6 max-w-md w-full relative shadow-[0_0_40px_rgba(234,179,8,0.3)] animate-in zoom-in-95">
-                        <button onClick={() => setShowPopup(false)} className="absolute top-3 right-3 text-gray-400 hover:text-white bg-gray-800 rounded-full p-1"><X size={20}/></button>
-                        <Trophy size={48} className="text-[#eab308] mx-auto mb-4" />
-                        <h2 className="text-2xl font-black text-center text-white uppercase tracking-widest mb-2">Lucky Winner Results!</h2>
-                        <p className="text-center text-gray-300 text-sm mb-6">Check the list below to see if you are one of the 100 lucky members to win $50 or $100 this month!</p>
-                        <button onClick={() => setShowPopup(false)} className="w-full bg-gradient-to-r from-yellow-600 to-yellow-500 text-black font-black uppercase py-3 rounded-xl shadow-lg hover:opacity-90">View Winners List</button>
-                    </div>
-                </div>
-            )}
+        
 
             <div className="max-w-6xl mx-auto space-y-6">
                 
