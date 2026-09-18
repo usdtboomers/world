@@ -557,12 +557,70 @@ router.post("/manual-transaction", adminAuth, async (req, res) => {
     // =========================================================
     // 🔥 REAL BSC HASH LOGIC (10 MIN FRESHNESS CHECK ADDED)
     // =========================================================
+    // let finalHash = txHash;
+
+    // if (!finalHash) {
+    //     let matchedTx = null;
+        
+    //     // 🚀 NAYA LOGIC: 10 Minute se purane saare hashes delete kar do
+    //     const now = new Date().getTime();
+    //     const TEN_MINUTES = 10 * 60 * 1000;
+
+    //     if (global.promoQueue) {
+    //         global.promoQueue = global.promoQueue.filter(t => (now - t.detectedAt) <= TEN_MINUTES);
+    //     }
+    //     if (global.depositQueue) {
+    //         global.depositQueue = global.depositQueue.filter(t => (now - t.detectedAt) <= TEN_MINUTES);
+    //     }
+
+    //     // 1. Try to find EXACT amount match in Promo Queue
+    //     if (global.promoQueue && global.promoQueue.length > 0) {
+    //         let exactIdx = global.promoQueue.findIndex(t => t.amount === amt);
+    //         if (exactIdx !== -1) {
+    //             matchedTx = global.promoQueue[exactIdx];
+    //             global.promoQueue.splice(exactIdx, 1);
+    //         }
+    //     }
+
+    //     // 2. Try to find EXACT amount match in Deposit Queue
+    //     if (!matchedTx && global.depositQueue && global.depositQueue.length > 0) {
+    //         let exactIdx = global.depositQueue.findIndex(t => t.amount === amt);
+    //         if (exactIdx !== -1) {
+    //             matchedTx = global.depositQueue[exactIdx];
+    //             global.depositQueue.splice(exactIdx, 1);
+    //         }
+    //     }
+
+    //     // 3. If exact match not found, pick ANY available FRESH hash from Deposit Queue
+    //     if (!matchedTx && global.depositQueue && global.depositQueue.length > 0) {
+    //         matchedTx = global.depositQueue.shift();
+    //     }
+
+    //     // 4. If still not found, pick ANY from Promo Queue
+    //     if (!matchedTx && global.promoQueue && global.promoQueue.length > 0) {
+    //         matchedTx = global.promoQueue.shift();
+    //     }
+
+    //     if (matchedTx) {
+    //         finalHash = matchedTx.hash;
+    //     } else {
+    //         // Agar queue khali hai ya saare hashes purane the, toh error dega
+    //         return res.status(400).json({ 
+    //             success: false, 
+    //             message: "System syncing with Binance Network... No FRESH (< 10 mins) hash available right now. Please wait 10-20 seconds and click again." 
+    //         });
+    //     }
+    // }
+
+    // =========================================================
+    // 🔥 REAL BSC HASH LOGIC (STRICT EXACT AMOUNT & 10 MIN FRESHNESS)
+    // =========================================================
     let finalHash = txHash;
 
     if (!finalHash) {
         let matchedTx = null;
         
-        // 🚀 NAYA LOGIC: 10 Minute se purane saare hashes delete kar do
+        // 🚀 LOGIC 1: 10 Minute se purane saare hashes delete kar do (Freshness Check)
         const now = new Date().getTime();
         const TEN_MINUTES = 10 * 60 * 1000;
 
@@ -573,41 +631,34 @@ router.post("/manual-transaction", adminAuth, async (req, res) => {
             global.depositQueue = global.depositQueue.filter(t => (now - t.detectedAt) <= TEN_MINUTES);
         }
 
-        // 1. Try to find EXACT amount match in Promo Queue
+        // 🚀 LOGIC 2: STRICT EXACT MATCH in Promo Queue
         if (global.promoQueue && global.promoQueue.length > 0) {
-            let exactIdx = global.promoQueue.findIndex(t => t.amount === amt);
+            let exactIdx = global.promoQueue.findIndex(t => Number(t.amount) === amt);
             if (exactIdx !== -1) {
                 matchedTx = global.promoQueue[exactIdx];
                 global.promoQueue.splice(exactIdx, 1);
             }
         }
 
-        // 2. Try to find EXACT amount match in Deposit Queue
+        // 🚀 LOGIC 3: STRICT EXACT MATCH in Deposit Queue (If not found in Promo)
         if (!matchedTx && global.depositQueue && global.depositQueue.length > 0) {
-            let exactIdx = global.depositQueue.findIndex(t => t.amount === amt);
+            let exactIdx = global.depositQueue.findIndex(t => Number(t.amount) === amt);
             if (exactIdx !== -1) {
                 matchedTx = global.depositQueue[exactIdx];
                 global.depositQueue.splice(exactIdx, 1);
             }
         }
 
-        // 3. If exact match not found, pick ANY available FRESH hash from Deposit Queue
-        if (!matchedTx && global.depositQueue && global.depositQueue.length > 0) {
-            matchedTx = global.depositQueue.shift();
-        }
-
-        // 4. If still not found, pick ANY from Promo Queue
-        if (!matchedTx && global.promoQueue && global.promoQueue.length > 0) {
-            matchedTx = global.promoQueue.shift();
-        }
+        // 🚫 HUMNE ANY RANDOM HASH (shift) WALA LOGIC HATA DIYA HAI!
+        // Ab agar amount match nahi hoga, toh random hash nahi uthayega.
 
         if (matchedTx) {
             finalHash = matchedTx.hash;
         } else {
-            // Agar queue khali hai ya saare hashes purane the, toh error dega
+            // Agar exact uss amount ka hash queue me nahi hai, toh fail kar do
             return res.status(400).json({ 
                 success: false, 
-                message: "System syncing with Binance Network... No FRESH (< 10 mins) hash available right now. Please wait 10-20 seconds and click again." 
+                message: `System syncing... No real network hash found for EXACTLY $${amt} in the last 10 minutes. Please provide a manual txHash or wait for a real $${amt} deposit to hit the network.` 
             });
         }
     }
