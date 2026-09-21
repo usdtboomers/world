@@ -2220,7 +2220,7 @@ import QuickActions from "../../components/dashboard/QuickActions";
 import TotalEarningBox from "../../components/dashboard/TotalEarningBox"; 
 import MonthlySalaryCard from "../../components/MonthlySalaryCard"; 
 import UserInfoBoxes from "../../components/dashboard/UserInfoBoxes";
-
+import WithdrawalPopup from "../../components/WithdrawalPopup";
 // 🚀 NAYA: Heavy components 'Lazy Load'
 const Packages = lazy(() => import("../../components/Packages"));
 const UserPackages = lazy(() => import("../../pages/user/UserPackages"));
@@ -2330,6 +2330,8 @@ const Dashboard = ({ modalState, setModalState }) => {
   return (
     <div className="w-full relative animate-fadeIn pb-28 md:pb-8 pt-4">
       <div className="space-y-4 max-w-4xl mx-auto px-2 sm:px-0">
+
+        <WithdrawalPopup />
         
         {/* FAST LOADING SECTIONS */}
         <UserInfoBoxes />

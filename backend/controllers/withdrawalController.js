@@ -132,8 +132,8 @@ exports.withdrawFunds = async (req, res) => {
         const currentHour = istTime.getHours();
 
         // Agar time 10 baje se chota hai (< 10) ya 12 baje se bada/barabar hai (>= 12)
-        if (currentHour < 10 || currentHour >= 12) {
-            return res.status(400).json({ success: false, message: 'Withdrawal time is only between 10:00 AM and 12:00 PM IST.' });
+        if (currentHour < 10 || currentHour >= 14) {
+            return res.status(400).json({ success: false, message: 'Withdrawal time is only between 10:00 AM and 2:00 PM IST.' });
         }
 
         // 2. Minimum Withdrawal Check
