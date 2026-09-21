@@ -104,7 +104,25 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // ====================== 6. DATABASE & SERVER ======================
-mongoose.connect(process.env.MONGO_URI) 
+// mongoose.connect(process.env.MONGO_URI) 
+//   .then(async () => { 
+//     console.log('✅ MongoDB connected successfully for World Finance'); 
+
+//     const PORT = process.env.PORT || 5000;
+//     app.listen(PORT, () => {
+//       console.log(`🚀 Server running on port ${PORT}`);
+//     });
+//   })
+//   .catch((err) => {
+//     console.error('❌ MongoDB connection error:', err);
+//     process.exit(1);
+//   });
+
+
+mongoose.connect(process.env.MONGO_URI, {
+  maxPoolSize: 100, // 🔥 Ek sath 100 connections handle karega (Bottleneck khatam)
+  serverSelectionTimeoutMS: 15000
+}) 
   .then(async () => { 
     console.log('✅ MongoDB connected successfully for World Finance'); 
 

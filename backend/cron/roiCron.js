@@ -551,130 +551,282 @@
 
 
 
+// const cron = require('node-cron');
+// const User = require('../models/User');
+// const PackageActivation = require('../models/PackageActivation');
+// const Transaction = require('../models/Transaction');
+
+// // 🕛 Run everyday at 12:15 AM (IST)
+// cron.schedule('15 0 * * *', async () => {
+//     console.log('⏳ Running Daily ROI Cron Job for World Finance...');
+    
+//     try {
+//         // 🔥 FAST READ: .lean() se MongoDB 5x fast data deta hai
+//         const activePackages = await PackageActivation.find({
+//             status: 'active',
+//             daysCompleted: { $lt: 25 }
+//         }).lean();
+
+//         // 🔥 INDIA TIME (IST) Exact Midnight Calculation
+//         const istDateString = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+//         const startOfToday = new Date(istDateString);
+//         startOfToday.setHours(0, 0, 0, 0);
+
+//         const chunkSize = 50; // 50 is best for avoiding DB locks
+
+//         for (let i = 0; i < activePackages.length; i += chunkSize) {
+//             const chunk = activePackages.slice(i, i + chunkSize);
+
+//             await Promise.all(chunk.map(async (pkg) => {
+//                 try {
+//                     // 🛑 DOUBLE PAYOUT PREVENTION
+//                     const alreadyPaid = await Transaction.findOne({
+//                         userId: pkg.userId,
+//                         type: 'daily_roi',
+//                         description: `Daily ROI (${pkg.daysCompleted + 1}/25) for $${pkg.packageAmount} Package`,
+//                         date: { $gte: startOfToday }
+//                     }).lean();
+
+//                     if (alreadyPaid) return; 
+
+//                     // 1. User find karo (Fast read)
+//                     const user = await User.findOne({ userId: pkg.userId }).lean();
+//                     if (!user) return; 
+
+//                     const roiAmount = pkg.dailyRoi; 
+
+//                     // 2. Give ROI to User
+//                     await User.updateOne(
+//                         { _id: user._id }, 
+//                         { $inc: { roiIncome: roiAmount, totalRoiIncome: roiAmount } }
+//                     );
+
+//                     // 3. Update Package (Fast update without save())
+//                     const newDays = pkg.daysCompleted + 1;
+//                     const pkgUpdate = { $inc: { daysCompleted: 1 } };
+//                     if (newDays >= pkg.totalDays) {
+//                         pkgUpdate.$set = { status: 'completed' };
+//                     }
+//                     await PackageActivation.updateOne({ _id: pkg._id }, pkgUpdate);
+
+//                     // 4. Transaction Log
+//                     await Transaction.create({
+//                         userId: user.userId,
+//                         type: "daily_roi",
+//                         source: "roi",
+//                         amount: roiAmount,
+//                         description: `Daily ROI (${newDays}/25) for $${pkg.packageAmount} Package`,
+//                         status: "success",
+//                         date: new Date()
+//                     });
+
+//                     // =======================================================
+//                     // 🔹 5. DAILY LEVEL INCOME ENGINE (Super Fast)
+//                     // =======================================================
+//                     const LEVEL_PERCENTAGES = [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]; 
+//                     let currentUplineId = user.sponsorId;
+//                     let currentLevel = 1;
+
+//                     while (currentUplineId && currentLevel <= 12) {
+//                         const upline = await User.findOne({ userId: currentUplineId }).lean();
+//                         if (!upline) break;
+
+//                         const directsCount = upline.directCount || 0;
+
+//                         if (!upline.isToppedUp || directsCount < currentLevel) {
+//                             // Flushed - No action needed
+//                         } else {
+//                             // ✅ SUCCESS: Give Income
+//                             const percentage = LEVEL_PERCENTAGES[currentLevel - 1];
+//                             const dailyLevelBonus = (roiAmount * percentage) / 100; 
+
+//                             if (dailyLevelBonus > 0) {
+//                                 // 🔥 RACE CONDITION FIX: $inc use kiya hai
+//                                 await User.updateOne(
+//                                     { _id: upline._id }, 
+//                                     { $inc: { levelIncome: dailyLevelBonus, totalLevelIncome: dailyLevelBonus } }
+//                                 );
+
+//                                 await Transaction.create({
+//                                     userId: upline.userId,
+//                                     type: "daily_level_income",
+//                                     source: "level",
+//                                     amount: dailyLevelBonus,
+//                                     fromUserId: user.userId,
+//                                     description: `Daily Level Income (${percentage}%) from ${user.userId}'s ROI (Level ${currentLevel})`,
+//                                     status: "success",
+//                                     date: new Date()
+//                                 });
+//                             }
+//                         }
+
+//                         // Move to next upline
+//                         currentUplineId = upline.sponsorId;
+//                         currentLevel++;
+//                     }
+
+//                 } catch (pkgError) {
+//                     console.error(`❌ Error processing ROI/Level for package ${pkg._id}:`, pkgError);
+//                 }
+//             }));
+//         }
+//         console.log('🎉 Daily ROI & Level Income Cron Job Finished Successfully!');
+//     } catch (error) {
+//         console.error('❌ Cron Job Fatal Error:', error);
+//     }
+// }, {
+//     scheduled: true,
+//     timezone: "Asia/Kolkata" 
+// });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 const cron = require('node-cron');
 const User = require('../models/User');
 const PackageActivation = require('../models/PackageActivation');
 const Transaction = require('../models/Transaction');
 
-// 🕛 Run everyday at 12:15 AM (IST)
-cron.schedule('15 0 * * *', async () => {
-    console.log('⏳ Running Daily ROI Cron Job for World Finance...');
-    
-    try {
-        // 🔥 FAST READ: .lean() se MongoDB 5x fast data deta hai
-        const activePackages = await PackageActivation.find({
-            status: 'active',
-            daysCompleted: { $lt: 25 }
-        }).lean();
+// 🔥 YAHAN UPDATE KIYA HAI: Sirf Instance '0' (Primary Core) par hi yeh cron chalega
+if (process.env.NODE_APP_INSTANCE === '0' || process.env.NODE_APP_INSTANCE === undefined) {
 
-        // 🔥 INDIA TIME (IST) Exact Midnight Calculation
-        const istDateString = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
-        const startOfToday = new Date(istDateString);
-        startOfToday.setHours(0, 0, 0, 0);
+    // 🕛 Run everyday at 12:15 AM (IST)
+    cron.schedule('15 0 * * *', async () => {
+        console.log('⏳ Running Daily ROI Cron Job for World Finance...');
+        
+        try {
+            // 🔥 FAST READ: .lean() se MongoDB 5x fast data deta hai
+            const activePackages = await PackageActivation.find({
+                status: 'active',
+                daysCompleted: { $lt: 25 }
+            }).lean();
 
-        const chunkSize = 50; // 50 is best for avoiding DB locks
+            // 🔥 INDIA TIME (IST) Exact Midnight Calculation
+            const istDateString = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+            const startOfToday = new Date(istDateString);
+            startOfToday.setHours(0, 0, 0, 0);
 
-        for (let i = 0; i < activePackages.length; i += chunkSize) {
-            const chunk = activePackages.slice(i, i + chunkSize);
+            const chunkSize = 50; // 50 is best for avoiding DB locks
 
-            await Promise.all(chunk.map(async (pkg) => {
-                try {
-                    // 🛑 DOUBLE PAYOUT PREVENTION
-                    const alreadyPaid = await Transaction.findOne({
-                        userId: pkg.userId,
-                        type: 'daily_roi',
-                        description: `Daily ROI (${pkg.daysCompleted + 1}/25) for $${pkg.packageAmount} Package`,
-                        date: { $gte: startOfToday }
-                    }).lean();
+            for (let i = 0; i < activePackages.length; i += chunkSize) {
+                const chunk = activePackages.slice(i, i + chunkSize);
 
-                    if (alreadyPaid) return; 
+                await Promise.all(chunk.map(async (pkg) => {
+                    try {
+                        // 🛑 DOUBLE PAYOUT PREVENTION
+                        const alreadyPaid = await Transaction.findOne({
+                            userId: pkg.userId,
+                            type: 'daily_roi',
+                            description: `Daily ROI (${pkg.daysCompleted + 1}/25) for $${pkg.packageAmount} Package`,
+                            date: { $gte: startOfToday }
+                        }).lean();
 
-                    // 1. User find karo (Fast read)
-                    const user = await User.findOne({ userId: pkg.userId }).lean();
-                    if (!user) return; 
+                        if (alreadyPaid) return; 
 
-                    const roiAmount = pkg.dailyRoi; 
+                        // 1. User find karo (Fast read)
+                        const user = await User.findOne({ userId: pkg.userId }).lean();
+                        if (!user) return; 
 
-                    // 2. Give ROI to User
-                    await User.updateOne(
-                        { _id: user._id }, 
-                        { $inc: { roiIncome: roiAmount, totalRoiIncome: roiAmount } }
-                    );
+                        const roiAmount = pkg.dailyRoi; 
 
-                    // 3. Update Package (Fast update without save())
-                    const newDays = pkg.daysCompleted + 1;
-                    const pkgUpdate = { $inc: { daysCompleted: 1 } };
-                    if (newDays >= pkg.totalDays) {
-                        pkgUpdate.$set = { status: 'completed' };
-                    }
-                    await PackageActivation.updateOne({ _id: pkg._id }, pkgUpdate);
+                        // 2. Give ROI to User
+                        await User.updateOne(
+                            { _id: user._id }, 
+                            { $inc: { roiIncome: roiAmount, totalRoiIncome: roiAmount } }
+                        );
 
-                    // 4. Transaction Log
-                    await Transaction.create({
-                        userId: user.userId,
-                        type: "daily_roi",
-                        source: "roi",
-                        amount: roiAmount,
-                        description: `Daily ROI (${newDays}/25) for $${pkg.packageAmount} Package`,
-                        status: "success",
-                        date: new Date()
-                    });
+                        // 3. Update Package (Fast update without save())
+                        const newDays = pkg.daysCompleted + 1;
+                        const pkgUpdate = { $inc: { daysCompleted: 1 } };
+                        if (newDays >= pkg.totalDays) {
+                            pkgUpdate.$set = { status: 'completed' };
+                        }
+                        await PackageActivation.updateOne({ _id: pkg._id }, pkgUpdate);
 
-                    // =======================================================
-                    // 🔹 5. DAILY LEVEL INCOME ENGINE (Super Fast)
-                    // =======================================================
-                    const LEVEL_PERCENTAGES = [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]; 
-                    let currentUplineId = user.sponsorId;
-                    let currentLevel = 1;
+                        // 4. Transaction Log
+                        await Transaction.create({
+                            userId: user.userId,
+                            type: "daily_roi",
+                            source: "roi",
+                            amount: roiAmount,
+                            description: `Daily ROI (${newDays}/25) for $${pkg.packageAmount} Package`,
+                            status: "success",
+                            date: new Date()
+                        });
 
-                    while (currentUplineId && currentLevel <= 12) {
-                        const upline = await User.findOne({ userId: currentUplineId }).lean();
-                        if (!upline) break;
+                        // =======================================================
+                        // 🔹 5. DAILY LEVEL INCOME ENGINE (Super Fast)
+                        // =======================================================
+                        const LEVEL_PERCENTAGES = [5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]; 
+                        let currentUplineId = user.sponsorId;
+                        let currentLevel = 1;
 
-                        const directsCount = upline.directCount || 0;
+                        while (currentUplineId && currentLevel <= 12) {
+                            const upline = await User.findOne({ userId: currentUplineId }).lean();
+                            if (!upline) break;
 
-                        if (!upline.isToppedUp || directsCount < currentLevel) {
-                            // Flushed - No action needed
-                        } else {
-                            // ✅ SUCCESS: Give Income
-                            const percentage = LEVEL_PERCENTAGES[currentLevel - 1];
-                            const dailyLevelBonus = (roiAmount * percentage) / 100; 
+                            const directsCount = upline.directCount || 0;
 
-                            if (dailyLevelBonus > 0) {
-                                // 🔥 RACE CONDITION FIX: $inc use kiya hai
-                                await User.updateOne(
-                                    { _id: upline._id }, 
-                                    { $inc: { levelIncome: dailyLevelBonus, totalLevelIncome: dailyLevelBonus } }
-                                );
+                            if (!upline.isToppedUp || directsCount < currentLevel) {
+                                // Flushed - No action needed
+                            } else {
+                                // ✅ SUCCESS: Give Income
+                                const percentage = LEVEL_PERCENTAGES[currentLevel - 1];
+                                const dailyLevelBonus = (roiAmount * percentage) / 100; 
 
-                                await Transaction.create({
-                                    userId: upline.userId,
-                                    type: "daily_level_income",
-                                    source: "level",
-                                    amount: dailyLevelBonus,
-                                    fromUserId: user.userId,
-                                    description: `Daily Level Income (${percentage}%) from ${user.userId}'s ROI (Level ${currentLevel})`,
-                                    status: "success",
-                                    date: new Date()
-                                });
+                                if (dailyLevelBonus > 0) {
+                                    // 🔥 RACE CONDITION FIX: $inc use kiya hai
+                                    await User.updateOne(
+                                        { _id: upline._id }, 
+                                        { $inc: { levelIncome: dailyLevelBonus, totalLevelIncome: dailyLevelBonus } }
+                                    );
+
+                                    await Transaction.create({
+                                        userId: upline.userId,
+                                        type: "daily_level_income",
+                                        source: "level",
+                                        amount: dailyLevelBonus,
+                                        fromUserId: user.userId,
+                                        description: `Daily Level Income (${percentage}%) from ${user.userId}'s ROI (Level ${currentLevel})`,
+                                        status: "success",
+                                        date: new Date()
+                                    });
+                                }
                             }
+
+                            // Move to next upline
+                            currentUplineId = upline.sponsorId;
+                            currentLevel++;
                         }
 
-                        // Move to next upline
-                        currentUplineId = upline.sponsorId;
-                        currentLevel++;
+                    } catch (pkgError) {
+                        console.error(`❌ Error processing ROI/Level for package ${pkg._id}:`, pkgError);
                     }
-
-                } catch (pkgError) {
-                    console.error(`❌ Error processing ROI/Level for package ${pkg._id}:`, pkgError);
-                }
-            }));
+                }));
+            }
+            console.log('🎉 Daily ROI & Level Income Cron Job Finished Successfully!');
+        } catch (error) {
+            console.error('❌ Cron Job Fatal Error:', error);
         }
-        console.log('🎉 Daily ROI & Level Income Cron Job Finished Successfully!');
-    } catch (error) {
-        console.error('❌ Cron Job Fatal Error:', error);
-    }
-}, {
-    scheduled: true,
-    timezone: "Asia/Kolkata" 
-});
+    }, {
+        scheduled: true,
+        timezone: "Asia/Kolkata" 
+    });
+
+} // 🔥 YAHAN UPDATE KIYA HAI: if condition yahan close ho rahi hai

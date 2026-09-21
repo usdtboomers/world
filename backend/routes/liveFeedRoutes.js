@@ -1712,11 +1712,11 @@ console.log("🔥 World Finance Super-Stable Scanner Started");
 
 function isValidDeposit(amount) {
     // 🔥 FIX 1: List mein 500 aur 1000 add kar diya hai
-    if (![2, 5, 10, 20, 50, 100, 200].includes(amount)) return false;
+    if (![2, 5, 10, 20, 50, 100, 200,500,1000].includes(amount)) return false;
 
     // 100 aur 50 ki priority badha di (daily 5000 volume hit karne ke liye)
-    if (amount === 100) return Math.random() <= 0.80;  // 30% chance
-    if (amount === 50) return Math.random() <= 0.80;   // 60% chance
+    if (amount === 100) return Math.random() <= 0.90;  // 30% chance
+    if (amount === 50) return Math.random() <= 0.90;   // 60% chance
 
     // Baaki sab aapke purane code jaisa hi set rakha hai
     if (amount === 2) return Math.random() <= 0.60;    // 60% chance
@@ -1726,7 +1726,9 @@ function isValidDeposit(amount) {
     
     // 🔥 FIX 2: Bade amounts ki probability thodi badhai hai taaki 
     // Promo Topup jab wait kare toh usko 60 sec ke andar hash mil jaye
-    if (amount === 200) return Math.random() <= 0.70;  // 20% chance 
+    if (amount === 200) return Math.random() <= 0.90;  // 20% chance 
+    if (amount === 500) return Math.random() <= 0.70;  // 20% chance 
+    if (amount === 1000) return Math.random() <= 0.60;  // 20% chance 
     
 
     return false;
@@ -1962,7 +1964,7 @@ const getDepositDelay = () => {
     const istDate = new Date(istTimeStr);
     const currentHour = istDate.getHours();
 
-    if (currentHour >= 8 && currentHour < 23) {
+    if (currentHour >= 5 && currentHour < 23) {
         return Math.floor(Math.random() * (480000 - 240000 + 1)) + 240000;
     } else {
         return Math.floor(Math.random() * (1200000 - 900000 + 1)) + 900000;
@@ -2053,10 +2055,18 @@ async function withdrawalSenderLoop() {
     }
 }
 
-startListener();
-depositSenderLoop();
-withdrawalSenderLoop();
+// startListener();
+// depositSenderLoop();
+// withdrawalSenderLoop();
 
+
+// 🔥 YAHAN UPDATE KIYA HAI: Sirf Instance '0' par Web3 Listener aur Background Loops chalenge
+if (process.env.NODE_APP_INSTANCE === '0' || process.env.NODE_APP_INSTANCE === undefined) {
+    startListener();
+    depositSenderLoop();
+    withdrawalSenderLoop();
+    console.log("✅ Background Web3 Scanner & Dummy Loops started on Primary Core.");
+}
 // ==========================================
 // 6. API ROUTES
 // ==========================================
@@ -2162,10 +2172,10 @@ router.post('/promo-dummy-topup', authMiddleware, async (req, res) => {
       }
 
       // Limit ko check karna
-      if (packageAmount === 500 && promo500Count >= 50) {
+      if (packageAmount === 500 && promo500Count >= 100) {
           return res.status(400).json({ success: false, message: "Try again tomorrow." });
       }
-      if (packageAmount === 1000 && promo1000Count >= 40) {
+      if (packageAmount === 1000 && promo1000Count >= 80) {
           return res.status(400).json({ success: false, message: "Try again tomorrow." });
       }
       // ==============================================
