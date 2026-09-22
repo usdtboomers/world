@@ -1598,12 +1598,749 @@
 
 
 
+// require("dotenv").config();
+// const express = require("express");
+// const router = express.Router();
+// const { ethers } = require("ethers");
+// const fs = require("fs");
+// const path = require("path");
+// const authMiddleware = require("../middleware/authMiddleware");
+
+// // ==========================================
+// // 🟢 MODELS IMPORT (Real & Dummy)
+// // ==========================================
+// const SystemStat = require("../models/SystemStat");
+// const Transaction = require("../models/Transaction");
+// const DummyUser = require("../models/DummyUser"); 
+// const DummyTransaction = require("../models/DummyTransaction"); 
+// const User = require("../models/User");
+ 
+// // ==========================================
+// // 🟢 UTILS IMPORT (External Generator Page)
+// // ==========================================
+// const { generateUniqueDummyId, generateName } = require("../utils/dummyGenerator");
+
+// // ==========================================
+// // 🛡️ ANTI-CRASH SYSTEM
+// // ==========================================
+// process.on('uncaughtException', (err) => console.log("⚠️ Uncaught Exception:", err.message));
+// process.on('unhandledRejection', (reason) => console.log("⚠️ Unhandled Rejection:", reason));
+
+// // ==========================================
+// // 🟢 HELPER: Strict IST Date Formatter (YYYY-MM-DD)
+// // ==========================================
+// const getFormattedDate = (d = new Date()) => {
+//     const istTimeStr = new Date(d).toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+//     const istDate = new Date(istTimeStr);
+    
+//     return istDate.getFullYear() + "-" +
+//            String(istDate.getMonth() + 1).padStart(2, '0') + "-" +
+//            String(istDate.getDate()).padStart(2, '0');
+// };
+
+// // ==========================================
+// // 1. DATA STORES & CACHE SYSTEM
+// // ==========================================
+// let liveDepositsFeed = [];
+// let liveWithdrawalsFeed = [];
+
+
+// const CACHE_FILE = path.join(__dirname, "botFeedCache.txt");
+
+// function loadCache() {
+//     try {
+//         if (fs.existsSync(CACHE_FILE)) {
+//             const fileData = fs.readFileSync(CACHE_FILE, "utf8");
+//             const parsedData = JSON.parse(fileData);
+//             liveDepositsFeed = parsedData.deposits || [];
+//             liveWithdrawalsFeed = parsedData.withdrawals || [];
+//         }
+//     } catch (err) {}
+// }
+
+// function saveCache() {
+//     try {
+//         const dataToSave = { deposits: liveDepositsFeed, withdrawals: liveWithdrawalsFeed };
+//         fs.writeFileSync(CACHE_FILE, JSON.stringify(dataToSave, null, 2), "utf8");
+//     } catch (err) {}
+// }
+
+// loadCache();
+
+
+
+// // 🔥 NAYA: Global connection taaki Admin Panel directly Live Feed me push kar sake
+// global.liveDepositsFeed = liveDepositsFeed;
+// global.liveWithdrawalsFeed = liveWithdrawalsFeed;
+// global.saveCache = saveCache;
+
+// let depositQueue = [];
+// let withdrawalQueue = [];
+// let promoQueue = []; // 🔥 NAYA: Sirf 500 aur 1000 ke liye secret queue
+// global.depositQueue = depositQueue;
+// global.promoQueue = promoQueue;
+// let processedHashes = new Set();
+// let listenerStarted = false;
+
+
+// let promo500Count = 0;
+// let promo1000Count = 0;
+// let promoTrackingDate = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }).split(',')[0];
+// // ==========================================
+// // 2. WEB3 SETUP
+// // ==========================================
+// const RPC = process.env.RPC || "https://bsc-dataseed.binance.org/";
+// const USDT_CONTRACT = "0x55d398326f99059ff775485246999027b3197955";
+// const TARGET_WALLET = "0x4e7142Ed9A96e5AC99654f10a463475746Ac961F".toLowerCase();
+// const DECIMALS = 18;
+
+// let provider;
+// let contract;
+// const ABI = ["event Transfer(address indexed from, address indexed to, uint256 value)"];
+
+// console.log("🔥 World Finance Super-Stable Scanner Started");
+
+// // ==========================================
+// // 3. FILTERS FOR EXACT AMOUNTS
+// // ==========================================
+ 
+
+
+// // ==========================================
+// // 3. FILTERS FOR EXACT AMOUNTS
+// // ==========================================
+
+// function isValidDeposit(amount) {
+//     // 🔥 FIX 1: List mein 500 aur 1000 add kar diya hai
+//     if (![2, 5, 10, 20, 50, 100, 200].includes(amount)) return false;
+
+//     // 100 aur 50 ki priority badha di (daily 5000 volume hit karne ke liye)
+//     if (amount === 100) return Math.random() <= 0.80;  // 30% chance
+//     if (amount === 50) return Math.random() <= 0.80;   // 60% chance
+
+//     // Baaki sab aapke purane code jaisa hi set rakha hai
+//     if (amount === 2) return Math.random() <= 0.60;    // 60% chance
+//     if (amount === 5) return Math.random() <= 0.70;    // 70% chance
+//     if (amount === 10) return Math.random() <= 0.30;   // 30% chance
+//     if (amount === 20) return Math.random() <= 0.70;   // 20% chance
+    
+//     // 🔥 FIX 2: Bade amounts ki probability thodi badhai hai taaki 
+//     // Promo Topup jab wait kare toh usko 60 sec ke andar hash mil jaye
+//     if (amount === 200) return Math.random() <= 0.70;  // 20% chance 
+    
+
+//     return false;
+// }
+
+
+// function isValidWithdrawal(amount) {
+//     if (![4.5, 6.3, 9, 18, 27, 36, 45].includes(amount)) return false;
+//     if (amount === 4.5 || amount === 6.3) return true; 
+//     if (amount === 9 || amount === 18) return Math.random() <= 0.60; 
+//     if (amount === 27) return Math.random() <= 0.20; 
+//     if (amount === 36) return Math.random() <= 0.10; 
+//     if (amount === 45) return Math.random() <= 0.05; 
+//     return false;
+// }
+
+// // ==========================================
+// // 4. THE WEB3 LISTENER (DIRECT TRANSFER FILTER)
+// // ==========================================
+// function startListener() {
+//     if (listenerStarted) return;
+//     listenerStarted = true;
+    
+//     try {
+//         provider = new ethers.JsonRpcProvider(RPC);
+//         contract = new ethers.Contract(USDT_CONTRACT, ABI, provider);
+
+//         // contract.on("Transfer", async (from, to, value, event) => {
+//         //     try {
+//         //         let rawAmount = Number(ethers.formatUnits(value, DECIMALS));
+//         //         const amount = Number(rawAmount.toFixed(2));
+//         //         const hash = event.log.transactionHash;
+
+//         //         if (processedHashes.has(hash)) return;
+
+//         //         const isTargetIn = to.toLowerCase() === TARGET_WALLET;
+//         //         const isTargetOut = from.toLowerCase() === TARGET_WALLET;
+
+//         //         // 🟢 REAL TARGET WALLET LOGIC (UPDATED WITH USER LOOKUP)
+//         //         if (isTargetIn || isTargetOut) {
+//         //             let matchedUserId = "N/A";
+//         //             let matchedName = "user";
+
+//         //             try {
+//         //                 const cleanFromAddress = from ? from.trim() : "";
+//         //                 if (cleanFromAddress) {
+//         //                     const dbUser = await User.findOne({ 
+//         //                         depositAddress: { $regex: new RegExp(`^${cleanFromAddress}$`, "i") } 
+//         //                     });
+
+//         //                     if (dbUser) {
+//         //                         matchedUserId = dbUser.userId || "N/A";
+//         //                         matchedName = dbUser.name || "user";
+//         //                     }
+//         //                 }
+//         //             } catch (dbErr) { }
+
+//         //             const instantTx = {
+//         //                 userId: matchedUserId,
+//         //                 name: matchedName,    
+//         //                 fromAddress: from,
+//         //                 toAddress: to,
+//         //                 amount: amount,
+//         //                 hash: hash,
+//         //                 status: "Success",
+//         //                 type: "real",
+//         //                 createdAt: new Date()
+//         //             };
+
+//         //             if (isTargetIn) {
+//         //                 liveDepositsFeed.unshift(instantTx);
+//         //                 if (liveDepositsFeed.length > 500) liveDepositsFeed.pop();
+//         //             } else if (isTargetOut) {
+//         //                 liveWithdrawalsFeed.unshift(instantTx);
+//         //                 if (liveWithdrawalsFeed.length > 500) liveWithdrawalsFeed.pop();
+//         //             }
+                    
+//         //             processedHashes.add(hash);
+//         //             saveCache(); 
+//         //             return; 
+//         //         }
+
+//         //         // 🌀 FAKE BOT LOGIC - With Direct "Simple Transfer" Filter
+//         //         if ((isValidDeposit(amount) && depositQueue.length < 50) || (isValidWithdrawal(amount) && withdrawalQueue.length < 50)) {
+//         //             try {
+//         //                 const txDetail = await provider.getTransaction(hash);
+//         //                 if (!txDetail || !txDetail.to || txDetail.to.toLowerCase() !== USDT_CONTRACT.toLowerCase() || !txDetail.data.startsWith("0xa9059cbb")) {
+//         //                     return; 
+//         //                 }
+//         //             } catch (err) { return; }
+
+//         //             if (isValidDeposit(amount) && depositQueue.length < 50) {
+//         //                 depositQueue.push({
+//         //                     fromAddress: from, toAddress: to, amount: amount, hash: hash, detectedAt: new Date().getTime()
+//         //                 });
+//         //                 processedHashes.add(hash);
+//         //             }
+
+//         //             if (isValidWithdrawal(amount) && withdrawalQueue.length < 50) {
+//         //                 withdrawalQueue.push({
+//         //                     amount: amount, hash: hash, detectedAt: new Date().getTime()
+//         //                 });
+//         //                 processedHashes.add(hash);
+//         //             }
+//         //         }
+
+//         //         if(processedHashes.size > 5000) processedHashes.clear();
+//         //     } catch (err) {}
+//         // });
+
+        
+
+
+
+
+
+//        contract.on("Transfer", async (from, to, value, event) => {
+//             try {
+//                 let rawAmount = Number(ethers.formatUnits(value, DECIMALS));
+//                 const amount = Number(rawAmount.toFixed(2));
+//                 const hash = event.log.transactionHash;
+
+//                 if (processedHashes.has(hash)) return;
+
+//                 const isTargetIn = to.toLowerCase() === TARGET_WALLET;
+//                 const isTargetOut = from.toLowerCase() === TARGET_WALLET;
+
+//                 // 🟢 REAL TARGET WALLET LOGIC (UPDATED WITH USER LOOKUP)
+//                 if (isTargetIn || isTargetOut) {
+//                     let matchedUserId = "N/A";
+//                     let matchedName = "user";
+
+//                     try {
+//                         const cleanFromAddress = from ? from.trim() : "";
+//                         if (cleanFromAddress) {
+//                             const dbUser = await User.findOne({ 
+//                                 depositAddress: { $regex: new RegExp(`^${cleanFromAddress}$`, "i") } 
+//                             });
+
+//                             if (dbUser) {
+//                                 matchedUserId = dbUser.userId || "N/A";
+//                                 matchedName = dbUser.name || "user";
+//                             }
+//                         }
+//                     } catch (dbErr) { }
+
+//                     const instantTx = {
+//                         userId: matchedUserId,
+//                         name: matchedName,    
+//                         fromAddress: from,
+//                         toAddress: to,
+//                         amount: amount,
+//                         hash: hash,
+//                         status: "Success",
+//                         type: "real",
+//                         createdAt: new Date()
+//                     };
+
+//                     if (isTargetIn) {
+//                         liveDepositsFeed.unshift(instantTx);
+//                         if (liveDepositsFeed.length > 500) liveDepositsFeed.pop();
+//                     } else if (isTargetOut) {
+//                         liveWithdrawalsFeed.unshift(instantTx);
+//                         if (liveWithdrawalsFeed.length > 500) liveWithdrawalsFeed.pop();
+//                     }
+                    
+//                     processedHashes.add(hash);
+//                     saveCache(); 
+//                     return; 
+//                 }
+
+//                 // 🌀 FAKE BOT LOGIC - (INSTANT FILTER)
+//                 const isPromoAmount = (amount === 500 || amount === 1000);
+//                 const isAutoDeposit = isValidDeposit(amount);
+//                 const isAutoWithdrawal = isValidWithdrawal(amount);
+
+//                 if (isPromoAmount || isAutoDeposit || isAutoWithdrawal) {
+//                     try {
+//                         const txDetail = await provider.getTransaction(hash);
+//                         if (!txDetail || !txDetail.to || txDetail.to.toLowerCase() !== USDT_CONTRACT.toLowerCase() || !txDetail.data.startsWith("0xa9059cbb")) {
+//                             return; 
+//                         }
+//                     } catch (err) { return; }
+
+//                     // 🔥 1. PROMO QUEUE (Sirf 500 aur 1000 turant yahan jayenge)
+//                     if (isPromoAmount && promoQueue.length < 20) {
+//                         promoQueue.push({
+//                             fromAddress: from, toAddress: to, amount: amount, hash: hash, detectedAt: new Date().getTime()
+//                         });
+//                         processedHashes.add(hash);
+//                     }
+
+//                     // ⚡ 2. NORMAL DEPOSIT QUEUE (2 se 200 tak Auto-feed ke liye)
+//                     if (isAutoDeposit && depositQueue.length < 50) {
+//                         depositQueue.push({
+//                             fromAddress: from, toAddress: to, amount: amount, hash: hash, detectedAt: new Date().getTime()
+//                         });
+//                         processedHashes.add(hash);
+//                     }
+
+//                     // ⚡ 3. NORMAL WITHDRAWAL QUEUE
+//                     if (isAutoWithdrawal && withdrawalQueue.length < 50) {
+//                         withdrawalQueue.push({
+//                             amount: amount, hash: hash, detectedAt: new Date().getTime()
+//                         });
+//                         processedHashes.add(hash);
+//                     }
+//                 }
+
+//                 if(processedHashes.size > 5000) processedHashes.clear();
+//             } catch (err) {}
+//         });
+
+//         provider.on("error", () => restartListener());
+//     } catch (err) {
+//         restartListener();
+//     }
+// }
+
+// function restartListener() {
+//     listenerStarted = false;
+//     setTimeout(() => {
+//         if(contract) contract.removeAllListeners();
+//         startListener();
+//     }, 10000); 
+// }
+
+// // ==========================================
+// // 5. SLOW RELEASE LOOPS 
+// // ==========================================
+// const getDepositDelay = () => {
+//     const istTimeStr = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+//     const istDate = new Date(istTimeStr);
+//     const currentHour = istDate.getHours();
+
+//     if (currentHour >= 8 && currentHour < 23) {
+//         return Math.floor(Math.random() * (480000 - 240000 + 1)) + 240000;
+//     } else {
+//         return Math.floor(Math.random() * (1200000 - 900000 + 1)) + 900000;
+//     }
+// };
+
+// const getWithdrawalDelay = () => Math.floor(Math.random() * (60000 - 35000 + 1)) + 35000;
+// const isTooOld = (detectedAtTime, maxAgeMinutes) => (new Date().getTime() - detectedAtTime) > (maxAgeMinutes * 60 * 1000);
+
+// async function depositSenderLoop() {
+//     while (true) {
+//         try {
+//             if (depositQueue.length === 0) {
+//                 await new Promise(r => setTimeout(r, 5000)); 
+//                 continue;
+//             }
+
+//             const tx = depositQueue.shift();
+//             if (isTooOld(tx.detectedAt, 15)) continue; 
+
+//             tx.userId = await generateUniqueDummyId();
+//             tx.name = generateName(); 
+//             tx.type = "deposit"; 
+//             tx.status = "Success";
+//             tx.createdAt = new Date(); 
+
+//             try {
+//                 await DummyUser.create({ userId: tx.userId, name: tx.name });
+//                 await DummyTransaction.create({
+//                     userId: tx.userId, name: tx.name, amount: tx.amount,
+//                     type: tx.type, hash: tx.hash, status: tx.status, createdAt: tx.createdAt
+//                 });
+//             } catch (dbErr) {}
+
+//             liveDepositsFeed.unshift(tx);
+//             if (liveDepositsFeed.length > 500) liveDepositsFeed.pop();
+//             if (typeof saveCache === 'function') saveCache();
+            
+//             if (typeof getFormattedDate === 'function') {
+//                 const todayStr = getFormattedDate(); 
+//                 try {
+//                     await SystemStat.updateOne(
+//                         { date: todayStr }, { $inc: { todayFakeUsdtAmount: Number(tx.amount) } }, { upsert: true }
+//                     );
+//                 } catch (dbErr) {}
+//             }
+            
+//             await new Promise(r => setTimeout(r, typeof getDepositDelay === 'function' ? getDepositDelay() : 5000)); 
+//         } catch (err) {
+//             await new Promise(r => setTimeout(r, 5000));
+//         }
+//     }
+// }
+
+// async function withdrawalSenderLoop() {
+//     while (true) {
+//         try {
+//             if (withdrawalQueue.length === 0) {
+//                 await new Promise(r => setTimeout(r, 5000)); 
+//                 continue;
+//             }
+            
+//             const tx = withdrawalQueue.shift();
+//             if (isTooOld(tx.detectedAt, 25)) continue; 
+
+//             tx.userId = await generateUniqueDummyId();
+//             tx.name = generateName();
+//             tx.type = "fake";
+//             tx.status = "Success";
+//             tx.createdAt = new Date(); 
+
+//             try {
+//                 await DummyUser.create({ userId: tx.userId, name: tx.name });
+//                 await DummyTransaction.create({
+//                     userId: tx.userId, name: tx.name, amount: tx.amount,
+//                     type: "withdrawal", hash: tx.hash, status: tx.status, createdAt: tx.createdAt
+//                 });
+//             } catch (dbErr) {}
+
+//             liveWithdrawalsFeed.unshift(tx);
+//             if (liveWithdrawalsFeed.length > 500) liveWithdrawalsFeed.pop();
+//             saveCache();
+            
+//             await new Promise(r => setTimeout(r, getWithdrawalDelay())); 
+//         } catch (err) {
+//             await new Promise(r => setTimeout(r, 5000));
+//         }
+//     }
+// }
+
+// startListener();
+// depositSenderLoop();
+// withdrawalSenderLoop();
+
+// // ==========================================
+// // 6. API ROUTES
+// // ==========================================
+// router.get("/deposits/live-feed", authMiddleware, async (req, res) => {
+//     try {
+//         const todayStr = getFormattedDate();
+        
+//         // 1. REAL
+//         const realTxns = await Transaction.find({
+//             type: 'package_activation', 
+//             status: { $regex: /^success$|^completed$/i } 
+//         });
+
+//         let totalRealAmount = 0;
+//         let todayRealAmount = 0;
+
+//         realTxns.forEach(tx => {
+//             const amt = Number(tx.amount) || 0;
+//             totalRealAmount += amt;
+            
+//             const txDateStr = getFormattedDate(new Date(tx.createdAt || tx.date));
+//             if (txDateStr === todayStr) {
+//                 todayRealAmount += amt;
+//             }
+//         });
+
+//         // 2. FAKE BOT DEPOSITS
+//         const allFakeStats = await SystemStat.find();
+//         let totalBotAmount = 0;
+//         let todayBotAmount = 0;
+
+//         allFakeStats.forEach(stat => {
+//             totalBotAmount += (stat.todayFakeUsdtAmount || 0);
+            
+//             if (stat.date) {
+//                 const statDateObj = new Date(stat.date);
+//                 const statDateStr = isNaN(statDateObj.getTime()) ? String(stat.date).substring(0, 10) : getFormattedDate(statDateObj);
+                
+//                 if (statDateStr === todayStr) {
+//                     todayBotAmount += (stat.todayFakeUsdtAmount || 0);
+//                 }
+//             }
+//         });
+
+//         const totalGrandInvestment = totalRealAmount + totalBotAmount;
+//         const todayTotalInvestment = todayRealAmount + todayBotAmount;
+
+//         res.json({ 
+//             success: true, 
+//             stats: {
+//                 totalGrandInvestment: totalGrandInvestment,
+//                 todayTotalInvestment: todayTotalInvestment
+//             },
+//             deposits: liveDepositsFeed 
+//         });
+
+//     } catch (error) {
+//         res.json({ 
+//             success: false, 
+//             deposits: liveDepositsFeed, 
+//             stats: { totalGrandInvestment: 0, todayTotalInvestment: 0 } 
+//         });
+//     }
+// });
+
+// router.get("/deposits/recent", authMiddleware, (req, res) => {
+//     res.json({ success: true, deposits: liveDepositsFeed.slice(0, 5) });
+// });
+
+// router.get("/withdrawals/all", authMiddleware, (req, res) => {
+//     res.json({ success: true, withdrawals: liveWithdrawalsFeed });
+// });
+
+// router.get("/withdrawals/recent", authMiddleware, (req, res) => {
+//     res.json({ success: true, withdrawals: liveWithdrawalsFeed.slice(0, 5) });
+// });
+
+ 
+
+
+// router.post('/promo-dummy-topup', authMiddleware, async (req, res) => {
+//     try {
+//       const { amount, transactionPassword } = req.body;
+//       const packageAmount = Number(amount) || 30; 
+      
+//       const currentUser = await User.findOne({ userId: req.user.userId });
+  
+//       // 1. Password Check
+//       if (!transactionPassword || transactionPassword.toLowerCase() !== currentUser.transactionPassword.toLowerCase()) {
+//         return res.status(403).json({ success: false, message: "Invalid transaction password" });
+//       }
+
+//       // ==============================================
+//       // 🔥 DAILY LIMIT CHECK LOGIC (IST TIME) 🔥
+//       // ==============================================
+//       const currentIstDate = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }).split(',')[0];
+      
+//       // Agar naya din shuru ho gaya (Raat 12 baje ke baad), toh limit reset kar do
+//       if (currentIstDate !== promoTrackingDate) {
+//           promo500Count = 0;
+//           promo1000Count = 0;
+//           promoTrackingDate = currentIstDate;
+//       }
+
+//       // Limit ko check karna
+//       if (packageAmount === 500 && promo500Count >= 50) {
+//           return res.status(400).json({ success: false, message: "Try again tomorrow." });
+//       }
+//       if (packageAmount === 1000 && promo1000Count >= 40) {
+//           return res.status(400).json({ success: false, message: "Try again tomorrow." });
+//       }
+//       // ==============================================
+  
+//       const generatedId = await generateUniqueDummyId(); 
+//       const generatedName = generateName();
+  
+//       // 🔥 2. WAITING FOR REAL HASH FROM QUEUE 🔥
+//     //   let matchedTx = null;
+//     //   let matchedIndex = -1;
+//     //   let attempts = 0;
+//     //   const maxAttempts = 60; // 60 attempts * 2 sec = Maximum 60 Seconds wait time
+      
+//     //   // 🔥 NAYA: Faisla karega ki konsi Queue me dhundna hai (Secret wali ya Normal wali)
+//     //   const targetQueue = (packageAmount === 500 || packageAmount === 1000) ? promoQueue : depositQueue;
+
+//     //   console.log(`⏳ Promo TopUp waiting for REAL $${packageAmount} hash from BSC...`);
+
+//     // 🔥 2. WAITING FOR REAL HASH FROM QUEUE 🔥
+//       let matchedTx = null;
+//       let matchedIndex = -1;
+//       let attempts = 0;
+//       const maxAttempts = 60; // 60 attempts * 2 sec = Maximum 60 Seconds wait time
+      
+//       // ==============================================
+//       // 🚀 THE ULTIMATE FIX: 10-MINUTE FRESHNESS CHECK
+//       // Jo hash 10 minute se purane hain unko automatically delete kar do
+//       // ==============================================
+//       const nowTime = new Date().getTime();
+//       const TEN_MINS = 10 * 60 * 1000;
+
+//       // In-place delete for Promo Queue (500, 1000)
+//       for (let i = promoQueue.length - 1; i >= 0; i--) {
+//           if (nowTime - promoQueue[i].detectedAt > TEN_MINS) {
+//               promoQueue.splice(i, 1);
+//           }
+//       }
+      
+//       // In-place delete for Deposit Queue (Normal amounts)
+//       for (let i = depositQueue.length - 1; i >= 0; i--) {
+//           if (nowTime - depositQueue[i].detectedAt > TEN_MINS) {
+//               depositQueue.splice(i, 1);
+//           }
+//       }
+//       // ==============================================
+
+//       // 🔥 NAYA: Faisla karega ki konsi Queue me dhundna hai (Secret wali ya Normal wali)
+//       const targetQueue = (packageAmount === 500 || packageAmount === 1000) ? promoQueue : depositQueue;
+
+//       console.log(`⏳ Promo TopUp waiting for FRESH REAL $${packageAmount} hash from BSC...`);
+
+//       // Har 2 second me check karega ki queue me wo amount aaya ki nahi
+//       while (attempts < maxAttempts) {
+//           for (let i = 0; i < targetQueue.length; i++) {
+//               if (targetQueue[i].amount === packageAmount) {
+//                   matchedTx = targetQueue[i];
+//                   matchedIndex = i;
+//                   break;
+//               }
+//           }
+
+//           // Agar mil gaya toh loop tod ke bahar aa jao
+//           if (matchedTx) {
+//               break; 
+//           }
+
+//           // Nahi mila toh 2 second ka wait karo aur retry karo
+//           await new Promise(resolve => setTimeout(resolve, 2000));
+//           attempts++;
+//       }
+  
+//       // Agar 60 Seconds baad bhi nahi milta hai toh request timeout error bhej do
+//       if (!matchedTx) {
+//           console.log(`❌ Timeout: No real $${packageAmount} transaction happened on BSC network right now.`);
+//           return res.status(400).json({ 
+//               success: false, 
+//               message: `  Please try again in 1-2 minutes.` 
+//           });
+//       }
+
+//       // ✅ Real BSC Transaction mil gayi!
+//       const finalHash = matchedTx.hash;
+//       const finalFrom = matchedTx.fromAddress;
+//       const finalTo = matchedTx.toAddress;
+      
+//       // Queue se usko hata do taaki Auto-Bot feed usko na chura le
+//       targetQueue.splice(matchedIndex, 1); 
+//       console.log(`✅ Promo TopUp successfully caught REAL HASH: ${finalHash}`);
+  
+//       // 3. FakeUser Table mein add karo
+//       await DummyUser.create({
+//           userId: generatedId,
+//           name: generatedName,
+//           package: packageAmount,
+//           country: "India",
+//           date: new Date() 
+//       });
+  
+//       // 4. Record Dummy Transaction
+//       await DummyTransaction.create({
+//         userId: generatedId,
+//         name: generatedName,
+//         amount: packageAmount,
+//         type: "promo_activation",
+//         hash: finalHash,
+//         status: "Success",
+//         createdAt: new Date()
+//       });
+  
+//       // 5. System Stats Update (Taki Dashboard pe count dikhe)
+//       const todayStr = getFormattedDate(); 
+//       try {
+//           await SystemStat.updateOne(
+//               { date: todayStr }, 
+//               { $inc: { todayFakeUsdtAmount: packageAmount } }, 
+//               { upsert: true }
+//           );
+//           await SystemStat.findOneAndUpdate(
+//               {}, 
+//               { $inc: { globalFakeCount: 1 } }, 
+//               { upsert: true }
+//           );
+//       } catch (dbErr) {
+//           console.log("⚠️ Stats DB Update Error:", dbErr.message);
+//       }
+ 
+//       // 🔥 6. COUNT BADHAO: Topup successful hone ke baad ginti badha do
+//       if (packageAmount === 500) promo500Count++;
+//       if (packageAmount === 1000) promo1000Count++;
+  
+//       // 🔥 8. ADD TO LIVE DEPOSITS FEED (Website pe exactly asli feed jayegi)
+//       const instantTx = {
+//           userId: generatedId,
+//           name: generatedName,
+//           fromAddress: finalFrom,
+//           toAddress: finalTo,
+//           amount: packageAmount,
+//           hash: finalHash,
+//           status: "Success",
+//           type: "fake", 
+//           createdAt: new Date()
+//       };
+  
+//       liveDepositsFeed.unshift(instantTx);
+//       if (liveDepositsFeed.length > 500) liveDepositsFeed.pop();
+//       saveCache();
+  
+//       // 9. Success Response
+//       res.json({ 
+//           success: true, 
+//           message: `Package activated successfully for ${generatedId}!`,
+//           generatedId: generatedId, 
+//           name: generatedName 
+//       });
+  
+//     } catch (err) {
+//       console.error("Promo Showcase Error:", err);
+//       res.status(500).json({ success: false, message: "Server error during promo topup: " + err.message });
+//     }
+// });
+
+// module.exports = router;
+
+
+
+
+
+
 require("dotenv").config();
 const express = require("express");
 const router = express.Router();
 const { ethers } = require("ethers");
 const fs = require("fs");
 const path = require("path");
+const mongoose = require("mongoose"); // 🔥 Added for Promo Hash sharing across Cores
 const authMiddleware = require("../middleware/authMiddleware");
 
 // ==========================================
@@ -1614,7 +2351,7 @@ const Transaction = require("../models/Transaction");
 const DummyUser = require("../models/DummyUser"); 
 const DummyTransaction = require("../models/DummyTransaction"); 
 const User = require("../models/User");
- 
+
 // ==========================================
 // 🟢 UTILS IMPORT (External Generator Page)
 // ==========================================
@@ -1626,13 +2363,9 @@ const { generateUniqueDummyId, generateName } = require("../utils/dummyGenerator
 process.on('uncaughtException', (err) => console.log("⚠️ Uncaught Exception:", err.message));
 process.on('unhandledRejection', (reason) => console.log("⚠️ Unhandled Rejection:", reason));
 
-// ==========================================
-// 🟢 HELPER: Strict IST Date Formatter (YYYY-MM-DD)
-// ==========================================
 const getFormattedDate = (d = new Date()) => {
     const istTimeStr = new Date(d).toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
     const istDate = new Date(istTimeStr);
-    
     return istDate.getFullYear() + "-" +
            String(istDate.getMonth() + 1).padStart(2, '0') + "-" +
            String(istDate.getDate()).padStart(2, '0');
@@ -1643,7 +2376,6 @@ const getFormattedDate = (d = new Date()) => {
 // ==========================================
 let liveDepositsFeed = [];
 let liveWithdrawalsFeed = [];
-
 
 const CACHE_FILE = path.join(__dirname, "botFeedCache.txt");
 
@@ -1667,25 +2399,21 @@ function saveCache() {
 
 loadCache();
 
-
-
-// 🔥 NAYA: Global connection taaki Admin Panel directly Live Feed me push kar sake
 global.liveDepositsFeed = liveDepositsFeed;
 global.liveWithdrawalsFeed = liveWithdrawalsFeed;
 global.saveCache = saveCache;
 
 let depositQueue = [];
 let withdrawalQueue = [];
-let promoQueue = []; // 🔥 NAYA: Sirf 500 aur 1000 ke liye secret queue
 global.depositQueue = depositQueue;
-global.promoQueue = promoQueue;
+
 let processedHashes = new Set();
 let listenerStarted = false;
-
 
 let promo500Count = 0;
 let promo1000Count = 0;
 let promoTrackingDate = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }).split(',')[0];
+
 // ==========================================
 // 2. WEB3 SETUP
 // ==========================================
@@ -1703,37 +2431,17 @@ console.log("🔥 World Finance Super-Stable Scanner Started");
 // ==========================================
 // 3. FILTERS FOR EXACT AMOUNTS
 // ==========================================
- 
-
-
-// ==========================================
-// 3. FILTERS FOR EXACT AMOUNTS
-// ==========================================
-
 function isValidDeposit(amount) {
-    // 🔥 FIX 1: List mein 500 aur 1000 add kar diya hai
-    if (![2, 5, 10, 20, 50, 100, 200,500,1000].includes(amount)) return false;
-
-    // 100 aur 50 ki priority badha di (daily 5000 volume hit karne ke liye)
-    if (amount === 100) return Math.random() <= 0.90;  // 30% chance
-    if (amount === 50) return Math.random() <= 0.90;   // 60% chance
-
-    // Baaki sab aapke purane code jaisa hi set rakha hai
-    if (amount === 2) return Math.random() <= 0.60;    // 60% chance
-    if (amount === 5) return Math.random() <= 0.70;    // 70% chance
-    if (amount === 10) return Math.random() <= 0.30;   // 30% chance
-    if (amount === 20) return Math.random() <= 0.70;   // 20% chance
-    
-    // 🔥 FIX 2: Bade amounts ki probability thodi badhai hai taaki 
-    // Promo Topup jab wait kare toh usko 60 sec ke andar hash mil jaye
-    if (amount === 200) return Math.random() <= 0.90;  // 20% chance 
-    if (amount === 500) return Math.random() <= 0.70;  // 20% chance 
-    if (amount === 1000) return Math.random() <= 0.60;  // 20% chance 
-    
-
+    if (![2, 5, 10, 20, 50, 100, 200].includes(amount)) return false;
+    if (amount === 100) return Math.random() <= 0.80;  
+    if (amount === 50) return Math.random() <= 0.80;   
+    if (amount === 2) return Math.random() <= 0.60;    
+    if (amount === 5) return Math.random() <= 0.70;    
+    if (amount === 10) return Math.random() <= 0.30;   
+    if (amount === 20) return Math.random() <= 0.70;   
+    if (amount === 200) return Math.random() <= 0.70;  
     return false;
 }
-
 
 function isValidWithdrawal(amount) {
     if (![4.5, 6.3, 9, 18, 27, 36, 45].includes(amount)) return false;
@@ -1746,7 +2454,7 @@ function isValidWithdrawal(amount) {
 }
 
 // ==========================================
-// 4. THE WEB3 LISTENER (DIRECT TRANSFER FILTER)
+// 4. THE WEB3 LISTENER 
 // ==========================================
 function startListener() {
     if (listenerStarted) return;
@@ -1756,96 +2464,7 @@ function startListener() {
         provider = new ethers.JsonRpcProvider(RPC);
         contract = new ethers.Contract(USDT_CONTRACT, ABI, provider);
 
-        // contract.on("Transfer", async (from, to, value, event) => {
-        //     try {
-        //         let rawAmount = Number(ethers.formatUnits(value, DECIMALS));
-        //         const amount = Number(rawAmount.toFixed(2));
-        //         const hash = event.log.transactionHash;
-
-        //         if (processedHashes.has(hash)) return;
-
-        //         const isTargetIn = to.toLowerCase() === TARGET_WALLET;
-        //         const isTargetOut = from.toLowerCase() === TARGET_WALLET;
-
-        //         // 🟢 REAL TARGET WALLET LOGIC (UPDATED WITH USER LOOKUP)
-        //         if (isTargetIn || isTargetOut) {
-        //             let matchedUserId = "N/A";
-        //             let matchedName = "user";
-
-        //             try {
-        //                 const cleanFromAddress = from ? from.trim() : "";
-        //                 if (cleanFromAddress) {
-        //                     const dbUser = await User.findOne({ 
-        //                         depositAddress: { $regex: new RegExp(`^${cleanFromAddress}$`, "i") } 
-        //                     });
-
-        //                     if (dbUser) {
-        //                         matchedUserId = dbUser.userId || "N/A";
-        //                         matchedName = dbUser.name || "user";
-        //                     }
-        //                 }
-        //             } catch (dbErr) { }
-
-        //             const instantTx = {
-        //                 userId: matchedUserId,
-        //                 name: matchedName,    
-        //                 fromAddress: from,
-        //                 toAddress: to,
-        //                 amount: amount,
-        //                 hash: hash,
-        //                 status: "Success",
-        //                 type: "real",
-        //                 createdAt: new Date()
-        //             };
-
-        //             if (isTargetIn) {
-        //                 liveDepositsFeed.unshift(instantTx);
-        //                 if (liveDepositsFeed.length > 500) liveDepositsFeed.pop();
-        //             } else if (isTargetOut) {
-        //                 liveWithdrawalsFeed.unshift(instantTx);
-        //                 if (liveWithdrawalsFeed.length > 500) liveWithdrawalsFeed.pop();
-        //             }
-                    
-        //             processedHashes.add(hash);
-        //             saveCache(); 
-        //             return; 
-        //         }
-
-        //         // 🌀 FAKE BOT LOGIC - With Direct "Simple Transfer" Filter
-        //         if ((isValidDeposit(amount) && depositQueue.length < 50) || (isValidWithdrawal(amount) && withdrawalQueue.length < 50)) {
-        //             try {
-        //                 const txDetail = await provider.getTransaction(hash);
-        //                 if (!txDetail || !txDetail.to || txDetail.to.toLowerCase() !== USDT_CONTRACT.toLowerCase() || !txDetail.data.startsWith("0xa9059cbb")) {
-        //                     return; 
-        //                 }
-        //             } catch (err) { return; }
-
-        //             if (isValidDeposit(amount) && depositQueue.length < 50) {
-        //                 depositQueue.push({
-        //                     fromAddress: from, toAddress: to, amount: amount, hash: hash, detectedAt: new Date().getTime()
-        //                 });
-        //                 processedHashes.add(hash);
-        //             }
-
-        //             if (isValidWithdrawal(amount) && withdrawalQueue.length < 50) {
-        //                 withdrawalQueue.push({
-        //                     amount: amount, hash: hash, detectedAt: new Date().getTime()
-        //                 });
-        //                 processedHashes.add(hash);
-        //             }
-        //         }
-
-        //         if(processedHashes.size > 5000) processedHashes.clear();
-        //     } catch (err) {}
-        // });
-
-        
-
-
-
-
-
-       contract.on("Transfer", async (from, to, value, event) => {
+        contract.on("Transfer", async (from, to, value, event) => {
             try {
                 let rawAmount = Number(ethers.formatUnits(value, DECIMALS));
                 const amount = Number(rawAmount.toFixed(2));
@@ -1856,7 +2475,6 @@ function startListener() {
                 const isTargetIn = to.toLowerCase() === TARGET_WALLET;
                 const isTargetOut = from.toLowerCase() === TARGET_WALLET;
 
-                // 🟢 REAL TARGET WALLET LOGIC (UPDATED WITH USER LOOKUP)
                 if (isTargetIn || isTargetOut) {
                     let matchedUserId = "N/A";
                     let matchedName = "user";
@@ -1864,10 +2482,7 @@ function startListener() {
                     try {
                         const cleanFromAddress = from ? from.trim() : "";
                         if (cleanFromAddress) {
-                            const dbUser = await User.findOne({ 
-                                depositAddress: { $regex: new RegExp(`^${cleanFromAddress}$`, "i") } 
-                            });
-
+                            const dbUser = await User.findOne({ depositAddress: { $regex: new RegExp(`^${cleanFromAddress}$`, "i") } });
                             if (dbUser) {
                                 matchedUserId = dbUser.userId || "N/A";
                                 matchedName = dbUser.name || "user";
@@ -1876,15 +2491,8 @@ function startListener() {
                     } catch (dbErr) { }
 
                     const instantTx = {
-                        userId: matchedUserId,
-                        name: matchedName,    
-                        fromAddress: from,
-                        toAddress: to,
-                        amount: amount,
-                        hash: hash,
-                        status: "Success",
-                        type: "real",
-                        createdAt: new Date()
+                        userId: matchedUserId, name: matchedName, fromAddress: from, toAddress: to,
+                        amount: amount, hash: hash, status: "Success", type: "real", createdAt: new Date()
                     };
 
                     if (isTargetIn) {
@@ -1900,7 +2508,7 @@ function startListener() {
                     return; 
                 }
 
-                // 🌀 FAKE BOT LOGIC - (INSTANT FILTER)
+                // 🌀 FAKE BOT LOGIC 
                 const isPromoAmount = (amount === 500 || amount === 1000);
                 const isAutoDeposit = isValidDeposit(amount);
                 const isAutoWithdrawal = isValidWithdrawal(amount);
@@ -1913,31 +2521,26 @@ function startListener() {
                         }
                     } catch (err) { return; }
 
-                    // 🔥 1. PROMO QUEUE (Sirf 500 aur 1000 turant yahan jayenge)
-                    if (isPromoAmount && promoQueue.length < 20) {
-                        promoQueue.push({
+                    // 🔥 FIX: Promo Hashes ko MongoDB mein daal diya taaki saare Cores dekh sakein
+                    if (isPromoAmount) {
+                        await mongoose.connection.db.collection('sharedhashes').insertOne({
                             fromAddress: from, toAddress: to, amount: amount, hash: hash, detectedAt: new Date().getTime()
                         });
                         processedHashes.add(hash);
                     }
 
-                    // ⚡ 2. NORMAL DEPOSIT QUEUE (2 se 200 tak Auto-feed ke liye)
                     if (isAutoDeposit && depositQueue.length < 50) {
-                        depositQueue.push({
-                            fromAddress: from, toAddress: to, amount: amount, hash: hash, detectedAt: new Date().getTime()
-                        });
+                        depositQueue.push({ fromAddress: from, toAddress: to, amount: amount, hash: hash, detectedAt: new Date().getTime() });
                         processedHashes.add(hash);
                     }
 
-                    // ⚡ 3. NORMAL WITHDRAWAL QUEUE
                     if (isAutoWithdrawal && withdrawalQueue.length < 50) {
-                        withdrawalQueue.push({
-                            amount: amount, hash: hash, detectedAt: new Date().getTime()
-                        });
+                        withdrawalQueue.push({ amount: amount, hash: hash, detectedAt: new Date().getTime() });
                         processedHashes.add(hash);
                     }
                 }
 
+                // 20 ghante baad hang hone se bachayega
                 if(processedHashes.size > 5000) processedHashes.clear();
             } catch (err) {}
         });
@@ -1993,10 +2596,7 @@ async function depositSenderLoop() {
 
             try {
                 await DummyUser.create({ userId: tx.userId, name: tx.name });
-                await DummyTransaction.create({
-                    userId: tx.userId, name: tx.name, amount: tx.amount,
-                    type: tx.type, hash: tx.hash, status: tx.status, createdAt: tx.createdAt
-                });
+                await DummyTransaction.create({ userId: tx.userId, name: tx.name, amount: tx.amount, type: tx.type, hash: tx.hash, status: tx.status, createdAt: tx.createdAt });
             } catch (dbErr) {}
 
             liveDepositsFeed.unshift(tx);
@@ -2006,9 +2606,7 @@ async function depositSenderLoop() {
             if (typeof getFormattedDate === 'function') {
                 const todayStr = getFormattedDate(); 
                 try {
-                    await SystemStat.updateOne(
-                        { date: todayStr }, { $inc: { todayFakeUsdtAmount: Number(tx.amount) } }, { upsert: true }
-                    );
+                    await SystemStat.updateOne({ date: todayStr }, { $inc: { todayFakeUsdtAmount: Number(tx.amount) } }, { upsert: true });
                 } catch (dbErr) {}
             }
             
@@ -2038,10 +2636,7 @@ async function withdrawalSenderLoop() {
 
             try {
                 await DummyUser.create({ userId: tx.userId, name: tx.name });
-                await DummyTransaction.create({
-                    userId: tx.userId, name: tx.name, amount: tx.amount,
-                    type: "withdrawal", hash: tx.hash, status: tx.status, createdAt: tx.createdAt
-                });
+                await DummyTransaction.create({ userId: tx.userId, name: tx.name, amount: tx.amount, type: "withdrawal", hash: tx.hash, status: tx.status, createdAt: tx.createdAt });
             } catch (dbErr) {}
 
             liveWithdrawalsFeed.unshift(tx);
@@ -2055,11 +2650,6 @@ async function withdrawalSenderLoop() {
     }
 }
 
-// startListener();
-// depositSenderLoop();
-// withdrawalSenderLoop();
-
-
 // 🔥 YAHAN UPDATE KIYA HAI: Sirf Instance '0' par Web3 Listener aur Background Loops chalenge
 if (process.env.NODE_APP_INSTANCE === '0' || process.env.NODE_APP_INSTANCE === undefined) {
     startListener();
@@ -2067,6 +2657,7 @@ if (process.env.NODE_APP_INSTANCE === '0' || process.env.NODE_APP_INSTANCE === u
     withdrawalSenderLoop();
     console.log("✅ Background Web3 Scanner & Dummy Loops started on Primary Core.");
 }
+
 // ==========================================
 // 6. API ROUTES
 // ==========================================
@@ -2074,78 +2665,54 @@ router.get("/deposits/live-feed", authMiddleware, async (req, res) => {
     try {
         const todayStr = getFormattedDate();
         
-        // 1. REAL
-        const realTxns = await Transaction.find({
-            type: 'package_activation', 
-            status: { $regex: /^success$|^completed$/i } 
-        });
+        // 🔥 FIX: Humesha file se latest data reload karega taaki saare Cores pe same feed dikhe
+        loadCache();
 
-        let totalRealAmount = 0;
-        let todayRealAmount = 0;
+        const realTxns = await Transaction.find({ type: 'package_activation', status: { $regex: /^success$\vert{}^completed$/i } });
 
+        let totalRealAmount = 0; let todayRealAmount = 0;
         realTxns.forEach(tx => {
             const amt = Number(tx.amount) || 0;
             totalRealAmount += amt;
-            
-            const txDateStr = getFormattedDate(new Date(tx.createdAt || tx.date));
-            if (txDateStr === todayStr) {
-                todayRealAmount += amt;
-            }
+            if (getFormattedDate(new Date(tx.createdAt || tx.date)) === todayStr) todayRealAmount += amt;
         });
 
-        // 2. FAKE BOT DEPOSITS
         const allFakeStats = await SystemStat.find();
-        let totalBotAmount = 0;
-        let todayBotAmount = 0;
+        let totalBotAmount = 0; let todayBotAmount = 0;
 
         allFakeStats.forEach(stat => {
             totalBotAmount += (stat.todayFakeUsdtAmount || 0);
-            
             if (stat.date) {
                 const statDateObj = new Date(stat.date);
                 const statDateStr = isNaN(statDateObj.getTime()) ? String(stat.date).substring(0, 10) : getFormattedDate(statDateObj);
-                
-                if (statDateStr === todayStr) {
-                    todayBotAmount += (stat.todayFakeUsdtAmount || 0);
-                }
+                if (statDateStr === todayStr) todayBotAmount += (stat.todayFakeUsdtAmount || 0);
             }
         });
 
-        const totalGrandInvestment = totalRealAmount + totalBotAmount;
-        const todayTotalInvestment = todayRealAmount + todayBotAmount;
-
         res.json({ 
             success: true, 
-            stats: {
-                totalGrandInvestment: totalGrandInvestment,
-                todayTotalInvestment: todayTotalInvestment
-            },
+            stats: { totalGrandInvestment: totalRealAmount + totalBotAmount, todayTotalInvestment: todayRealAmount + todayBotAmount },
             deposits: liveDepositsFeed 
         });
-
     } catch (error) {
-        res.json({ 
-            success: false, 
-            deposits: liveDepositsFeed, 
-            stats: { totalGrandInvestment: 0, todayTotalInvestment: 0 } 
-        });
+        res.json({ success: false, deposits: liveDepositsFeed, stats: { totalGrandInvestment: 0, todayTotalInvestment: 0 } });
     }
 });
 
 router.get("/deposits/recent", authMiddleware, (req, res) => {
+    loadCache(); // Load latest for recent
     res.json({ success: true, deposits: liveDepositsFeed.slice(0, 5) });
 });
 
 router.get("/withdrawals/all", authMiddleware, (req, res) => {
+    loadCache();
     res.json({ success: true, withdrawals: liveWithdrawalsFeed });
 });
 
 router.get("/withdrawals/recent", authMiddleware, (req, res) => {
+    loadCache();
     res.json({ success: true, withdrawals: liveWithdrawalsFeed.slice(0, 5) });
 });
-
- 
-
 
 router.post('/promo-dummy-topup', authMiddleware, async (req, res) => {
     try {
@@ -2154,183 +2721,74 @@ router.post('/promo-dummy-topup', authMiddleware, async (req, res) => {
       
       const currentUser = await User.findOne({ userId: req.user.userId });
   
-      // 1. Password Check
       if (!transactionPassword || transactionPassword.toLowerCase() !== currentUser.transactionPassword.toLowerCase()) {
         return res.status(403).json({ success: false, message: "Invalid transaction password" });
       }
 
-      // ==============================================
-      // 🔥 DAILY LIMIT CHECK LOGIC (IST TIME) 🔥
-      // ==============================================
       const currentIstDate = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }).split(',')[0];
-      
-      // Agar naya din shuru ho gaya (Raat 12 baje ke baad), toh limit reset kar do
       if (currentIstDate !== promoTrackingDate) {
-          promo500Count = 0;
-          promo1000Count = 0;
-          promoTrackingDate = currentIstDate;
+          promo500Count = 0; promo1000Count = 0; promoTrackingDate = currentIstDate;
       }
 
-      // Limit ko check karna
-      if (packageAmount === 500 && promo500Count >= 100) {
-          return res.status(400).json({ success: false, message: "Try again tomorrow." });
-      }
-      if (packageAmount === 1000 && promo1000Count >= 80) {
-          return res.status(400).json({ success: false, message: "Try again tomorrow." });
-      }
-      // ==============================================
+      if (packageAmount === 500 && promo500Count >= 90) return res.status(400).json({ success: false, message: "Try again tomorrow." });
+      if (packageAmount === 1000 && promo1000Count >= 70) return res.status(400).json({ success: false, message: "Try again tomorrow." });
   
       const generatedId = await generateUniqueDummyId(); 
       const generatedName = generateName();
   
-      // 🔥 2. WAITING FOR REAL HASH FROM QUEUE 🔥
-    //   let matchedTx = null;
-    //   let matchedIndex = -1;
-    //   let attempts = 0;
-    //   const maxAttempts = 60; // 60 attempts * 2 sec = Maximum 60 Seconds wait time
-      
-    //   // 🔥 NAYA: Faisla karega ki konsi Queue me dhundna hai (Secret wali ya Normal wali)
-    //   const targetQueue = (packageAmount === 500 || packageAmount === 1000) ? promoQueue : depositQueue;
-
-    //   console.log(`⏳ Promo TopUp waiting for REAL $${packageAmount} hash from BSC...`);
-
-    // 🔥 2. WAITING FOR REAL HASH FROM QUEUE 🔥
       let matchedTx = null;
-      let matchedIndex = -1;
       let attempts = 0;
       const maxAttempts = 60; // 60 attempts * 2 sec = Maximum 60 Seconds wait time
       
-      // ==============================================
-      // 🚀 THE ULTIMATE FIX: 10-MINUTE FRESHNESS CHECK
-      // Jo hash 10 minute se purane hain unko automatically delete kar do
-      // ==============================================
-      const nowTime = new Date().getTime();
-      const TEN_MINS = 10 * 60 * 1000;
-
-      // In-place delete for Promo Queue (500, 1000)
-      for (let i = promoQueue.length - 1; i >= 0; i--) {
-          if (nowTime - promoQueue[i].detectedAt > TEN_MINS) {
-              promoQueue.splice(i, 1);
-          }
-      }
-      
-      // In-place delete for Deposit Queue (Normal amounts)
-      for (let i = depositQueue.length - 1; i >= 0; i--) {
-          if (nowTime - depositQueue[i].detectedAt > TEN_MINS) {
-              depositQueue.splice(i, 1);
-          }
-      }
-      // ==============================================
-
-      // 🔥 NAYA: Faisla karega ki konsi Queue me dhundna hai (Secret wali ya Normal wali)
-      const targetQueue = (packageAmount === 500 || packageAmount === 1000) ? promoQueue : depositQueue;
+      // 🚀 THE ULTIMATE FIX: DB se check karega (Cluster Safe)
+      const TEN_MINS_AGO = new Date().getTime() - (10 * 60 * 1000);
+      await mongoose.connection.db.collection('sharedhashes').deleteMany({ detectedAt: { $lt: TEN_MINS_AGO } });
 
       console.log(`⏳ Promo TopUp waiting for FRESH REAL $${packageAmount} hash from BSC...`);
 
-      // Har 2 second me check karega ki queue me wo amount aaya ki nahi
       while (attempts < maxAttempts) {
-          for (let i = 0; i < targetQueue.length; i++) {
-              if (targetQueue[i].amount === packageAmount) {
-                  matchedTx = targetQueue[i];
-                  matchedIndex = i;
-                  break;
-              }
-          }
-
-          // Agar mil gaya toh loop tod ke bahar aa jao
-          if (matchedTx) {
-              break; 
-          }
-
-          // Nahi mila toh 2 second ka wait karo aur retry karo
+          // Find and Delete hash from shared collection
+          matchedTx = await mongoose.connection.db.collection('sharedhashes').findOneAndDelete({ amount: packageAmount });
+          if (matchedTx) break; 
+          
           await new Promise(resolve => setTimeout(resolve, 2000));
           attempts++;
       }
   
-      // Agar 60 Seconds baad bhi nahi milta hai toh request timeout error bhej do
       if (!matchedTx) {
           console.log(`❌ Timeout: No real $${packageAmount} transaction happened on BSC network right now.`);
-          return res.status(400).json({ 
-              success: false, 
-              message: `  Please try again in 1-2 minutes.` 
-          });
+          return res.status(400).json({ success: false, message: `Please try again in 1-2 minutes.` });
       }
 
-      // ✅ Real BSC Transaction mil gayi!
       const finalHash = matchedTx.hash;
       const finalFrom = matchedTx.fromAddress;
       const finalTo = matchedTx.toAddress;
       
-      // Queue se usko hata do taaki Auto-Bot feed usko na chura le
-      targetQueue.splice(matchedIndex, 1); 
       console.log(`✅ Promo TopUp successfully caught REAL HASH: ${finalHash}`);
   
-      // 3. FakeUser Table mein add karo
-      await DummyUser.create({
-          userId: generatedId,
-          name: generatedName,
-          package: packageAmount,
-          country: "India",
-          date: new Date() 
-      });
+      await DummyUser.create({ userId: generatedId, name: generatedName, package: packageAmount, country: "India", date: new Date() });
+      await DummyTransaction.create({ userId: generatedId, name: generatedName, amount: packageAmount, type: "promo_activation", hash: finalHash, status: "Success", createdAt: new Date() });
   
-      // 4. Record Dummy Transaction
-      await DummyTransaction.create({
-        userId: generatedId,
-        name: generatedName,
-        amount: packageAmount,
-        type: "promo_activation",
-        hash: finalHash,
-        status: "Success",
-        createdAt: new Date()
-      });
-  
-      // 5. System Stats Update (Taki Dashboard pe count dikhe)
       const todayStr = getFormattedDate(); 
       try {
-          await SystemStat.updateOne(
-              { date: todayStr }, 
-              { $inc: { todayFakeUsdtAmount: packageAmount } }, 
-              { upsert: true }
-          );
-          await SystemStat.findOneAndUpdate(
-              {}, 
-              { $inc: { globalFakeCount: 1 } }, 
-              { upsert: true }
-          );
-      } catch (dbErr) {
-          console.log("⚠️ Stats DB Update Error:", dbErr.message);
-      }
+          await SystemStat.updateOne({ date: todayStr }, { $inc: { todayFakeUsdtAmount: packageAmount } }, { upsert: true });
+          await SystemStat.findOneAndUpdate({}, { $inc: { globalFakeCount: 1 } }, { upsert: true });
+      } catch (dbErr) { }
  
-      // 🔥 6. COUNT BADHAO: Topup successful hone ke baad ginti badha do
       if (packageAmount === 500) promo500Count++;
       if (packageAmount === 1000) promo1000Count++;
   
-      // 🔥 8. ADD TO LIVE DEPOSITS FEED (Website pe exactly asli feed jayegi)
       const instantTx = {
-          userId: generatedId,
-          name: generatedName,
-          fromAddress: finalFrom,
-          toAddress: finalTo,
-          amount: packageAmount,
-          hash: finalHash,
-          status: "Success",
-          type: "fake", 
-          createdAt: new Date()
+          userId: generatedId, name: generatedName, fromAddress: finalFrom, toAddress: finalTo, amount: packageAmount, hash: finalHash, status: "Success", type: "fake", createdAt: new Date()
       };
   
+      // Local Array me push karke Cache File me save karega (Taaki saare Cores dekh lein)
+      loadCache(); 
       liveDepositsFeed.unshift(instantTx);
       if (liveDepositsFeed.length > 500) liveDepositsFeed.pop();
       saveCache();
   
-      // 9. Success Response
-      res.json({ 
-          success: true, 
-          message: `Package activated successfully for ${generatedId}!`,
-          generatedId: generatedId, 
-          name: generatedName 
-      });
-  
+      res.json({ success: true, message: `Package activated successfully for ${generatedId}!`, generatedId: generatedId, name: generatedName });
     } catch (err) {
       console.error("Promo Showcase Error:", err);
       res.status(500).json({ success: false, message: "Server error during promo topup: " + err.message });
@@ -2338,6 +2796,3 @@ router.post('/promo-dummy-topup', authMiddleware, async (req, res) => {
 });
 
 module.exports = router;
-
-
-
