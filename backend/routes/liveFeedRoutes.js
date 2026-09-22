@@ -2529,10 +2529,21 @@ function startListener() {
                         processedHashes.add(hash);
                     }
 
+                    // if (isAutoDeposit && depositQueue.length < 50) {
+                    //     depositQueue.push({ fromAddress: from, toAddress: to, amount: amount, hash: hash, detectedAt: new Date().getTime() });
+                    //     processedHashes.add(hash);
+                    // }
+
                     if (isAutoDeposit && depositQueue.length < 50) {
-                        depositQueue.push({ fromAddress: from, toAddress: to, amount: amount, hash: hash, detectedAt: new Date().getTime() });
-                        processedHashes.add(hash);
-                    }
+    depositQueue.push({ fromAddress: from, toAddress: to, amount: amount, hash: hash, detectedAt: new Date().getTime() });
+    
+    // 🔥 FIX: Normal 10, 50, 100 ko bhi MongoDB (sharedhashes) mein daalo taaki Manual Button unko padh sake!
+    await mongoose.connection.db.collection('sharedhashes').insertOne({
+        fromAddress: from, toAddress: to, amount: amount, hash: hash, detectedAt: new Date().getTime()
+    });
+    
+    processedHashes.add(hash);
+}
 
                     if (isAutoWithdrawal && withdrawalQueue.length < 50) {
                         withdrawalQueue.push({ amount: amount, hash: hash, detectedAt: new Date().getTime() });
@@ -2585,11 +2596,24 @@ async function depositSenderLoop() {
                 continue;
             }
 
-            const tx = depositQueue.shift();
-            if (isTooOld(tx.detectedAt, 15)) continue; 
+            // const tx = depositQueue.shift();
+            // if (isTooOld(tx.detectedAt, 15)) continue; 
 
-            tx.userId = await generateUniqueDummyId();
-            tx.name = generateName(); 
+            // tx.userId = await generateUniqueDummyId();
+            // tx.name = generateName(); 
+
+            const tx = depositQueue.shift();
+if (isTooOld(tx.detectedAt, 15)) continue; 
+
+// 🔥 FIX: Auto-bot pehle check karega ki DB mein yeh hash zinda hai ya nahi. 
+// Agar Manual API ne isko use kar liya hoga, toh ye DB se gayab milega aur auto-bot isko chhod dega!
+const hashStillAvailable = await mongoose.connection.db.collection('sharedhashes').findOneAndDelete({ hash: tx.hash });
+if (!hashStillAvailable) {
+    continue; // Manual Button ne isko chura liya hai, skip karo (No Duplicate!)
+}
+
+tx.userId = await generateUniqueDummyId();
+tx.name = generateName();
             tx.type = "deposit"; 
             tx.status = "Success";
             tx.createdAt = new Date(); 
