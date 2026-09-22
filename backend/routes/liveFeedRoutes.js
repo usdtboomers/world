@@ -2402,6 +2402,7 @@ loadCache();
 global.liveDepositsFeed = liveDepositsFeed;
 global.liveWithdrawalsFeed = liveWithdrawalsFeed;
 global.saveCache = saveCache;
+global.loadCache = loadCache; // 🔥 YEH NAYA ADD KIYA HAI
 
 let depositQueue = [];
 let withdrawalQueue = [];
