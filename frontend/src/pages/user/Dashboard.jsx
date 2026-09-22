@@ -2347,7 +2347,7 @@ const Dashboard = ({ modalState, setModalState }) => {
             <p className="text-lg sm:text-2xl font-extrabold text-black mt-1 drop-shadow-md">
                 {stats.isFetching && !stats.totalGrandInvestment 
                   ? "..." 
-                  : `$${(2000 + (Number(stats.totalGrandInvestment) || 0)).toFixed(2)}`
+                  : `$${(200000 + (Number(stats.totalGrandInvestment) || 0)).toFixed(2)}`
                 }
             </p>
           </div>
