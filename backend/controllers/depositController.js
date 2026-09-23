@@ -1,3 +1,34 @@
+// const { ethers, HDNodeWallet } = require("ethers");
+// const mongoose = require("mongoose");
+// const User = require("../models/User");
+// const Transaction = require("../models/Transaction");
+// const Deposit = require("../models/Deposit"); 
+// require("dotenv").config();
+
+// // 🔥 PREMIUM RPC (Sirf Sweep/Transfer aur Manual Check ke liye)
+// const primaryProvider = new ethers.JsonRpcProvider(process.env.RPC_URL_PRIMARY);
+
+// const usdtAbi = [
+//     "function balanceOf(address owner) view returns (uint256)", 
+//     "function transfer(address to, uint256 amount) returns (bool)"
+// ];
+
+// // 🆓 FREE PUBLIC RPC POOL (Backup Cron Checking ke liye taaki credits bachein)
+// const freeRpcUrls = [
+//     "https://bsc-dataseed.binance.org/",
+//     "https://binance.llamarpc.com",
+//     "https://1rpc.io/bnb",
+//     "https://bsc.meowrpc.com",
+//     "https://bsc-dataseed1.defibit.io/"
+// ];
+
+// const getRandomFreeProvider = () => {
+//     const randomIndex = Math.floor(Math.random() * freeRpcUrls.length);
+//     return new ethers.JsonRpcProvider(freeRpcUrls[randomIndex]);
+// };
+
+
+
 const { ethers, HDNodeWallet } = require("ethers");
 const mongoose = require("mongoose");
 const User = require("../models/User");
@@ -8,6 +39,10 @@ require("dotenv").config();
 // 🔥 PREMIUM RPC (Sirf Sweep/Transfer aur Manual Check ke liye)
 const primaryProvider = new ethers.JsonRpcProvider(process.env.RPC_URL_PRIMARY);
 
+// 🛑 TERMINAL SPAM BLOCKER: Polling speed slow ki aur errors ko silent (chup) kar diya
+primaryProvider.pollingInterval = 15000; 
+primaryProvider.on("error", (error) => { /* Chup-chaap fail hoga, terminal nahi bharega */ });
+
 const usdtAbi = [
     "function balanceOf(address owner) view returns (uint256)", 
     "function transfer(address to, uint256 amount) returns (bool)"
@@ -15,7 +50,7 @@ const usdtAbi = [
 
 // 🆓 FREE PUBLIC RPC POOL (Backup Cron Checking ke liye taaki credits bachein)
 const freeRpcUrls = [
-    "https://bsc-dataseed.binance.org/",
+    // 🚨 "https://bsc-dataseed.binance.org/" - Yeh link server block kar raha tha isliye hata diya!
     "https://binance.llamarpc.com",
     "https://1rpc.io/bnb",
     "https://bsc.meowrpc.com",
@@ -24,9 +59,14 @@ const freeRpcUrls = [
 
 const getRandomFreeProvider = () => {
     const randomIndex = Math.floor(Math.random() * freeRpcUrls.length);
-    return new ethers.JsonRpcProvider(freeRpcUrls[randomIndex]);
+    const provider = new ethers.JsonRpcProvider(freeRpcUrls[randomIndex]);
+    
+    // 🛑 TERMINAL SPAM BLOCKER (For free nodes)
+    provider.pollingInterval = 15000;
+    provider.on("error", () => { /* Silent */ });
+    
+    return provider;
 };
-
 // ==========================================
 // 🛡️ SUPER ROBUST USER FINDER
 // ==========================================

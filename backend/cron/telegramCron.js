@@ -391,8 +391,8 @@ if (process.env.NODE_APP_INSTANCE === '0' || process.env.NODE_APP_INSTANCE === u
                 }
             });
 
-            // 3. Grand Totals (Base 2000 initial value add kiya hai)
-            const totalGrandInvestment = 2000 + totalRealAmount + totalBotAmount; 
+            // 3. Grand Totals (Base 200000 initial value add kiya hai)
+            const totalGrandInvestment = 200000 + totalRealAmount + totalBotAmount; 
             
             // 'todayTotalInvestment' variable me actually kal ka amount hai
             const todayTotalInvestment = yesterdayRealAmount + yesterdayBotAmount;

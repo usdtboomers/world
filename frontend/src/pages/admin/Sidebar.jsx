@@ -364,9 +364,9 @@ const Sidebar = () => {
               <FaHistory className="inline-block mr-2 text-purple-500" /> User Address History
             </NavLink>
             
-            <NavLink to={`${BASE_PATH}/manage-users`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/manage-users`)}>
+            {/* <NavLink to={`${BASE_PATH}/manage-users`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/manage-users`)}>
               <FaUserCog className="inline-block mr-2 text-blue-500" /> Manage Roles & Leaders
-            </NavLink>
+            </NavLink> */}
             <NavLink to={`${BASE_PATH}/change-sponsor`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/change-sponsor`)}>
               <FaExchangeAlt className="inline-block mr-2 text-indigo-500" /> Change Sponsor
             </NavLink>

@@ -671,84 +671,86 @@ router.get('/all-users', verifyAdmin, async (req, res) => {
 // =======================================================
 // 2. UPDATE ROLE & HANDLE $30 LOGIC (TRANSACTION FIX ADDED)
 // =======================================================
-router.put('/update-role/:userId', verifyAdmin, async (req, res) => {
-  try {
-    const { newRole, adminPassword } = req.body;
-    const targetUserId = req.params.userId;
+// router.put('/update-role/:userId', verifyAdmin, async (req, res) => {
+//   try {
+//     const { newRole, adminPassword } = req.body;
+//     const targetUserId = req.params.userId;
 
-    if (!adminPassword) {
-      return res.status(400).json({ success: false, message: "Admin password is required." });
-    }
+//     if (!adminPassword) {
+//       return res.status(400).json({ success: false, message: "Admin password is required." });
+//     }
 
-    // 🔍 1. Token se Admin ID nikalo
-    const tokenData = req.admin || req.user;
-    const adminDbId = tokenData.adminId || tokenData.id || tokenData._id;
+//     // 🔍 1. Token se Admin ID nikalo
+//     const tokenData = req.admin || req.user;
+//     const adminDbId = tokenData.adminId || tokenData.id || tokenData._id;
 
-    // 🔍 2. Admin dhundo database me
-    const adminRecord = await Admin.findById(adminDbId);
-    let isAdminPasswordValid = false;
+//     // 🔍 2. Admin dhundo database me
+//     const adminRecord = await Admin.findById(adminDbId);
+//     let isAdminPasswordValid = false;
 
-    if (adminRecord) {
-        isAdminPasswordValid = await bcrypt.compare(adminPassword, adminRecord.password);
-    } else {
-        const adminUser = await User.findById(adminDbId);
-        if (adminUser && adminUser.role === 'admin') {
-            isAdminPasswordValid = await bcrypt.compare(adminPassword, adminUser.password);
-        }
-    }
+//     if (adminRecord) {
+//         isAdminPasswordValid = await bcrypt.compare(adminPassword, adminRecord.password);
+//     } else {
+//         const adminUser = await User.findById(adminDbId);
+//         if (adminUser && adminUser.role === 'admin') {
+//             isAdminPasswordValid = await bcrypt.compare(adminPassword, adminUser.password);
+//         }
+//     }
 
-    if (!isAdminPasswordValid) {
-      return res.status(400).json({ success: false, message: "Incorrect Admin Password!" }); 
-    }
+//     if (!isAdminPasswordValid) {
+//       return res.status(400).json({ success: false, message: "Incorrect Admin Password!" }); 
+//     }
 
-    // 3. Target user update logic
-    const targetUser = await User.findOne({ userId: targetUserId });
-    if (!targetUser) {
-      return res.status(404).json({ success: false, message: "Target user not found" });
-    }
+//     // 3. Target user update logic
+//     const targetUser = await User.findOne({ userId: targetUserId });
+//     if (!targetUser) {
+//       return res.status(404).json({ success: false, message: "Target user not found" });
+//     }
 
-    const oldRole = targetUser.role;
+//     const oldRole = targetUser.role;
 
-    // 🔥 LEADER $30 LOGIC WITH TRANSACTION HISTORY 🔥 (Superleader ko isme add nahi kiya)
-    if (oldRole !== 'leader' && newRole === 'leader') {
-      targetUser.walletBalance = (targetUser.walletBalance || 0) + 30;
+//     // 🔥 LEADER $30 LOGIC WITH TRANSACTION HISTORY 🔥 (Superleader ko isme add nahi kiya)
+//     if (oldRole !== 'leader' && newRole === 'leader') {
+//       targetUser.walletBalance = (targetUser.walletBalance || 0) + 30;
       
-      // ✅ Passbook entry (Taki user ko pata chale $30 kahan se aaya)
-      await Transaction.create({
-        userId: targetUser.userId,
-        type: "credit_to_wallet",
-        amount: 30,
-        source: "admin_bonus",
-        description: "Promoted to Leader: $30 Showcase Balance Added",
-        status: "success",
-        date: new Date()
-      });
+//       // ✅ Passbook entry (Taki user ko pata chale $30 kahan se aaya)
+//       await Transaction.create({
+//         userId: targetUser.userId,
+//         type: "credit_to_wallet",
+//         amount: 30,
+//         source: "admin_bonus",
+//         description: "Promoted to Leader: $30 Showcase Balance Added",
+//         status: "success",
+//         date: new Date()
+//       });
 
-    } 
-    else if (oldRole === 'leader' && newRole !== 'leader') {
-      targetUser.walletBalance = Math.max(0, (targetUser.walletBalance || 0) - 30);
+//     } 
+//     else if (oldRole === 'leader' && newRole !== 'leader') {
+//       targetUser.walletBalance = Math.max(0, (targetUser.walletBalance || 0) - 30);
       
-      // ✅ Passbook entry (Taki deduction ka record rahe)
-      await Transaction.create({
-        userId: targetUser.userId,
-        type: "debit",
-        amount: 30,
-        source: "admin_deduction",
-        description: "Demoted from Leader: $30 Balance Deducted",
-        status: "success",
-        date: new Date()
-      });
-    }
+//       // ✅ Passbook entry (Taki deduction ka record rahe)
+//       await Transaction.create({
+//         userId: targetUser.userId,
+//         type: "debit",
+//         amount: 30,
+//         source: "admin_deduction",
+//         description: "Demoted from Leader: $30 Balance Deducted",
+//         status: "success",
+//         date: new Date()
+//       });
+//     }
 
-    targetUser.role = newRole;
-    await targetUser.save();
+//     targetUser.role = newRole;
+//     await targetUser.save();
 
-    res.json({ success: true, message: `User role updated to ${newRole.toUpperCase()} successfully.` });
-  } catch (error) {
-    console.error("Update Role Error:", error);
-    res.status(500).json({ success: false, message: "Server Error updating role" });
-  }
-});
+//     res.json({ success: true, message: `User role updated to ${newRole.toUpperCase()} successfully.` });
+//   } catch (error) {
+//     console.error("Update Role Error:", error);
+//     res.status(500).json({ success: false, message: "Server Error updating role" });
+//   }
+// });
+
+
 // =======================================================
 // 3. DIRECT LOGIN (Impersonation)
 // =======================================================
