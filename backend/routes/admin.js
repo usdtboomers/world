@@ -4366,10 +4366,6 @@ router.get('/withdrawals', verifyAdmin, async (req, res) => {
   }
 });
 
-
-
-
-
 // APPROVE a withdrawal (single withdrawal record)
 // Sirf status update karne ke liye
 router.put('/withdrawals/approve/:id', verifyAdmin, async (req, res) => {
@@ -4414,8 +4410,6 @@ router.put('/withdrawals/approve/:id', verifyAdmin, async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 });
-
-
 
 // APPROVE a dummy txn with txnHash
 // ✅ Dummy Transaction Route (Fixed for Schedule IDs)
