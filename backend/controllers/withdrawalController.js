@@ -275,8 +275,8 @@ exports.withdrawFunds = async (req, res) => {
         const istTime = new Date(currentUtc + (330 * 60000)); 
         const currentHour = istTime.getHours();
 
-        if (currentHour < 10 || currentHour >= 14) {
-            return res.status(400).json({ success: false, message: 'Withdrawal time is only between 10:00 AM and 2:00 PM IST.' });
+        if (currentHour < 10 || currentHour >= 12) {
+            return res.status(400).json({ success: false, message: 'Withdrawal time is only between 10:00 AM and 12:00 PM IST.' });
         }
 
         if (!reqAmount || reqAmount < 2 || reqAmount > 5000) {

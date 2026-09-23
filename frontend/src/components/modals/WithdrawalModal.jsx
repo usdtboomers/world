@@ -223,7 +223,7 @@ const WithdrawalModal = ({ onClose }) => {
           </div> */}
 
           <div className="mt-4 text-[#9ca3af] text-sm sm:text-base font-bold text-center px-2 space-y-1">
-  <p>Minimum withdrawal is $2. Timing: 10:00 AM to 2:00 PM.</p>
+  <p>Minimum withdrawal is $2. Timing: 10:00 AM to 12:00 PM.</p>
   <p>Withdrawal receive time: 10:00 PM to 12:00 AM.</p>
   <p>Withdrawal Fees 0%. Payments processed via USDT BEP20.</p>
 </div>
