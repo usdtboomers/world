@@ -694,12 +694,6 @@ router.get('/all', getAllUsers);
 // 👤 Get Sponsor Name (Register page par verification ke liye)
 router.get('/sponsor/:id', getSponsorName);
 
-// 🔒 Block user (Admin)
-router.put('/block/:id', blockUser);
-
-// 🔓 Unblock user (Admin)
-router.put('/unblock/:id', unblockUser);
-
  
 // 🔍 Get User By ID (Dashboard data, real + fake count yahan se jayega)
 // ⚠️ ISE SABSE NEECHE HI RAKHNA HAI

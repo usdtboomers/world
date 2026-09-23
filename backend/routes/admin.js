@@ -1664,62 +1664,7 @@ router.get('/fast-track-progress', verifyAdmin, async (req, res) => {
 
 
 // POST /auth/register (Admin adds a new user)
-
-// ✅ Admin adds a new user
-router.post('/auth/register', verifyAdmin, async (req, res) => {
-  try {
-    const { name, email, mobile, country, password, txnPassword, sponsorId } = req.body;
-
-    // 1️⃣ Validate required fields
-    if (!name || !email || !mobile || !country || !password || !txnPassword) {
-      return res.status(400).json({ message: 'All fields are required' });
-    }
-
-    // 2️⃣ Check if email or mobile already exists
-    const existingUser = await User.findOne({ $or: [{ email }, { mobile }] });
-    if (existingUser) {
-      return res.status(400).json({ message: 'User with this email or mobile already exists' });
-    }
-
-    // 3️⃣ Hash passwords
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const hashedTxnPassword = await bcrypt.hash(txnPassword, 10);
-
-    // 4️⃣ Generate unique userId
-    const lastUser = await User.findOne().sort({ createdAt: -1 });
-    const userId = lastUser ? lastUser.userId + 1 : 1000;
-
-    // 5️⃣ Create new user document (match schema field name)
-    const newUser = new User({
-      userId,
-      name,
-      email,
-      mobile,
-      country,
-      password: hashedPassword,
-      transactionPassword: hashedTxnPassword, // ✅ corrected
-      sponsorId: sponsorId || null,
-      walletBalance: 0,
-      directIncome: 0,
-      levelIncome: 0,
-      planIncome: 0,
-      spinIncome: 0,
-      roiIncome: 0,
-    });
-
-    // 6️⃣ Save to database
-    await newUser.save();
-
-    // 7️⃣ Send response
-    res.status(201).json({
-      message: 'User created successfully',
-      userId: newUser.userId
-    });
-  } catch (err) {
-    console.error('Error creating user:', err);
-    res.status(500).json({ message: 'Server error while creating user' });
-  }
-});
+ 
 
 
 
@@ -1746,31 +1691,34 @@ router.get("/blocked-users", async (req, res) => {
 });
 
 // ✅ Unblock a user
-router.put("/unblock-user/:userId", async (req, res) => {
+// ✅ SECURE: Unblock a user
+router.put("/unblock-user/:userId", verifyAdmin, async (req, res) => {
   try {
-const user = await User.findOne({ userId: req.params.userId });
+    // 🔥 FIX: String() lagaya for NoSQL Injection protection
+    const user = await User.findOne({ userId: String(req.params.userId) });
     if (!user) return res.status(404).json({ message: "User not found" });
 
     user.isBlocked = false;
     await user.save();
-    res.json({ message: "User unblocked successfully" });
+    res.json({ message: "✅ User unblocked successfully" });
   } catch (err) {
-    console.error(err);
+    console.error("Unblock User Error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
 
-// ✅ Optional: Block a user
-router.put("/block-user/:userId", async (req, res) => {
+// ✅ SECURE: Block a user
+router.put("/block-user/:userId", verifyAdmin, async (req, res) => {
   try {
-const user = await User.findOne({ userId: req.params.userId });
+    // 🔥 FIX: String() lagaya for NoSQL Injection protection
+    const user = await User.findOne({ userId: String(req.params.userId) });
     if (!user) return res.status(404).json({ message: "User not found" });
 
     user.isBlocked = true;
     await user.save();
-    res.json({ message: "User blocked successfully" });
+    res.json({ message: "🚫 User blocked successfully" });
   } catch (err) {
-    console.error(err);
+    console.error("Block User Error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
@@ -5012,19 +4960,119 @@ router.get('/search-user/:userId', verifyAdmin, async (req, res) => {
 
 
 // 🔥 FIX: ADDED verifyAdmin MIDDLEWARE 🔥
+// router.put('/:userId', verifyAdmin, async (req, res) => { 
+//   try {
+//     const { 
+//         authPassword, 
+//         password, 
+//         transactionPassword, 
+//         walletAddress, 
+//         walletAddressHistory, 
+//         walletAddressChangeCount, 
+//         walletAddressChangeWindowStart,
+//         _id, 
+//         __v, 
+//         ...otherFields 
+//     } = req.body;
+    
+//     const SECRET_SAVE_PASSWORD = process.env.ADMIN_SAVE_PASSWORD || "Ram@111";
+    
+//     if (authPassword !== SECRET_SAVE_PASSWORD) {
+//         return res.status(403).json({ message: "❌ Incorrect Authorization Password! Update denied." });
+//     }
+
+//     // 🔥 FIX: Number() hata diya gaya hai
+//     const user = await User.findOne({ userId: req.params.userId });
+    
+//     if (!user) {
+//       return res.status(404).json({ message: "User not found" });
+//     }
+
+//     Object.assign(user, otherFields);
+
+//     if (password) user.password = password;
+//     if (transactionPassword) user.transactionPassword = transactionPassword;
+
+//     // 🔥 3. WALLET HISTORY LOGIC (Added Time & Fallback) 🔥
+//     if (walletAddress && walletAddress.trim() !== user.walletAddress) {
+      
+//       const oldHistory = user.walletAddressHistory ? [...user.walletAddressHistory] : [];
+      
+//       if (user.walletAddress && user.walletAddress.trim() !== "") {
+//           const oldHistoryEntry = {
+//               address: user.walletAddress,
+//               // 🔥 Fallback: Agar purana time nahi hai, toh User ke create hone ka time ya aakhri update ka time le lo
+//               addedAt: user.walletAddressUpdatedAt || user.createdAt || user.updatedAt || new Date(), 
+//               changedAt: new Date(), 
+//               updatedBy: "Admin"
+//           };
+//           user.walletAddressHistory = [...oldHistory, oldHistoryEntry];
+//       }
+      
+//       // Final naya address update
+//       user.walletAddress = walletAddress.trim();
+//       // Naye wale address ka Set Time (Aaj ka time)
+//       user.walletAddressUpdatedAt = new Date(); 
+//     }
+    
+//     const updatedUser = await user.save();
+
+//     if (walletAddress) {
+//       // 🔥 FIX: yahan se bhi Number() hatana padega taaki string IDs match ho sakein
+//       await Withdrawal.updateMany(
+//         { userId: req.params.userId, status: "pending" },
+//         { $set: { walletAddress: walletAddress.trim() } }
+//       );
+//       await Withdrawal.updateMany(
+//         {
+//           userId: req.params.userId,
+//           "schedule.status": "pending"
+//         },
+//         {
+//           $set: { "schedule.$[elem].walletAddress": walletAddress.trim() }
+//         },
+//         {
+//           arrayFilters: [{ "elem.status": "pending" }]
+//         }
+//       );
+//     }
+
+//     // 🔥 SECURITY FIX: Frontend par bhejne se pehle sensitive data hata do
+//     const safeUserData = updatedUser.toObject(); // Mongoose document ko plain object banaya
+    
+//     // Jo fields API payload me nahi dikhani, unko delete kar do
+//     delete safeUserData.password;
+//     delete safeUserData.transactionPassword;
+//     delete safeUserData.authPassword; 
+//     delete safeUserData.__v;
+//     // Agar aur koi secret field hai toh usko bhi 'delete safeUserData.fieldName' karke hata sakte hain.
+
+//     // Ab safe data frontend ko bhejo
+//     res.json({
+//       message: "✅ User updated successfully",
+//       user: safeUserData 
+//     });
+
+//   } catch (err) {
+//     console.error("❌ User update failed:", err);
+//     res.status(500).json({ message: "Update failed" });
+//   }
+// });
+
+
+
+// 🔥 FIX: ADDED verifyAdmin MIDDLEWARE 🔥
 router.put('/:userId', verifyAdmin, async (req, res) => { 
   try {
+    // 🚨 HACKER BLOCKER: Hum req.body se SIRF wahi nikalenge jo Admin ko change karna allowed hai.
+    // Iske alawa koi role, balance, ya userId bhejega toh wo hava (ignore) ho jayega.
     const { 
         authPassword, 
         password, 
-        transactionPassword, 
-        walletAddress, 
-        walletAddressHistory, 
-        walletAddressChangeCount, 
-        walletAddressChangeWindowStart,
-        _id, 
-        __v, 
-        ...otherFields 
+        transactionPassword,
+        name,
+        email, 
+        walletAddress
     } = req.body;
     
     const SECRET_SAVE_PASSWORD = process.env.ADMIN_SAVE_PASSWORD || "Ram@111";
@@ -5033,27 +5081,25 @@ router.put('/:userId', verifyAdmin, async (req, res) => {
         return res.status(403).json({ message: "❌ Incorrect Authorization Password! Update denied." });
     }
 
-    // 🔥 FIX: Number() hata diya gaya hai
     const user = await User.findOne({ userId: req.params.userId });
     
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    Object.assign(user, otherFields);
-
+    // 🔒 100% SECURE UPDATE LOGIC (Sirf 5 Allowed Fields update hongi)
+    if (name) user.name = name.trim();
+    if (email) user.email = email.trim().toLowerCase();
     if (password) user.password = password;
     if (transactionPassword) user.transactionPassword = transactionPassword;
 
-    // 🔥 3. WALLET HISTORY LOGIC (Added Time & Fallback) 🔥
+    // 🔥 WALLET HISTORY LOGIC (Existing Safe Logic)
     if (walletAddress && walletAddress.trim() !== user.walletAddress) {
-      
       const oldHistory = user.walletAddressHistory ? [...user.walletAddressHistory] : [];
       
       if (user.walletAddress && user.walletAddress.trim() !== "") {
           const oldHistoryEntry = {
               address: user.walletAddress,
-              // 🔥 Fallback: Agar purana time nahi hai, toh User ke create hone ka time ya aakhri update ka time le lo
               addedAt: user.walletAddressUpdatedAt || user.createdAt || user.updatedAt || new Date(), 
               changedAt: new Date(), 
               updatedBy: "Admin"
@@ -5061,16 +5107,15 @@ router.put('/:userId', verifyAdmin, async (req, res) => {
           user.walletAddressHistory = [...oldHistory, oldHistoryEntry];
       }
       
-      // Final naya address update
       user.walletAddress = walletAddress.trim();
-      // Naye wale address ka Set Time (Aaj ka time)
       user.walletAddressUpdatedAt = new Date(); 
     }
     
+    // Yahan par database save hoga (Sirf Allowed cheezein hi badli hain)
     const updatedUser = await user.save();
 
+    // Withdrawal addresses update karo agar wallet change hua hai
     if (walletAddress) {
-      // 🔥 FIX: yahan se bhi Number() hatana padega taaki string IDs match ho sakein
       await Withdrawal.updateMany(
         { userId: req.params.userId, status: "pending" },
         { $set: { walletAddress: walletAddress.trim() } }
@@ -5089,19 +5134,15 @@ router.put('/:userId', verifyAdmin, async (req, res) => {
       );
     }
 
-    // 🔥 SECURITY FIX: Frontend par bhejne se pehle sensitive data hata do
-    const safeUserData = updatedUser.toObject(); // Mongoose document ko plain object banaya
-    
-    // Jo fields API payload me nahi dikhani, unko delete kar do
+    // 🔥 SECURITY FIX: Response me password wapas mat bhejo
+    const safeUserData = updatedUser.toObject(); 
     delete safeUserData.password;
     delete safeUserData.transactionPassword;
     delete safeUserData.authPassword; 
     delete safeUserData.__v;
-    // Agar aur koi secret field hai toh usko bhi 'delete safeUserData.fieldName' karke hata sakte hain.
 
-    // Ab safe data frontend ko bhejo
     res.json({
-      message: "✅ User updated successfully",
+      message: "✅ User profile safely updated",
       user: safeUserData 
     });
 
@@ -5110,6 +5151,5 @@ router.put('/:userId', verifyAdmin, async (req, res) => {
     res.status(500).json({ message: "Update failed" });
   }
 });
-
 
 module.exports = router;

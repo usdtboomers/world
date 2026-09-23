@@ -1026,12 +1026,27 @@ router.post("/manual-transaction", adminAuth, async (req, res) => {
         }
     }
 
+    // if (txHash) { 
+    //   const checkHash = txHash || finalHash;
+    //   const existingTx = await Transaction.findOne({ txHash: checkHash });
+    //   const existingDeposit = await Deposit.findOne({ txnHash: checkHash });
+    //   if (existingTx || existingDeposit) {
+    //     return res.status(400).json({ message: "TxHash already used." });
+    //   }
+    // }
+
     if (txHash) { 
+      // 🔥 STRICT FIX: Sirf valid 66-character Binance Smart Chain (BEP20) hash allow karega
+      const hashRegex = /^0x([A-Fa-f0-9]{64})$/;
+      if (!hashRegex.test(txHash)) {
+          return res.status(400).json({ message: "🚨 Security Alert: Invalid Transaction Hash format. Only real BEP-20 hashes allowed." });
+      }
+
       const checkHash = txHash || finalHash;
       const existingTx = await Transaction.findOne({ txHash: checkHash });
       const existingDeposit = await Deposit.findOne({ txnHash: checkHash });
       if (existingTx || existingDeposit) {
-        return res.status(400).json({ message: "TxHash already used." });
+        return res.status(400).json({ message: "TxHash already used in the system." });
       }
     }
 

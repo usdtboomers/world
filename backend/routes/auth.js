@@ -1,317 +1,80 @@
  
 
-require('dotenv').config();
-const express = require('express');
-const router = express.Router();
-const jwt = require('jsonwebtoken');
-const crypto = require('crypto');
-const User = require('../models/User');
-const Setting = require('../models/Setting'); 
-const sanitizeUser = require('../utils/sanitizeUser');
-const sendEmail = require('../utils/sendEmail');
-const checkFeature = require('../middleware/checkFeatureEnabled');
-const DummyUser = require('../models/DummyUser.js');
-const LoginHistory = require('../models/LoginHistory'); 
-const IpRule = require('../models/IpRule'); 
-const FakeUser = require('../models/FakeUser'); 
-const BlockedDevice = require('../models/BlockedDevice'); 
-const { bot } = require('../utils/telegramBot');
+// require('dotenv').config();
+// const express = require('express');
+// const router = express.Router();
+// const jwt = require('jsonwebtoken');
+// const crypto = require('crypto');
+// const User = require('../models/User');
+// const Setting = require('../models/Setting'); 
+// const sanitizeUser = require('../utils/sanitizeUser');
+// const sendEmail = require('../utils/sendEmail');
+// const checkFeature = require('../middleware/checkFeatureEnabled');
+// const DummyUser = require('../models/DummyUser.js');
+// const LoginHistory = require('../models/LoginHistory'); 
+// const IpRule = require('../models/IpRule'); 
+// const FakeUser = require('../models/FakeUser'); 
+// const BlockedDevice = require('../models/BlockedDevice'); 
+// const { bot } = require('../utils/telegramBot');
 
-const JWT_SECRET = process.env.JWT_SECRET;
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+// const JWT_SECRET = process.env.JWT_SECRET;
+// const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
-const getClientIP = (req) => {
-    let ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.ip || req.connection.remoteAddress || '127.0.0.1';
-    if (ip.includes('::ffff:')) {
-        ip = ip.replace('::ffff:', '');
-    }
-    return ip;
-};
+// const getClientIP = (req) => {
+//     let ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.ip || req.connection.remoteAddress || '127.0.0.1';
+//     if (ip.includes('::ffff:')) {
+//         ip = ip.replace('::ffff:', '');
+//     }
+//     return ip;
+// };
 
-// 🔥 UPDATE 1: Generate "WF" + 7 Digit User ID
-const generateUserId = async () => {
-  let id;
-  let exists = true;
-  while (exists) {
-    // 7 digit random number (1000000 to 9999999)
-    const random7Digit = Math.floor(1000000 + Math.random() * 9000000);
-    id = `WF${random7Digit}`; // Output example: WF1234567
+// // 🔥 UPDATE 1: Generate "WF" + 7 Digit User ID
+// const generateUserId = async () => {
+//   let id;
+//   let exists = true;
+//   while (exists) {
+//     // 7 digit random number (1000000 to 9999999)
+//     const random7Digit = Math.floor(1000000 + Math.random() * 9000000);
+//     id = `WF${random7Digit}`; // Output example: WF1234567
     
-    const existsInReal = await User.exists({ userId: id });
-    const existsInDummy = await DummyUser.exists({ userId: id });
-    if (!existsInReal && !existsInDummy) {
-      exists = false;
-    }
-  }
-  return id;
-};
+//     const existsInReal = await User.exists({ userId: id });
+//     const existsInDummy = await DummyUser.exists({ userId: id });
+//     if (!existsInReal && !existsInDummy) {
+//       exists = false;
+//     }
+//   }
+//   return id;
+// };
 
-const generateTransactionPassword = () => {
-    return Math.floor(100000 + Math.random() * 900000).toString();
-};
+// const generateTransactionPassword = () => {
+//     return Math.floor(100000 + Math.random() * 900000).toString();
+// };
  
 
 
-// router.post('/register', checkFeature('allowRegistrations'), async (req, res) => {
-//   try {
-//     // Wallet aur Country nikal diya idhar se
-//     let { name, mobile, email, sponsorId, deviceId, upi, password } = req.body;
-//     const userIP = getClientIP(req);
-
-//     name = name ? name.trim() : '';
-//     mobile = mobile ? mobile.trim() : '';
-//     email = email ? email.trim().toLowerCase() : '';
-
-//     const nameRegex = /^[A-Za-z\s]{3,50}$/;
-//     if (!name || !nameRegex.test(name)) {
-//         return res.status(400).json({ message: 'Invalid Name. Only alphabets are allowed.' });
-//     }
-
-//     const mobileRegex = /^[0-9]{10,15}$/;
-//     if (!mobile || !mobileRegex.test(mobile)) {
-//         return res.status(400).json({ message: 'Invalid Mobile Number.' });
-//     }
-
-//     if (!email || !email.endsWith('@gmail.com')) {
-//         return res.status(400).json({ message: 'Registration failed: Only @gmail.com emails are accepted.' });
-//     }
-
-//     if (!password || password.length < 6) {
-//         return res.status(400).json({ message: 'Password must be at least 6 characters long.' });
-//     }
-
-//     // --- Anti-Bot Security ---
-//     const isLocalIP = userIP === '127.0.0.1' || userIP === '::1';
-//     if (!isLocalIP) {
-//         const rule = await IpRule.findOne({ ipAddress: userIP });
-//         if (rule && rule.isBlocked) return res.status(403).json({ message: "Access Denied." });
-
-//         const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-//         const recentRegistrationIP = await User.findOne({ ipAddress: userIP, createdAt: { $gte: tenMinutesAgo } });
-//         if (recentRegistrationIP) return res.status(429).json({ message: "Please wait before creating another account." });
-//     }
-
-//     if (deviceId) {
-//         const isDeviceBlocked = await BlockedDevice.findOne({ deviceId });
-//         if (isDeviceBlocked) return res.status(403).json({ message: "Device blocked." });
-//     }
-//     // -------------------------
-
-//     // 🔥 YAHAN CHANGE KIYA HAI: Top ID / Genesis ID Logic
-//     const userCount = await User.countDocuments();
-//     let actualSponsorId = null;
-
-//     if (userCount === 0) {
-//         // Agar database khali hai, toh ye system ki 1st ID hai. Sponsor optional hai.
-//         // Agar sponsorId frontend se nahi aayi toh default 'ROOT' set ho jayegi
-//         actualSponsorId = sponsorId || 'ROOT'; 
-//     } else {
-//         // Agar pehle se log registered hain, toh Sponsor ID strict aur compulsory hai
-//         if (!sponsorId) return res.status(400).json({ message: 'Sponsor ID is compulsory.' });
-
-//         actualSponsorId = sponsorId; 
-//         let sponsorExists = await User.findOne({ userId: actualSponsorId });
-
-//         if (!sponsorExists) return res.status(400).json({ message: 'Invalid Sponsor ID.' });
-//     }
-//     // ----------------------------------------------------
-
-//     const newUserId = await generateUserId(); 
-    
-//     // System generated 6-digit transaction password
-//     const txPassword = generateTransactionPassword();
-
-//     // User Object me se walletAddress hat gaya
-//     const user = new User({
-//       userId: newUserId, 
-//       name, 
-//       mobile, 
-//       email, 
-//       upi,
-//       password: password, 
-//       transactionPassword: txPassword, 
-//       sponsorId: actualSponsorId, 
-//       role: 'user',
-//       ipAddress: userIP,
-//       deviceId: deviceId || null 
-//     });
-
-//     await user.save();
-
-//     try {
-//         await sendEmail({
-//             email: user.email,
-//             subject: '🎉 Welcome to World Finance 24!',
-//             html: `
-//             <div style="font-family: Arial; padding: 20px;">
-//                 <h2 style="color: #03a9f4;">🚀 Welcome to World Finance 24</h2>
-//                 <p>Hello <strong>${user.name}</strong>,</p>
-//                 <p>Your account has been successfully created.</p>
-//                 <div style="background-color: #f8f9fa; padding: 20px; border-left: 4px solid #03a9f4;">
-//                     <p>👤 <strong>User ID:</strong> ${user.userId}</p>
-//                     <p>🔑 <strong>Login Password:</strong> ${user.password}</p>
-//                     <p>🛡️ <strong>Transaction Password:</strong> <span style="color:red;">${user.transactionPassword}</span> (Keep this safe!)</p>
-//                 </div>
-//                 <br/>
-//                 <a href="${process.env.FRONTEND_URL}/login" style="background-color: #03a9f4; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Login Now</a>
-//             </div>
-//             ` 
-//         });
-//     } catch (emailErr) { 
-//         console.error("Email failed:", emailErr); 
-//     }
-
-//     // YAHAN PAR TRANSACTION PASSWORD ADD KIYA HAI 👇
-//     res.status(201).json({ 
-//         message: 'User registered successfully.', 
-//         userId: user.userId, 
-//         name: user.name,
-//         transactionPassword: txPassword 
-//     });
-
-//   } catch (err) {
-//     console.error('Register error:', err);
-//     res.status(500).json({ message: 'Server error.' });
-//   }
-// });
-
-
-// router.post('/register', checkFeature('allowRegistrations'), async (req, res) => {
-//   try {
-//     // 🔥 YAHAN CHANGE KIYA HAI: Country add kiya gaya hai
-//     let { name, mobile, email, sponsorId, deviceId, upi, password, country } = req.body;
-//     const userIP = getClientIP(req);
-
-//     name = name ? name.trim() : '';
-//     mobile = mobile ? mobile.trim() : '';
-//     email = email ? email.trim().toLowerCase() : '';
-//     country = country ? country.trim() : '';
-
-//     const nameRegex = /^[A-Za-z\s]{3,50}$/;
-//     if (!name || !nameRegex.test(name)) {
-//         return res.status(400).json({ message: 'Invalid Name. Only alphabets are allowed.' });
-//     }
-
-//     if (!country) {
-//         return res.status(400).json({ message: 'Country is required.' });
-//     }
-
-//     const mobileRegex = /^[0-9]{10,15}$/;
-//     if (!mobile || !mobileRegex.test(mobile)) {
-//         return res.status(400).json({ message: 'Invalid Mobile Number.' });
-//     }
-
-//     if (!email || !email.endsWith('@gmail.com')) {
-//         return res.status(400).json({ message: 'Registration failed: Only @gmail.com emails are accepted.' });
-//     }
-
-//     if (!password || password.length < 6) {
-//         return res.status(400).json({ message: 'Password must be at least 6 characters long.' });
-//     }
-
-//     // --- Anti-Bot Security ---
-//     const isLocalIP = userIP === '127.0.0.1' || userIP === '::1';
-//     if (!isLocalIP) {
-//         const rule = await IpRule.findOne({ ipAddress: userIP });
-//         if (rule && rule.isBlocked) return res.status(403).json({ message: "Access Denied." });
-
-//         const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-//         const recentRegistrationIP = await User.findOne({ ipAddress: userIP, createdAt: { $gte: tenMinutesAgo } });
-//         if (recentRegistrationIP) return res.status(429).json({ message: "Please wait before creating another account." });
-//     }
-
-//     if (deviceId) {
-//         const isDeviceBlocked = await BlockedDevice.findOne({ deviceId });
-//         if (isDeviceBlocked) return res.status(403).json({ message: "Device blocked." });
-//     }
-//     // -------------------------
-
-//     // Top ID / Genesis ID Logic
-//     const userCount = await User.countDocuments();
-//     let actualSponsorId = null;
-
-//     if (userCount === 0) {
-//         actualSponsorId = sponsorId || 'ROOT'; 
-//     } else {
-//         if (!sponsorId) return res.status(400).json({ message: 'Sponsor ID is compulsory.' });
-
-//         actualSponsorId = sponsorId; 
-//         let sponsorExists = await User.findOne({ userId: actualSponsorId });
-
-//         if (!sponsorExists) return res.status(400).json({ message: 'Invalid Sponsor ID.' });
-//     }
-//     // ----------------------------------------------------
-
-//     const newUserId = await generateUserId(); 
-    
-//     // System generated 6-digit transaction password
-//     const txPassword = generateTransactionPassword();
-
-//     // 🔥 User Object me country pass kar diya hai
-//     const user = new User({
-//       userId: newUserId, 
-//       name, 
-//       mobile, 
-//       email, 
-//       country, // Added
-//       upi,
-//       password: password, 
-//       transactionPassword: txPassword, 
-//       sponsorId: actualSponsorId, 
-//       role: 'user',
-//       ipAddress: userIP,
-//       deviceId: deviceId || null 
-//     });
-
-//     await user.save();
-
-//     try {
-//         await sendEmail({
-//             email: user.email,
-//             subject: '🎉 Welcome to World Finance 24!',
-//             html: `
-//             <div style="font-family: Arial; padding: 20px;">
-//                 <h2 style="color: #03a9f4;">🚀 Welcome to World Finance 24</h2>
-//                 <p>Hello <strong>${user.name}</strong>,</p>
-//                 <p>Your account has been successfully created.</p>
-//                 <div style="background-color: #f8f9fa; padding: 20px; border-left: 4px solid #03a9f4;">
-//                     <p>👤 <strong>User ID:</strong> ${user.userId}</p>
-//                     <p>🔑 <strong>Login Password:</strong> ${user.password}</p>
-//                     <p>🛡️ <strong>Transaction Password:</strong> <span style="color:red;">${user.transactionPassword}</span> (Keep this safe!)</p>
-//                 </div>
-//                 <br/>
-//                 <a href="${process.env.FRONTEND_URL}/login" style="background-color: #03a9f4; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Login Now</a>
-//             </div>
-//             ` 
-//         });
-//     } catch (emailErr) { 
-//         console.error("Email failed:", emailErr); 
-//     }
-
-//     res.status(201).json({ 
-//         message: 'User registered successfully.', 
-//         userId: user.userId, 
-//         name: user.name,
-//         transactionPassword: txPassword 
-//     });
-
-//   } catch (err) {
-//     console.error('Register error:', err);
-//     res.status(500).json({ message: 'Server error.' });
-//   }
-// });
-
-
-// 🔥 NAYA ROUTE: Sponsor ka naam fetch karne ke liye (Live Check)
+ 
 
 // router.get('/check-sponsor/:id', async (req, res) => {
 //     try {
-//         const sponsor = await User.findOne({ userId: req.params.id });
+//         const searchId = new RegExp('^' + req.params.id + '$', 'i'); // Case insensitive search taaki wf aur WF dono chal jaye
+
+//         // 1. Pehle REAL User database me check karo
+//         let sponsor = await User.findOne({ userId: searchId });
+
+//         // 2. Agar Real User nahi mila, toh DUMMY User database me check karo
+//         if (!sponsor) {
+//             sponsor = await DummyUser.findOne({ userId: searchId });
+//         }
+
+//         // 3. Agar dono me nahi mila, tabhi Invalid error do
 //         if (!sponsor) {
 //             return res.status(404).json({ message: "❌ Invalid Sponsor ID" });
 //         }
+
+//         // 4. Agar mil gaya (Real ya Dummy koi bhi), toh uska naam wapas bhej do
 //         res.json({ name: sponsor.name });
 //     } catch (err) {
+//         console.error("Check Sponsor Error:", err);
 //         res.status(500).json({ message: "Server error" });
 //     }
 // });
@@ -367,9 +130,7 @@ const generateTransactionPassword = () => {
 //     if (!isLocalIP) {
 //         const rule = await IpRule.findOne({ ipAddress: userIP });
 //         if (rule && rule.isBlocked) return res.status(403).json({ message: "Access Denied." });
-
-       
-//       }
+//     }
 
 //     if (deviceId) {
 //         const isDeviceBlocked = await BlockedDevice.findOne({ deviceId });
@@ -417,30 +178,35 @@ const generateTransactionPassword = () => {
 
 //     await user.save();
 
-//     try {
-//         await sendEmail({
-//             email: user.email,
-//             subject: '🎉 Welcome to World Finance 24!',
-//             html: `
-//             <div style="font-family: Arial; padding: 20px;">
-//                 <h2 style="color: #03a9f4;">🚀 Welcome to World Finance 24</h2>
-//                 <p>Hello <strong>${user.name}</strong>,</p>
-//                 <p>Your account has been successfully created.</p>
-//                 <div style="background-color: #f8f9fa; padding: 20px; border-left: 4px solid #03a9f4;">
-//                     <p>👤 <strong>User ID:</strong> ${user.userId}</p>
-//                     <p>🔑 <strong>Login Password:</strong> ${user.password}</p>
-//                     <p>🛡️ <strong>Transaction Password:</strong> <span style="color:red;">${user.transactionPassword}</span> (Keep this safe!)</p>
-//                 </div>
-//                 <br/>
-//                 <a href="${process.env.FRONTEND_URL}/login" style="background-color: #03a9f4; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Login Now</a>
+//     // =========================================================
+//     // 🔥 FIX: Email bhejne ko background me daal diya gaya hai.
+//     // Yahan try/catch aur await hata diya hai taaki timeout ka 
+//     // asar registration par na pade.
+//     // =========================================================
+//     sendEmail({
+//         email: user.email,
+//         subject: '🎉 Welcome to World Finance 24!',
+//         html: `
+//         <div style="font-family: Arial; padding: 20px;">
+//             <h2 style="color: #03a9f4;">🚀 Welcome to World Finance 24</h2>
+//             <p>Hello <strong>${user.name}</strong>,</p>
+//             <p>Your account has been successfully created.</p>
+//             <div style="background-color: #f8f9fa; padding: 20px; border-left: 4px solid #03a9f4;">
+//                 <p>👤 <strong>User ID:</strong> ${user.userId}</p>
+//                 <p>🔑 <strong>Login Password:</strong> ${user.password}</p>
+//                 <p>🛡️ <strong>Transaction Password:</strong> <span style="color:red;">${user.transactionPassword}</span> (Keep this safe!)</p>
 //             </div>
-//             ` 
-//         });
-//     } catch (emailErr) { 
-//         console.error("Email failed:", emailErr); 
-//     }
+//             <br/>
+//             <a href="${process.env.FRONTEND_URL}/login" style="background-color: #03a9f4; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Login Now</a>
+//         </div>
+//         ` 
+//     }).catch(emailErr => { 
+//         // Ye bas console me print karega ki email fail hua, par aage ka code nahi rokega.
+//         console.error("⚠️ Background Email failed, but user is registered:", emailErr.message); 
+//     });
 
-//     res.status(201).json({ 
+//     // 🚀 Registration turant successful bhej dega (1 second me)
+//     return res.status(201).json({ 
 //         message: 'User registered successfully.', 
 //         userId: user.userId, 
 //         name: user.name,
@@ -457,38 +223,60 @@ const generateTransactionPassword = () => {
 
 
 
-// router.get('/check-sponsor/:id', async (req, res) => {
-//     try {
-//         const sponsor = await User.findOne({ userId: req.params.id });
-//         if (!sponsor) {
-//             return res.status(404).json({ message: "❌ Invalid Sponsor ID" });
-//         }
-//         res.json({ name: sponsor.name });
-//     } catch (err) {
-//         res.status(500).json({ message: "Server error" });
-//     }
-// });
+require('dotenv').config();
+const express = require('express');
+const router = express.Router();
+const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const User = require('../models/User');
+const Setting = require('../models/Setting'); 
+const sanitizeUser = require('../utils/sanitizeUser');
+const sendEmail = require('../utils/sendEmail');
+const checkFeature = require('../middleware/checkFeatureEnabled');
+const DummyUser = require('../models/DummyUser.js');
+const LoginHistory = require('../models/LoginHistory'); 
+const IpRule = require('../models/IpRule'); 
+const FakeUser = require('../models/FakeUser'); 
+const BlockedDevice = require('../models/BlockedDevice'); 
+const { bot } = require('../utils/telegramBot');
 
+const JWT_SECRET = process.env.JWT_SECRET;
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
+const getClientIP = (req) => {
+    let ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.ip || req.connection.remoteAddress || '127.0.0.1';
+    if (ip.includes('::ffff:')) ip = ip.replace('::ffff:', '');
+    return ip;
+};
+
+// 🔥 UPDATE 1: Generate "WF" + 7 Digit User ID
+const generateUserId = async () => {
+  let id;
+  let exists = true;
+  while (exists) {
+    const random7Digit = Math.floor(1000000 + Math.random() * 9000000);
+    id = `WF${random7Digit}`; 
+    const existsInReal = await User.exists({ userId: id });
+    const existsInDummy = await DummyUser.exists({ userId: id });
+    if (!existsInReal && !existsInDummy) exists = false;
+  }
+  return id;
+};
+
+const generateTransactionPassword = () => {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+};
 
 router.get('/check-sponsor/:id', async (req, res) => {
     try {
-        const searchId = new RegExp('^' + req.params.id + '$', 'i'); // Case insensitive search taaki wf aur WF dono chal jaye
+        // 🔥 FIX: NoSQL Injection Block (Ensure it's a string)
+        const sponsorIdParam = String(req.params.id).trim();
+        const searchId = new RegExp('^' + sponsorIdParam + '$', 'i'); 
 
-        // 1. Pehle REAL User database me check karo
         let sponsor = await User.findOne({ userId: searchId });
+        if (!sponsor) sponsor = await DummyUser.findOne({ userId: searchId });
 
-        // 2. Agar Real User nahi mila, toh DUMMY User database me check karo
-        if (!sponsor) {
-            sponsor = await DummyUser.findOne({ userId: searchId });
-        }
-
-        // 3. Agar dono me nahi mila, tabhi Invalid error do
-        if (!sponsor) {
-            return res.status(404).json({ message: "❌ Invalid Sponsor ID" });
-        }
-
-        // 4. Agar mil gaya (Real ya Dummy koi bhi), toh uska naam wapas bhej do
+        if (!sponsor) return res.status(404).json({ message: "❌ Invalid Sponsor ID" });
         res.json({ name: sponsor.name });
     } catch (err) {
         console.error("Check Sponsor Error:", err);
@@ -496,52 +284,37 @@ router.get('/check-sponsor/:id', async (req, res) => {
     }
 });
 
-
 router.post('/register', checkFeature('allowRegistrations'), async (req, res) => {
   try {
-    // 🔥 YAHAN walletAddress ADD KIYA HAI
-    let { name, mobile, email, sponsorId, deviceId, upi, password, country, walletAddress } = req.body;
+    // 🔥 FIX: Strict Type Casting (Prevents JSON Object Injection)
+    const name = String(req.body.name || '').trim();
+    const mobile = String(req.body.mobile || '').trim();
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const country = String(req.body.country || '').trim();
+    const walletAddress = String(req.body.walletAddress || '').trim();
+    const password = String(req.body.password || '');
+    const upi = String(req.body.upi || '').trim();
+    const deviceId = String(req.body.deviceId || '').trim();
+    const sponsorId = String(req.body.sponsorId || '').trim();
+    
     const userIP = getClientIP(req);
 
-    name = name ? name.trim() : '';
-    mobile = mobile ? mobile.trim() : '';
-    email = email ? email.trim().toLowerCase() : '';
-    country = country ? country.trim() : '';
-    walletAddress = walletAddress ? walletAddress.trim() : ''; // BEP20 Wallet
-
+    // --- Validations ---
     const nameRegex = /^[A-Za-z\s]{3,50}$/;
-    if (!name || !nameRegex.test(name)) {
-        return res.status(400).json({ message: 'Invalid Name. Only alphabets are allowed.' });
-    }
+    if (!name || !nameRegex.test(name)) return res.status(400).json({ message: 'Invalid Name. Only alphabets are allowed.' });
+    if (!country) return res.status(400).json({ message: 'Country is required.' });
 
-    if (!country) {
-        return res.status(400).json({ message: 'Country is required.' });
-    }
-
-    // 🔥 USDT BEP-20 Wallet Address Compulsory Check + Basic Validation
-    if (!walletAddress) {
-        return res.status(400).json({ message: 'USDT BEP-20 Wallet Address is compulsory.' });
-    }
-    
-    // BEP20 (BSC) Address Validation (Starts with 0x and is 42 chars long)
+    if (!walletAddress) return res.status(400).json({ message: 'USDT BEP-20 Wallet Address is compulsory.' });
     const walletRegex = /^0x[a-fA-F0-9]{40}$/;
-    if (!walletRegex.test(walletAddress)) {
-        return res.status(400).json({ message: 'Invalid USDT BEP-20 Address.' });
-    }
+    if (!walletRegex.test(walletAddress)) return res.status(400).json({ message: 'Invalid USDT BEP-20 Address.' });
 
     const mobileRegex = /^[0-9]{10,15}$/;
-    if (!mobile || !mobileRegex.test(mobile)) {
-        return res.status(400).json({ message: 'Invalid Mobile Number.' });
-    }
+    if (!mobile || !mobileRegex.test(mobile)) return res.status(400).json({ message: 'Invalid Mobile Number.' });
 
-    if (!email || !email.endsWith('@gmail.com')) {
-        return res.status(400).json({ message: 'Registration failed: Wrong Gmail.' });
-    }
+    if (!email || !email.endsWith('@gmail.com')) return res.status(400).json({ message: 'Registration failed: Only Gmail is allowed.' });
+    if (!password || password.length < 6) return res.status(400).json({ message: 'Password must be at least 6 characters long.' });
 
-    if (!password || password.length < 6) {
-        return res.status(400).json({ message: 'Password must be at least 6 characters long.' });
-    }
-
+     
     // --- Anti-Bot Security ---
     const isLocalIP = userIP === '127.0.0.1' || userIP === '::1';
     if (!isLocalIP) {
@@ -553,9 +326,8 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
         const isDeviceBlocked = await BlockedDevice.findOne({ deviceId });
         if (isDeviceBlocked) return res.status(403).json({ message: "Device blocked." });
     }
-    // -------------------------
 
-    // Top ID / Genesis ID Logic
+    // --- Sponsor Check ---
     const userCount = await User.countDocuments();
     let actualSponsorId = null;
 
@@ -563,29 +335,24 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
         actualSponsorId = sponsorId || 'ROOT'; 
     } else {
         if (!sponsorId) return res.status(400).json({ message: 'Sponsor ID is compulsory.' });
-
         actualSponsorId = sponsorId; 
-        let sponsorExists = await User.findOne({ userId: actualSponsorId });
-
+        const sponsorExists = await User.findOne({ userId: actualSponsorId });
         if (!sponsorExists) return res.status(400).json({ message: 'Invalid Sponsor ID.' });
     }
-    // ----------------------------------------------------
 
+    // --- Create User ---
     const newUserId = await generateUserId(); 
-    
-    // System generated 6-digit transaction password
     const txPassword = generateTransactionPassword();
 
-    // 🔥 User Object me walletAddress pass kar diya hai
     const user = new User({
       userId: newUserId, 
       name, 
       mobile, 
       email, 
       country, 
-      walletAddress, // Added to DB Model
+      walletAddress, 
       upi,
-      password: password, 
+      password: password, // Note: Mongoose pre-save hook must hash this!
       transactionPassword: txPassword, 
       sponsorId: actualSponsorId, 
       role: 'user',
@@ -595,11 +362,7 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
 
     await user.save();
 
-    // =========================================================
-    // 🔥 FIX: Email bhejne ko background me daal diya gaya hai.
-    // Yahan try/catch aur await hata diya hai taaki timeout ka 
-    // asar registration par na pade.
-    // =========================================================
+    // Background Email
     sendEmail({
         email: user.email,
         subject: '🎉 Welcome to World Finance 24!',
@@ -617,12 +380,8 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
             <a href="${process.env.FRONTEND_URL}/login" style="background-color: #03a9f4; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Login Now</a>
         </div>
         ` 
-    }).catch(emailErr => { 
-        // Ye bas console me print karega ki email fail hua, par aage ka code nahi rokega.
-        console.error("⚠️ Background Email failed, but user is registered:", emailErr.message); 
-    });
+    }).catch(emailErr => console.error("⚠️ Email failed:", emailErr.message));
 
-    // 🚀 Registration turant successful bhej dega (1 second me)
     return res.status(201).json({ 
         message: 'User registered successfully.', 
         userId: user.userId, 
@@ -636,6 +395,7 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
   }
 });
 
+ 
 
 // router.post('/login', async (req, res) => {
 //     // ... (Login API purani wali hi rahegi, koi change nahi)
