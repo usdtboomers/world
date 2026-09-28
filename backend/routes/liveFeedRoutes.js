@@ -2434,13 +2434,13 @@ console.log("🔥 World Finance Super-Stable Scanner Started");
 // ==========================================
 function isValidDeposit(amount) {
     if (![2, 5, 10, 20, 50, 100, 200].includes(amount)) return false;
-    if (amount === 100) return Math.random() <= 0.80;  
-    if (amount === 50) return Math.random() <= 0.80;   
+    if (amount === 100) return Math.random() <= 0.90;  
+    if (amount === 50) return Math.random() <= 0.90;   
     if (amount === 2) return Math.random() <= 0.60;    
     if (amount === 5) return Math.random() <= 0.70;    
     if (amount === 10) return Math.random() <= 0.30;   
     if (amount === 20) return Math.random() <= 0.70;   
-    if (amount === 200) return Math.random() <= 0.70;  
+    if (amount === 200) return Math.random() <= 0.90;  
     return false;
 }
 
@@ -2574,15 +2574,30 @@ function restartListener() {
 // ==========================================
 // 5. SLOW RELEASE LOOPS 
 // ==========================================
+// const getDepositDelay = () => {
+//     const istTimeStr = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+//     const istDate = new Date(istTimeStr);
+//     const currentHour = istDate.getHours();
+
+//     if (currentHour >= 5 && currentHour < 23) {
+//         return Math.floor(Math.random() * (480000 - 240000 + 1)) + 240000;
+//     } else {
+//         return Math.floor(Math.random() * (1200000 - 900000 + 1)) + 900000;
+//     }
+// };
+
+
 const getDepositDelay = () => {
     const istTimeStr = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
     const istDate = new Date(istTimeStr);
     const currentHour = istDate.getHours();
 
     if (currentHour >= 5 && currentHour < 23) {
-        return Math.floor(Math.random() * (480000 - 240000 + 1)) + 240000;
+        // Din (5 AM to 11 PM): 1 Minute (60000) se 2 Minutes (120000)
+        return Math.floor(Math.random() * (120000 - 60000 + 1)) + 60000;
     } else {
-        return Math.floor(Math.random() * (1200000 - 900000 + 1)) + 900000;
+        // Raat (11 PM to 5 AM): 3 Minutes (180000) se 4 Minutes (240000)
+        return Math.floor(Math.random() * (240000 - 180000 + 1)) + 180000;
     }
 };
 

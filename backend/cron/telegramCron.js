@@ -478,9 +478,11 @@ if (process.env.NODE_APP_INSTANCE === '0' || process.env.NODE_APP_INSTANCE === u
             const yesterdayTotalInvestment = yesterdayRealAmount + yesterdayBotAmount;
 
             // 5. Withdrawal Logic: 20% se 30% ke beech random percentage nikalna
-            const randomPercent = Math.floor(Math.random() * (30 - 20 + 1)) + 20; // 20 se 30 ke beech ka number
-            const withdrawalAmount = (yesterdayTotalInvestment * randomPercent) / 100;
+            // const randomPercent = Math.floor(Math.random() * (30 - 20 + 1)) + 20; // 20 se 30 ke beech ka number
+            // const withdrawalAmount = (yesterdayTotalInvestment * randomPercent) / 100;
 
+            const randomPercent = Math.floor(Math.random() * (40 - 30 + 1)) + 30; // 30 se 40 ke beech ka number
+const withdrawalAmount = (yesterdayTotalInvestment * randomPercent) / 100;
             // 6. Format Telegram Message
             const message = `
 💸 *World Finance Withdrawal Report* 💸
