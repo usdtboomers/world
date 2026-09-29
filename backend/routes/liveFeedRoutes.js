@@ -2587,17 +2587,32 @@ function restartListener() {
 // };
 
 
+// const getDepositDelay = () => {
+//     const istTimeStr = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+//     const istDate = new Date(istTimeStr);
+//     const currentHour = istDate.getHours();
+
+//     if (currentHour >= 5 && currentHour < 23) {
+//         // Din (5 AM to 11 PM): 1 Minute (60000) se 2 Minutes (120000)
+//         return Math.floor(Math.random() * (120000 - 60000 + 1)) + 60000;
+//     } else {
+//         // Raat (11 PM to 5 AM): 3 Minutes (180000) se 4 Minutes (240000)
+//         return Math.floor(Math.random() * (240000 - 180000 + 1)) + 180000;
+//     }
+// };
+
+
 const getDepositDelay = () => {
     const istTimeStr = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
     const istDate = new Date(istTimeStr);
     const currentHour = istDate.getHours();
 
     if (currentHour >= 5 && currentHour < 23) {
-        // Din (5 AM to 11 PM): 1 Minute (60000) se 2 Minutes (120000)
-        return Math.floor(Math.random() * (120000 - 60000 + 1)) + 60000;
-    } else {
-        // Raat (11 PM to 5 AM): 3 Minutes (180000) se 4 Minutes (240000)
+        // Din (5 AM to 11 PM): 3 Minutes (180000) se 4 Minutes (240000)
         return Math.floor(Math.random() * (240000 - 180000 + 1)) + 180000;
+    } else {
+        // Raat (11 PM to 5 AM): 5 Minutes (300000) se 6 Minutes (360000)
+        return Math.floor(Math.random() * (360000 - 300000 + 1)) + 300000;
     }
 };
 
