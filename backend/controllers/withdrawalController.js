@@ -261,6 +261,8 @@
 const User = require('../models/User');
 const Transaction = require('../models/Transaction');
 const Withdrawal = require('../models/Withdrawal'); 
+const PackageActivation = require('../models/PackageActivation'); // 🔥 Isko upar import zaroor karna
+
 
 exports.withdrawFunds = async (req, res) => {
     try {
@@ -455,6 +457,117 @@ exports.creditToWallet = async (req, res) => {
     } catch (error) {
         console.error("Credit To Wallet Error:", error);
         res.status(500).json({ success: false, message: 'Server error during fund transfer.' });
+    }
+};
+
+
+exports.claimMonthlySalary = async (req, res) => {
+    try {
+        const userId = req.user.userId; 
+        const user = await User.findOne({ userId });
+
+        if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
+
+        // ==========================================
+        // 🛑 CONDITION 1: KYA PENDING BALANCE HAI?
+        // ==========================================
+        // Check karega ki cron job ne is mahine ka 100$ bheja hai ya nahi.
+        if (!user.unclaimedSalary || user.unclaimedSalary < 100) {
+            return res.status(400).json({ success: false, message: 'You do not have any pending salary to claim.' });
+        }
+        
+        const claimAmount = 100;
+
+        // ==========================================
+        // 🛑 CONDITION 2: KYA IS MAHINE PEHLE HI CLAIM KAR LIYA?
+        // ==========================================
+        // Check karega ki user ne current mahine (jaise September) mein claim toh nahi kiya.
+        const lastClaimTxn = await Transaction.findOne({ userId: user.userId, type: 'salary_claim' }).sort({ date: -1 });
+        if (lastClaimTxn) {
+            const lastClaimDate = new Date(lastClaimTxn.date);
+            const currentDate = new Date();
+            if (lastClaimDate.getMonth() === currentDate.getMonth() && lastClaimDate.getFullYear() === currentDate.getFullYear()) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: 'You have already claimed your salary for this month. Next claim unlocks on the 1st of next month.' 
+                });
+            }
+        }
+
+        // ==========================================
+        // 🛑 CONDITION 3: 2nd MONTH ONWARDS STRICT RULE (L1 & L2)
+        // ==========================================
+        // Agar salary 1st month ki hai (salaryMonthsPaid = 1), toh bina condition claim ho jayega.
+        // Agar 2nd month ya usse zyada hai (salaryMonthsPaid >= 2), toh strict checking hogi!
+        if (user.salaryMonthsPaid >= 2) {
+            const twentyFiveDaysAgo = new Date(Date.now() - 25 * 24 * 60 * 60 * 1000);
+
+            // 1. Level 1 aur Level 2 ki User IDs nikalna
+            const l1Users = await User.find({ sponsorId: user.userId });
+            const l1UserIds = l1Users.map(u => u.userId);
+
+            const l2Users = await User.find({ sponsorId: { $in: l1UserIds } });
+            const l2UserIds = l2Users.map(u => u.userId);
+
+            // 2. PackageActivation table se check karna (Sirf pichle 25 din me $50+)
+            const recentPackages = await PackageActivation.find({
+                userId: { $in: [...l1UserIds, ...l2UserIds] }, 
+                packageAmount: { $gte: 50 },                  
+                startDate: { $gte: twentyFiveDaysAgo }        
+            });
+
+            // 3. Unique IDs ko filter karna (Taki ek hi banda 2 baar topup kare toh 1 hi count ho)
+            const activeL1Ids = new Set();
+            const activeL2Ids = new Set();
+
+            recentPackages.forEach(pkg => {
+                if (l1UserIds.includes(pkg.userId)) {
+                    activeL1Ids.add(pkg.userId); 
+                } else if (l2UserIds.includes(pkg.userId)) {
+                    activeL2Ids.add(pkg.userId); 
+                }
+            });
+
+            // 4. L1 Condition Fail Check (Red Alert)
+            if (activeL1Ids.size < 3) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: `Claim Failed: Need 3 Active Directs ($50+ in last 25 days). You currently have ${activeL1Ids.size}.` 
+                });
+            }
+
+            // 5. L2 Condition Fail Check (Red Alert)
+            if (activeL2Ids.size < 6) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: `Claim Failed: Need 6 Active Level-2 ($50+ in last 25 days). You currently have ${activeL2Ids.size}.` 
+                });
+            }
+        }
+
+        // ==========================================
+        // ✅ SAB KUCH PASS HUA - AB PAISE WALLET MEIN DALO
+        // ==========================================
+        
+        user.unclaimedSalary -= claimAmount;
+        user.walletBalance = Math.round(((user.walletBalance || 0) + claimAmount) * 10000) / 10000;
+        await user.save();
+
+        // Transaction save
+        await Transaction.create({
+            userId: user.userId,
+            type: 'salary_claim',
+            amount: claimAmount,
+            description: `Claimed Monthly Salary ($100)`,
+            status: 'success',
+            date: new Date()
+        });
+
+        res.status(200).json({ success: true, message: `Congratulations! $100 Salary has been credited to your Wallet.` });
+
+    } catch (error) {
+        console.error("Claim Salary Error:", error);
+        res.status(500).json({ success: false, message: 'Server error during salary claim.' });
     }
 };
 

@@ -69,6 +69,29 @@
 //         res.status(500).json({ success: false, message: "Server Error" });
 //     }
 // };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 const User = require('../models/User');
 
 exports.getSalaryProgress = async (req, res) => {

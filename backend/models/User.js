@@ -107,10 +107,12 @@ const userSchema = new mongoose.Schema({
   // ==========================================
   // 🏆 MONTHLY SALARY PLAN TRACKING
   // ==========================================
+ 
+
   isSalaryQualified: { type: Boolean, default: false }, // Kya user 10 din me qualify hua?
   salaryMonthsPaid: { type: Number, default: 0 },       // Kitne mahine (max 6) salary mil chuki?
   salaryTotalIncome: { type: Number, default: 0 },      // Total Salary Income ($600 max)
-
+  unclaimedSalary: { type: Number, default: 0 },        // 🔥 NAYA: Cron job isme $100 daalega, user claim karke nikalega
   
   // ==========================================
   // 🔐 WALLET ADDRESS SECURITY

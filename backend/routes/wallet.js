@@ -1150,6 +1150,8 @@ router.post('/withdraw', authMiddleware, withdrawalController.withdrawFunds);
 
 router.post('/credit-to-wallet', authMiddleware, withdrawalController.creditToWallet);
 
+router.post('/claim-salary', authMiddleware, withdrawalController.claimMonthlySalary);
+
 router.post("/promo-withdraw", authMiddleware, async (req, res) => {
   try {
     const { items, transactionPassword } = req.body;
