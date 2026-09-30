@@ -296,6 +296,78 @@ router.get('/downline-business', authMiddleware, async (req, res) => {
 // ==========================================
 // 🏆 SALARY ACHIEVERS LIST (REAL + 201 FAKE)
 // ==========================================
+// router.get('/salary-achievers-list', authMiddleware, async (req, res) => {
+//     try {
+//         // 1. GET REAL ACHIEVERS (Jinhone sach me target pura kiya hai)
+//         const realUsers = await User.find({ isSalaryQualified: true })
+//             .select('userId name topUpAmount createdAt')
+//             .lean();
+
+//         let achievers = realUsers.map(u => ({
+//             userId: u.userId,
+//             name: u.name || "User",
+//             amount: u.topUpAmount || 50,
+//             type: 'Real Achiever'
+//         }));
+
+//         // 2. GET FAKE ACHIEVERS (Pehle DB se uthao)
+//         const fakeUsers = await DummyUser.find()
+//             .sort({ _id: 1 }) 
+//             .limit(201)
+//             .lean();
+
+//         let formattedFake = fakeUsers.map(u => {
+//             // Har dummy user ko consistent amount dena
+//             const charCode = u.userId ? u.userId.charCodeAt(u.userId.length - 1) : 0;
+//             let fallbackAmt = 50;
+//             if (charCode % 5 === 0) fallbackAmt = 500;
+//             else if (charCode % 3 === 0) fallbackAmt = 100;
+//             else if (charCode % 2 === 0) fallbackAmt = 200;
+
+//             return {
+//                 userId: u.userId,
+//                 name: u.name || "User",
+//                 amount: (u.package && u.package >= 50) ? u.package : fallbackAmt,
+//                 type: 'System Achiever'
+//             };
+//         });
+
+//         // 🔥 3. AUTO-GENERATE LOGIC: Agar 201 log nahi mile, toh khud bana lo!
+//         if (formattedFake.length < 201) {
+//             const needed = 201 - formattedFake.length;
+//             const amounts = [50, 100, 50, 200, 50, 100, 500, 50]; // Random realistic amounts
+//             const firstNames = ["Aarav", "Vikram", "Rohan", "Sneha", "Rahul", "Pooja", "Amit", "Karan", "Priya", "Suresh", "Neha", "Vikas"];
+            
+//             for (let i = 0; i < needed; i++) {
+//                 const rAmt = amounts[i % amounts.length];
+//                 const rName = firstNames[i % firstNames.length] + " " + String.fromCharCode(65 + (i % 26)); // Example: Rahul M
+                
+//                 formattedFake.push({
+//                     userId: `WF${800000 + i}`, // Fixed sequence IDs taaki real lagein
+//                     name: rName,
+//                     amount: rAmt,
+//                     type: 'System Achiever'
+//                 });
+//             }
+//         }
+
+//         // 4. COMBINE DONO LIST (Real + Fake)
+//         achievers = [...achievers, ...formattedFake];
+
+//         // 5. SORTING (Jiska bada package wo upar)
+//         achievers.sort((a, b) => b.amount - a.amount);
+
+//         res.json({ 
+//             success: true, 
+//             totalAchievers: achievers.length,
+//             data: achievers 
+//         });
+
+//     } catch (error) {
+//         console.error("Salary Achievers Error:", error);
+//         res.status(500).json({ success: false, message: "Server error while fetching achievers" });
+//     }
+// });
 router.get('/salary-achievers-list', authMiddleware, async (req, res) => {
     try {
         // 1. GET REAL ACHIEVERS (Jinhone sach me target pura kiya hai)
@@ -310,10 +382,13 @@ router.get('/salary-achievers-list', authMiddleware, async (req, res) => {
             type: 'Real Achiever'
         }));
 
+        // 🔥 Pehle ke 201 + naye 628 = Total 829 fake users
+        const TARGET_FAKE_COUNT = 829; 
+
         // 2. GET FAKE ACHIEVERS (Pehle DB se uthao)
         const fakeUsers = await DummyUser.find()
             .sort({ _id: 1 }) 
-            .limit(201)
+            .limit(TARGET_FAKE_COUNT)
             .lean();
 
         let formattedFake = fakeUsers.map(u => {
@@ -332,18 +407,28 @@ router.get('/salary-achievers-list', authMiddleware, async (req, res) => {
             };
         });
 
-        // 🔥 3. AUTO-GENERATE LOGIC: Agar 201 log nahi mile, toh khud bana lo!
-        if (formattedFake.length < 201) {
-            const needed = 201 - formattedFake.length;
-            const amounts = [50, 100, 50, 200, 50, 100, 500, 50]; // Random realistic amounts
-            const firstNames = ["Aarav", "Vikram", "Rohan", "Sneha", "Rahul", "Pooja", "Amit", "Karan", "Priya", "Suresh", "Neha", "Vikas"];
+        // 3. AUTO-GENERATE LOGIC: Agar 829 log nahi mile, toh khud bana lo!
+        if (formattedFake.length < TARGET_FAKE_COUNT) {
+            const needed = TARGET_FAKE_COUNT - formattedFake.length;
+            const amounts = [50, 100, 50, 200, 50, 100, 500, 50, 100, 200]; 
+            // Naam ki list thodi badi kar di taaki real lage
+            const firstNames = [
+                "Aarav", "Vikram", "Rohan", "Sneha", "Rahul", "Pooja", "Amit", "Karan", 
+                "Priya", "Suresh", "Neha", "Vikas", "Ravi", "Anjali", "Sanjay", "Kavita", 
+                "Manish", "Sunita", "Rajesh", "Anita", "Deepak", "Ritu", "Mohit", "Geeta"
+            ];
             
+            const currentCount = formattedFake.length;
+
             for (let i = 0; i < needed; i++) {
-                const rAmt = amounts[i % amounts.length];
-                const rName = firstNames[i % firstNames.length] + " " + String.fromCharCode(65 + (i % 26)); // Example: Rahul M
+                // 🔥 globalIndex se pehle wale users hamesha same rahenge!
+                const globalIndex = currentCount + i; 
+                
+                const rAmt = amounts[globalIndex % amounts.length];
+                const rName = firstNames[globalIndex % firstNames.length] + " " + String.fromCharCode(65 + (globalIndex % 26)); 
                 
                 formattedFake.push({
-                    userId: `WF${800000 + i}`, // Fixed sequence IDs taaki real lagein
+                    userId: `WF${800000 + globalIndex}`, // WF800000 se shuru hoke aage badhega
                     name: rName,
                     amount: rAmt,
                     type: 'System Achiever'
@@ -368,7 +453,6 @@ router.get('/salary-achievers-list', authMiddleware, async (req, res) => {
         res.status(500).json({ success: false, message: "Server error while fetching achievers" });
     }
 });
-
 
 
 const LuckyWinner = require('../models/LuckyWinner');
