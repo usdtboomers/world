@@ -577,7 +577,8 @@ const CreditToWalletModal = ({ onClose }) => {
           </div>
 
           {/* 🎁 MONTHLY SALARY CLAIM BOX (EXACTLY AS PER IMAGE) */}
-          {salaryInfo && salaryInfo.salaryMonthsPaid < 6 && salaryInfo.status !== 'waiting_time' && (
+          {/* 🎁 MONTHLY SALARY CLAIM BOX (SIRF UNKE LIYE JISKA DB ME isSalaryQualified TRUE HAI) */}
+          {salaryInfo && salaryInfo.status === 'qualified' && salaryInfo.salaryMonthsPaid < 6 && (
             <div className="bg-[#1e2536] p-4 rounded-lg border border-[#2d3748] shadow-sm mt-2 flex justify-between items-center">
               
               {/* Left Side: Title & Month Info */}
