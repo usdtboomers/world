@@ -529,18 +529,26 @@ exports.claimMonthlySalary = async (req, res) => {
             });
 
             // 4. L1 Condition Fail Check (Red Alert)
-            if (activeL1Ids.size < 3) {
-                return res.status(400).json({ 
-                    success: false, 
-                    message: `Claim Failed: Need 3 Active Directs ($50+ in last 25 days). You currently have ${activeL1Ids.size}.` 
-                });
-            }
+            // if (activeL1Ids.size < 3) {
+            //     return res.status(400).json({ 
+            //         success: false, 
+            //         message: `Claim Failed: Need 3 Active Directs ($50+ in last 25 days). You currently have ${activeL1Ids.size}.` 
+            //     });
+            // }
 
-            // 5. L2 Condition Fail Check (Red Alert)
-            if (activeL2Ids.size < 6) {
+            // // 5. L2 Condition Fail Check (Red Alert)
+            // if (activeL2Ids.size < 6) {
+            //     return res.status(400).json({ 
+            //         success: false, 
+            //         message: `Claim Failed: Need 6 Active Level-2 ($50+ in last 25 days). You currently have ${activeL2Ids.size}.` 
+            //     });
+            // }
+
+            // 4. L1 & L2 Condition Fail Check (Combined Alert)
+            if (activeL1Ids.size < 3 || activeL2Ids.size < 6) {
                 return res.status(400).json({ 
                     success: false, 
-                    message: `Claim Failed: Need 6 Active Level-2 ($50+ in last 25 days). You currently have ${activeL2Ids.size}.` 
+                    message: `Your salary is ready! To claim it, you must maintain at least 3 Active Directs (L1) AND 6 Active Level-2 (L2) members with a $50+ package in the last 25 days. Currently, you have ${activeL1Ids.size} L1 and ${activeL2Ids.size} L2 active.` 
                 });
             }
         }
