@@ -382,8 +382,8 @@ router.get('/salary-achievers-list', authMiddleware, async (req, res) => {
             type: 'Real Achiever'
         }));
 
-        // 🔥 Pehle ke 201 + naye 628 = Total 829 fake users
-        const TARGET_FAKE_COUNT = 829; 
+        // 🔥 Pehle ke 201 + naye 628 = Total 837 fake users
+        const TARGET_FAKE_COUNT = 836; 
 
         // 2. GET FAKE ACHIEVERS (Pehle DB se uthao)
         const fakeUsers = await DummyUser.find()
