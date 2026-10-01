@@ -88,22 +88,13 @@ const MonthlySalaryClaims = () => {
             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Qualified</p>
             <h3 className="text-3xl font-black text-white mt-1">{stats.total}</h3>
           </div>
-          <div className="bg-green-900/20 p-4 rounded-xl border border-green-800/50 shadow-sm">
-            <p className="text-[10px] font-black text-green-400 uppercase tracking-widest flex items-center gap-1"><CheckCircle size={12}/> Claimed</p>
-            <h3 className="text-3xl font-black text-green-500 mt-1">{stats.claimed}</h3>
-          </div>
-          <div className="bg-blue-900/20 p-4 rounded-xl border border-blue-800/50 shadow-sm">
-            <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest flex items-center gap-1"><Clock size={12}/> Ready</p>
-            <h3 className="text-3xl font-black text-blue-500 mt-1">{stats.ready}</h3>
-          </div>
+          
+         
           <div className="bg-red-900/20 p-4 rounded-xl border border-red-800/50 shadow-sm">
             <p className="text-[10px] font-black text-red-400 uppercase tracking-widest flex items-center gap-1"><ShieldAlert size={12}/> Blocked</p>
             <h3 className="text-3xl font-black text-red-500 mt-1">{stats.blocked}</h3>
           </div>
-          <div className="bg-gray-800/50 p-4 rounded-xl border border-gray-700 shadow-sm">
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-1"><Calendar size={12}/> Waiting</p>
-            <h3 className="text-3xl font-black text-gray-300 mt-1">{stats.waiting}</h3>
-          </div>
+          
         </div>
 
         {/* 🔍 Controls Section */}
