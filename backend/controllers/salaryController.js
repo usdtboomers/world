@@ -94,6 +94,109 @@
 
 const User = require('../models/User');
 
+// exports.getSalaryProgress = async (req, res) => {
+
+//     try {
+//         const userId = req.params.userId;
+//         const user = await User.findOne({ userId: String(userId) });
+
+//         if (!user) {
+//             return res.status(404).json({ success: false, message: "User not found" });
+//         }
+
+//         // 1. Time Calculation (10 days from TopUp)
+//         let timeLeftMs = 0;
+//         let isExpired = false;
+//         let isNeverToppedUp = false;
+//         const tenDaysMs = 10 * 24 * 60 * 60 * 1000;
+//         let deadline = null;
+
+//         if (user.topUpDate) {
+//             deadline = new Date(user.topUpDate.getTime() + tenDaysMs);
+//             timeLeftMs = deadline.getTime() - Date.now();
+//             if (timeLeftMs < 0) isExpired = true;
+//         } else {
+//             isExpired = true; 
+//             isNeverToppedUp = true; 
+//         }
+
+//         // 2. Self Package Check
+//         const hasSelf50 = (user.topUpAmount || 0) >= 50;
+
+//         // 3. Level 1 & Level 2 Calculation (Fix: Only counting top-ups before deadline)
+//         let qualifiedL1Count = 0;
+//         let qualifiedL2Count = 0;
+
+//         if (deadline && !isNeverToppedUp) {
+//              const l1Users = await User.find({ sponsorId: user.userId });
+             
+//              // L1 Filter
+//              const validL1Users = l1Users.filter(u => 
+//                 (u.topUpAmount || 0) >= 50 && u.topUpDate && new Date(u.topUpDate) <= deadline
+//              );
+//              qualifiedL1Count = validL1Users.length;
+
+//              // L2 Filter
+//              const l1UserIds = l1Users.map(u => u.userId);
+//              const l2Users = await User.find({ sponsorId: { $in: l1UserIds } });
+             
+//              const validL2Users = l2Users.filter(u => 
+//                  (u.topUpAmount || 0) >= 50 && u.topUpDate && new Date(u.topUpDate) <= deadline
+//              );
+//              qualifiedL2Count = validL2Users.length;
+//         }
+
+//         // 4. Qualification Logic (Fix: Checking history even if time expired)
+//         let status = "pending";
+//         if (user.isSalaryQualified) {
+//             status = "qualified";
+//         } else if (hasSelf50 && qualifiedL1Count >= 3 && qualifiedL2Count >= 6) {
+//              // Agar conditions met hain toh time ki parwah mat karo, qualify kardo!
+//             user.isSalaryQualified = true;
+//             await user.save();
+//             status = "qualified";
+//         } else if (isExpired) {
+//             status = "failed"; 
+//         }
+
+//         res.status(200).json({
+//             success: true,
+//             data: {
+//                 hasSelf50,
+//                 l1Count: qualifiedL1Count,
+//                 l2Count: qualifiedL2Count,
+//                 status: status, 
+//                 timeLeftMs: timeLeftMs > 0 ? timeLeftMs : 0,
+//                 salaryMonthsPaid: user.salaryMonthsPaid,
+//                 salaryTotalIncome: user.salaryTotalIncome,
+//                 isNeverToppedUp: isNeverToppedUp 
+//             }
+//         });
+
+//     } catch (error) {
+//         console.error("Salary Progress Error:", error);
+//         res.status(500).json({ success: false, message: "Server Error" });
+//     }
+// };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 exports.getSalaryProgress = async (req, res) => {
     try {
         const userId = req.params.userId;
@@ -158,6 +261,43 @@ exports.getSalaryProgress = async (req, res) => {
             status = "failed"; 
         }
 
+        // ==========================================
+        // 🔥 5. NAYA LOGIC: 2nd Month Maintenance Check (25 Days)
+        // ==========================================
+        let l1Active = 0;
+        let l2Active = 0;
+
+        // Sirf unke liye check karo jinki 1st month ki salary mil chuki hai
+        if (status === "qualified" && user.salaryMonthsPaid >= 1) {
+            const PackageActivation = require('../models/PackageActivation'); // Top pe import na ho toh safe rahega
+            const twentyFiveDaysAgo = new Date(Date.now() - 25 * 24 * 60 * 60 * 1000);
+
+            // Saare directs aur L2 nikal lo
+            const allL1Users = await User.find({ sponsorId: user.userId });
+            const allL1UserIds = allL1Users.map(u => u.userId);
+            
+            const allL2Users = await User.find({ sponsorId: { $in: allL1UserIds } });
+            const allL2UserIds = allL2Users.map(u => u.userId);
+
+            // Sirf last 25 days me hue $50+ topups find karo
+            const recentPackages = await PackageActivation.find({
+                userId: { $in: [...allL1UserIds, ...allL2UserIds] },
+                packageAmount: { $gte: 50 },
+                startDate: { $gte: twentyFiveDaysAgo }
+            }).lean();
+
+            const activeTopupUserIds = new Set(recentPackages.map(p => p.userId));
+
+            // Count L1 and L2 active
+            allL1UserIds.forEach(id => {
+                if (activeTopupUserIds.has(id)) l1Active++;
+            });
+            allL2UserIds.forEach(id => {
+                if (activeTopupUserIds.has(id)) l2Active++;
+            });
+        }
+        // ==========================================
+
         res.status(200).json({
             success: true,
             data: {
@@ -168,7 +308,10 @@ exports.getSalaryProgress = async (req, res) => {
                 timeLeftMs: timeLeftMs > 0 ? timeLeftMs : 0,
                 salaryMonthsPaid: user.salaryMonthsPaid,
                 salaryTotalIncome: user.salaryTotalIncome,
-                isNeverToppedUp: isNeverToppedUp 
+                isNeverToppedUp: isNeverToppedUp,
+                // 🔥 Yeh 2 naye data points frontend ke dropdown ke liye bhej diye!
+                l1Active: l1Active,
+                l2Active: l2Active
             }
         });
 
