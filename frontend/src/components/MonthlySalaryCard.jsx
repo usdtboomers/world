@@ -590,7 +590,7 @@ const MonthlySalaryCard = ({ userId }) => {
             {showMaintenance && (
               <div className="p-4 border-t border-gray-700 bg-[#131c31]">
                 <p className="text-xs text-gray-400 mb-4 font-medium leading-relaxed">
-                  To claim your next salary, you must maintain active team members ($50+ packages) in the <span className="text-white font-bold">last 25 days</span>.
+                  To claim your salary, you must maintain active team members ($50+ packages) in the <span className="text-white font-bold">last 25 days</span>.
                 </p>
                 
                 <div className="space-y-4">
