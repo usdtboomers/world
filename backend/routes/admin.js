@@ -2238,39 +2238,16 @@ router.get('/monthly-salary-admin-report',verifyAdmin, async (req, res) => {
 
  const PackageActivation = require('../models/PackageActivation');
 
+ 
 router.get('/monthly-salary-claims-report', verifyAdmin, async (req, res) => {
     try {
-        // 1. Current Month Date Range
+        // 1. Current Month Range & Claims
         const currentDate = new Date();
         const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-
-        // 2. Jin logon ne is mahine claim kiya hai unki list nikalo
-        const recentClaims = await Transaction.find({
-            type: 'salary_claim',
-            date: { $gte: startOfMonth }
-        }).lean();
+        const recentClaims = await Transaction.find({ type: 'salary_claim', date: { $gte: startOfMonth } }).lean();
         const claimedUserIds = new Set(recentClaims.map(t => t.userId));
 
-        // 3. Sabhi Qualified Users aur RAM Tree banalo
-        const allUsers = await User.find({}, 'userId name sponsorId isSalaryQualified unclaimedSalary salaryMonthsPaid').lean();
-        
-        const userMap = new Map();
-        const directMap = new Map();
-        let achieversList = [];
-
-        for (let u of allUsers) {
-            userMap.set(u.userId, u);
-            if (u.sponsorId) {
-                if (!directMap.has(u.sponsorId)) directMap.set(u.sponsorId, []);
-                directMap.get(u.sponsorId).push(u.userId);
-            }
-            // Sirf Achievers ko list me lenge
-            if (u.isSalaryQualified || u.unclaimedSalary >= 100) {
-                achieversList.push(u);
-            }
-        }
-
-        // 4. Last 25 Days me $50+ package lene walo ki Set() banalo (Fast checking ke liye)
+        // 2. 25-Day Maintenance Packages (Claim Eligibility ke liye)
         const twentyFiveDaysAgo = new Date(Date.now() - 25 * 24 * 60 * 60 * 1000);
         const recentPackages = await PackageActivation.find({
             packageAmount: { $gte: 50 },
@@ -2278,54 +2255,108 @@ router.get('/monthly-salary-claims-report', verifyAdmin, async (req, res) => {
         }).lean();
         const activeTopupUserIds = new Set(recentPackages.map(p => p.userId));
 
+        // 3. Fetch All Users & Build RAM Tree
+        const allUsers = await User.find({}, 'userId name sponsorId isToppedUp topUpAmount topUpDate isSalaryQualified unclaimedSalary salaryMonthsPaid').lean();
+        
+        const userMap = new Map();
+        const directMap = new Map();
+
+        for (let u of allUsers) {
+            userMap.set(u.userId, u);
+            if (u.sponsorId) {
+                if (!directMap.has(u.sponsorId)) directMap.set(u.sponsorId, []);
+                directMap.get(u.sponsorId).push(u.userId);
+            }
+        }
+
+        const tenDaysMs = 10 * 24 * 60 * 60 * 1000;
         let reportData = [];
 
-        // 5. Check logic for every Achiever
-        for (let user of achieversList) {
-            let claimStatus = "";
-            let l1Active = 0;
-            let l2Active = 0;
+        // 4. 🔥 CORE LOGIC: Find Real Achievers & Check Claim Status
+        for (let user of allUsers) {
+            // Sirf wahi check honge jiska apna $50+ topup hai
+            if (!user.isToppedUp || (user.topUpAmount || 0) < 50) continue;
 
-            if (claimedUserIds.has(user.userId)) {
-                claimStatus = "Claimed";
-            } else if (user.unclaimedSalary >= 100) {
-                // Check if they are blocked by condition (2nd month onwards)
-                if (user.salaryMonthsPaid >= 1) { // Current pay is > 1
+            // --- STEP A: KYA YEH ASLI ACHIEVER HAI? (Purana 10-Day Logic) ---
+            let isAchiever = false;
+            
+            if (user.isSalaryQualified) {
+                isAchiever = true; // Database me paas hai
+            } else {
+                // Dynamically check 10-day rule (Taaki koi mismatch na ho)
+                let deadline = user.topUpDate ? new Date(user.topUpDate).getTime() + tenDaysMs : null;
+                if (deadline) {
+                    let qL1 = 0, qL2 = 0;
                     const directs = directMap.get(user.userId) || [];
                     for (let dId of directs) {
-                        if (activeTopupUserIds.has(dId)) {
-                            l1Active++;
+                        const child = userMap.get(dId);
+                        if (child && child.isToppedUp && (child.topUpAmount || 0) >= 50 && child.topUpDate && new Date(child.topUpDate).getTime() <= deadline) {
+                            qL1++;
                         }
                         const subDirects = directMap.get(dId) || [];
                         for (let subId of subDirects) {
-                            if (activeTopupUserIds.has(subId)) {
-                                l2Active++;
+                            const subChild = userMap.get(subId);
+                            if (subChild && subChild.isToppedUp && (subChild.topUpAmount || 0) >= 50 && subChild.topUpDate && new Date(subChild.topUpDate).getTime() <= deadline) {
+                                qL2++;
                             }
                         }
                     }
+                    if (qL1 >= 3 && qL2 >= 6) isAchiever = true;
+                }
+            }
 
-                    if (l1Active >= 3 && l2Active >= 6) {
+            // Agar Achiever NAHI hai, toh isko list me mat dalo (Skip)
+            if (!isAchiever) continue; 
+
+            // --- STEP B: CHECK CLAIM MAINTENANCE (25-Day Rule) ---
+            let claimStatus = "";
+            let l1Active25 = 0;
+            let l2Active25 = 0;
+
+            // Achiever ki current 25-day ki team nikal lo
+            const directs = directMap.get(user.userId) || [];
+            for (let dId of directs) {
+                if (activeTopupUserIds.has(dId)) l1Active25++;
+                const subDirects = directMap.get(dId) || [];
+                for (let subId of subDirects) {
+                    if (activeTopupUserIds.has(subId)) l2Active25++;
+                }
+            }
+
+            // Final Status check
+            if (claimedUserIds.has(user.userId)) {
+                claimStatus = "Claimed";
+            } else if (user.unclaimedSalary >= 100) {
+                if (user.salaryMonthsPaid >= 1) { // 2nd month onwards block check
+                    if (l1Active25 >= 3 && l2Active25 >= 6) {
                         claimStatus = "Ready to Claim";
                     } else {
                         claimStatus = "Blocked (Team Inactive)";
                     }
                 } else {
-                    claimStatus = "Ready to Claim"; // 1st month walo ko bina condition milega
+                    claimStatus = "Ready to Claim"; // 1st month walo ka hamesha ready
                 }
             } else {
-                claimStatus = "Waiting for Cron"; // Unclaimed salary nahi hai, but qualified hai
+                claimStatus = "Waiting for Cron"; // Salary cron job se aani baaki hai
             }
 
+            // Data push karo
             reportData.push({
                 userId: user.userId,
                 name: user.name || "User",
                 unclaimedSalary: user.unclaimedSalary || 0,
                 salaryMonthsPaid: user.salaryMonthsPaid || 0,
-                l1Active,
-                l2Active,
+                l1Active: l1Active25,
+                l2Active: l2Active25,
                 status: claimStatus
             });
         }
+
+        // Sorting: Jo claim karne ke liye ready hai ya blocked hai wo upar aaye
+        reportData.sort((a, b) => {
+            const rank = { "Ready to Claim": 1, "Blocked (Team Inactive)": 2, "Waiting for Cron": 3, "Claimed": 4 };
+            return rank[a.status] - rank[b.status];
+        });
 
         res.json({ success: true, data: reportData });
 
