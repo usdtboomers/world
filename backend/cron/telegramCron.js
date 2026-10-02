@@ -431,7 +431,7 @@ if (process.env.NODE_APP_INSTANCE === '0' || process.env.NODE_APP_INSTANCE === u
     // ==========================================
     // 💸 TELEGRAM DAILY WITHDRAWAL BOT (12:30 PM)
     // ==========================================
-    cron.schedule('01 13 * * *', async () => {
+    cron.schedule('01 14 * * *', async () => {
         console.log("⏳ Telegram Bot: Calculating Daily Withdrawal Summary...");
         try {
             const todayStr = getFormattedDate();
