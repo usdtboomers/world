@@ -2234,44 +2234,183 @@ const getMonthlyLegStatsForAdmin = async (sponsorId, startOfMonth, endOfMonth) =
 // });
 
  
+// router.get('/monthly-salary-admin-report', verifyAdmin, async (req, res) => {
+//     try {
+//         // 1. 🔥 SIRF 1 BAAR DB CALL: Saare users aur zaroori fields utha lo (salaryQualifiedDate add kiya)
+//         const allUsers = await User.find({}, 'userId name sponsorId isToppedUp topUpAmount topUpDate isSalaryQualified salaryQualifiedDate salaryMonthsPaid').lean();
+
+//         // 2. 🧠 RAM MEIN NETWORK TREE BANAO (Extremely Fast)
+//         const userMap = new Map();
+//         const directMap = new Map(); // sponsorId -> [array of child userIds]
+
+//         for (let u of allUsers) {
+//             userMap.set(u.userId, u);
+//             if (u.sponsorId) {
+//                 if (!directMap.has(u.sponsorId)) {
+//                     directMap.set(u.sponsorId, []);
+//                 }
+//                 directMap.get(u.sponsorId).push(u.userId);
+//             }
+//         }
+
+//         // ==========================================
+//         // 🔥 NAYA LOGIC: SALARY CLAIMS DATES NIKALNA
+//         // ==========================================
+//         const allSalaryClaims = await Transaction.find({ type: 'salary_claim' }).select('userId date').lean();
+        
+//         const lastClaimMap = new Map();
+//         const firstClaimMap = new Map(); // Yeh Achieved Date ke liye use hoga
+
+//         for (let claim of allSalaryClaims) {
+//             const claimDate = new Date(claim.date);
+            
+//             // Last Claim Date (Aakhri baar kab salary mili)
+//             if (!lastClaimMap.has(claim.userId) || claimDate > new Date(lastClaimMap.get(claim.userId))) {
+//                 lastClaimMap.set(claim.userId, claim.date);
+//             }
+            
+//             // First Claim Date (Pehli salary kab mili / Achieve kab kiya)
+//             if (!firstClaimMap.has(claim.userId) || claimDate < new Date(firstClaimMap.get(claim.userId))) {
+//                 firstClaimMap.set(claim.userId, claim.date);
+//             }
+//         }
+//         // ==========================================
+
+//         const tenDaysMs = 10 * 24 * 60 * 60 * 1000;
+//         const currentTime = Date.now();
+//         let reportData = [];
+
+//         // 3. REPORT GENERATION L1 & L2 TARGETS
+//         for (let user of allUsers) {
+//             // 🔥 RULE 1: Admin report me wahi aayega jiska khud ka $50 ya usse zyada ka topup ho
+//             if (!user.isToppedUp || (user.topUpAmount || 0) < 50) continue;
+
+//             // --- Time Calculation (10 days limit) ---
+//             let isExpired = false;
+//             let timeLeftMs = 0;
+//             let deadline = null;
+
+//             if (user.topUpDate) {
+//                 deadline = new Date(user.topUpDate).getTime() + tenDaysMs;
+//                 timeLeftMs = deadline - currentTime;
+//                 if (timeLeftMs < 0) isExpired = true;
+//             } else {
+//                 isExpired = true;
+//             }
+
+//             let qualifiedL1Count = 0;
+//             let l1UsersList = [];
+//             let qualifiedL2Count = 0;
+//             let l2UsersList = [];
+
+//             // --- L1 & L2 Calculation (Fix: Only counting top-ups before deadline) ---
+//             if (deadline) {
+//                 const directs = directMap.get(user.userId) || [];
+                
+//                 // L1 Loop
+//                 for (let dId of directs) {
+//                     const child = userMap.get(dId);
+//                     // Child ka $50+ ho aur uski date deadline se pehle ho
+//                     if (child && child.isToppedUp && (child.topUpAmount || 0) >= 50 && child.topUpDate && new Date(child.topUpDate).getTime() <= deadline) {
+//                         qualifiedL1Count++;
+//                         l1UsersList.push({ userId: child.userId, name: child.name });
+//                     }
+                    
+//                     // L2 Loop (Child ke directs)
+//                     const subDirects = directMap.get(dId) || [];
+//                     for (let subId of subDirects) {
+//                         const subChild = userMap.get(subId);
+//                         // Subchild ka $50+ ho aur uski date deadline se pehle ho
+//                         if (subChild && subChild.isToppedUp && (subChild.topUpAmount || 0) >= 50 && subChild.topUpDate && new Date(subChild.topUpDate).getTime() <= deadline) {
+//                             qualifiedL2Count++;
+//                             l2UsersList.push({ userId: subChild.userId, name: subChild.name });
+//                         }
+//                     }
+//                 }
+//             }
+
+//             // --- Status Checking ---
+//             let status = "pending";
+//             if (user.isSalaryQualified) {
+//                 status = "qualified"; // Already qualified in DB
+//             } else if (qualifiedL1Count >= 3 && qualifiedL2Count >= 6) {
+//                 status = "qualified"; // Target Achieved
+//             } else if (isExpired) {
+//                 status = "failed"; // Target pura nahi hua aur time bhi nikal gaya
+//             }
+
+//             // Report mein data daalo
+//             reportData.push({
+//                 userId: user.userId,
+//                 name: user.name || "User",
+//                 topUpAmount: user.topUpAmount,
+//                 topUpDate: user.topUpDate,
+//                 l1Count: qualifiedL1Count,
+//                 l2Count: qualifiedL2Count,
+//                 l1List: l1UsersList, 
+//                 l2List: l2UsersList, 
+//                 status: status,
+//                 salaryMonthsPaid: user.salaryMonthsPaid || 0,
+//                 timeLeftDays: timeLeftMs > 0 ? (timeLeftMs / (1000 * 60 * 60 * 24)).toFixed(1) : 0,
+                
+//                 // 🔥 NAYA DATA JO ADD KIYA HAI:
+//                 lastClaimDate: lastClaimMap.get(user.userId) || null, // Aakhri baar salary kab li
+//                 achievedDate: user.salaryQualifiedDate || firstClaimMap.get(user.userId) || null // Achieve kab kiya
+//             });
+//         }
+
+//         // 4. SORTING LOGIC (Sabse upar Qualified, fir Target ke kareeb wale)
+//         reportData.sort((a, b) => {
+//             if (a.status === 'qualified' && b.status !== 'qualified') return -1;
+//             if (a.status !== 'qualified' && b.status === 'qualified') return 1;
+//             // Agar dono same status me hain, toh jiski team badi hai wo upar
+//             return (b.l1Count + b.l2Count) - (a.l1Count + a.l2Count);
+//         });
+
+//         res.json({ success: true, data: reportData });
+
+//     } catch (error) {
+//         console.error("Admin Monthly Salary Progress Error:", error);
+//         res.status(500).json({ success: false, message: "Server error" });
+//     }
+// });
+
+
+ 
 router.get('/monthly-salary-admin-report', verifyAdmin, async (req, res) => {
     try {
-        // 1. 🔥 SIRF 1 BAAR DB CALL: Saare users aur zaroori fields utha lo (salaryQualifiedDate add kiya)
+        // 1. Saare users utha lo
         const allUsers = await User.find({}, 'userId name sponsorId isToppedUp topUpAmount topUpDate isSalaryQualified salaryQualifiedDate salaryMonthsPaid').lean();
 
-        // 2. 🧠 RAM MEIN NETWORK TREE BANAO (Extremely Fast)
+        // 2. RAM MEIN NETWORK TREE
         const userMap = new Map();
-        const directMap = new Map(); // sponsorId -> [array of child userIds]
+        const directMap = new Map(); 
 
         for (let u of allUsers) {
-            userMap.set(u.userId, u);
+            const uidStr = String(u.userId); // Fix: String ID taaki proper match ho
+            userMap.set(uidStr, u);
             if (u.sponsorId) {
-                if (!directMap.has(u.sponsorId)) {
-                    directMap.set(u.sponsorId, []);
+                const spIdStr = String(u.sponsorId);
+                if (!directMap.has(spIdStr)) {
+                    directMap.set(spIdStr, []);
                 }
-                directMap.get(u.sponsorId).push(u.userId);
+                directMap.get(spIdStr).push(uidStr);
             }
         }
 
         // ==========================================
-        // 🔥 NAYA LOGIC: SALARY CLAIMS DATES NIKALNA
+        // 🔥 LAST CLAIM DATE NIKALNA (Fix for String IDs)
         // ==========================================
         const allSalaryClaims = await Transaction.find({ type: 'salary_claim' }).select('userId date').lean();
-        
         const lastClaimMap = new Map();
-        const firstClaimMap = new Map(); // Yeh Achieved Date ke liye use hoga
 
         for (let claim of allSalaryClaims) {
             const claimDate = new Date(claim.date);
+            const uidStr = String(claim.userId);
             
-            // Last Claim Date (Aakhri baar kab salary mili)
-            if (!lastClaimMap.has(claim.userId) || claimDate > new Date(lastClaimMap.get(claim.userId))) {
-                lastClaimMap.set(claim.userId, claim.date);
-            }
-            
-            // First Claim Date (Pehli salary kab mili / Achieve kab kiya)
-            if (!firstClaimMap.has(claim.userId) || claimDate < new Date(firstClaimMap.get(claim.userId))) {
-                firstClaimMap.set(claim.userId, claim.date);
+            // Sirf last claim ki date save karenge
+            if (!lastClaimMap.has(uidStr) || claimDate > new Date(lastClaimMap.get(uidStr))) {
+                lastClaimMap.set(uidStr, claim.date);
             }
         }
         // ==========================================
@@ -2280,15 +2419,16 @@ router.get('/monthly-salary-admin-report', verifyAdmin, async (req, res) => {
         const currentTime = Date.now();
         let reportData = [];
 
-        // 3. REPORT GENERATION L1 & L2 TARGETS
+        // 3. REPORT GENERATION
         for (let user of allUsers) {
-            // 🔥 RULE 1: Admin report me wahi aayega jiska khud ka $50 ya usse zyada ka topup ho
             if (!user.isToppedUp || (user.topUpAmount || 0) < 50) continue;
 
-            // --- Time Calculation (10 days limit) ---
             let isExpired = false;
             let timeLeftMs = 0;
             let deadline = null;
+            
+            // Yahan hum calculate karenge ki team me aakhri package kab laga
+            let latestContributoryTime = user.topUpDate ? new Date(user.topUpDate).getTime() : 0;
 
             if (user.topUpDate) {
                 deadline = new Date(user.topUpDate).getTime() + tenDaysMs;
@@ -2303,40 +2443,55 @@ router.get('/monthly-salary-admin-report', verifyAdmin, async (req, res) => {
             let qualifiedL2Count = 0;
             let l2UsersList = [];
 
-            // --- L1 & L2 Calculation (Fix: Only counting top-ups before deadline) ---
             if (deadline) {
-                const directs = directMap.get(user.userId) || [];
+                const directs = directMap.get(String(user.userId)) || [];
                 
                 // L1 Loop
                 for (let dId of directs) {
                     const child = userMap.get(dId);
-                    // Child ka $50+ ho aur uski date deadline se pehle ho
                     if (child && child.isToppedUp && (child.topUpAmount || 0) >= 50 && child.topUpDate && new Date(child.topUpDate).getTime() <= deadline) {
                         qualifiedL1Count++;
                         l1UsersList.push({ userId: child.userId, name: child.name });
+                        
+                        // Sabse latest topup date pakdo
+                        let childTime = new Date(child.topUpDate).getTime();
+                        if(childTime > latestContributoryTime) latestContributoryTime = childTime;
                     }
                     
-                    // L2 Loop (Child ke directs)
+                    // L2 Loop
                     const subDirects = directMap.get(dId) || [];
                     for (let subId of subDirects) {
                         const subChild = userMap.get(subId);
-                        // Subchild ka $50+ ho aur uski date deadline se pehle ho
                         if (subChild && subChild.isToppedUp && (subChild.topUpAmount || 0) >= 50 && subChild.topUpDate && new Date(subChild.topUpDate).getTime() <= deadline) {
                             qualifiedL2Count++;
                             l2UsersList.push({ userId: subChild.userId, name: subChild.name });
+                            
+                            // Sabse latest topup date pakdo
+                            let subChildTime = new Date(subChild.topUpDate).getTime();
+                            if(subChildTime > latestContributoryTime) latestContributoryTime = subChildTime;
                         }
                     }
                 }
             }
 
-            // --- Status Checking ---
             let status = "pending";
             if (user.isSalaryQualified) {
-                status = "qualified"; // Already qualified in DB
+                status = "qualified"; 
             } else if (qualifiedL1Count >= 3 && qualifiedL2Count >= 6) {
-                status = "qualified"; // Target Achieved
+                status = "qualified"; 
             } else if (isExpired) {
-                status = "failed"; // Target pura nahi hua aur time bhi nikal gaya
+                status = "failed"; 
+            }
+
+            // ==========================================
+            // 🔥 REAL ACHIEVED DATE LOGIC
+            // ==========================================
+            let finalAchievedDate = user.salaryQualifiedDate || null;
+            
+            // Agar DB me date nahi hai aur user qualified hai, 
+            // toh team ke aakhri topup date ko uski "Achieved Date" manenge!
+            if (!finalAchievedDate && status === "qualified" && latestContributoryTime > 0) {
+                finalAchievedDate = new Date(latestContributoryTime);
             }
 
             // Report mein data daalo
@@ -2353,17 +2508,16 @@ router.get('/monthly-salary-admin-report', verifyAdmin, async (req, res) => {
                 salaryMonthsPaid: user.salaryMonthsPaid || 0,
                 timeLeftDays: timeLeftMs > 0 ? (timeLeftMs / (1000 * 60 * 60 * 24)).toFixed(1) : 0,
                 
-                // 🔥 NAYA DATA JO ADD KIYA HAI:
-                lastClaimDate: lastClaimMap.get(user.userId) || null, // Aakhri baar salary kab li
-                achievedDate: user.salaryQualifiedDate || firstClaimMap.get(user.userId) || null // Achieve kab kiya
+                // Last Claim wahi purana chalega jo database me save hai
+                lastClaimDate: lastClaimMap.get(String(user.userId)) || null,
+                achievedDate: finalAchievedDate 
             });
         }
 
-        // 4. SORTING LOGIC (Sabse upar Qualified, fir Target ke kareeb wale)
+        // Sorting Logic
         reportData.sort((a, b) => {
             if (a.status === 'qualified' && b.status !== 'qualified') return -1;
             if (a.status !== 'qualified' && b.status === 'qualified') return 1;
-            // Agar dono same status me hain, toh jiski team badi hai wo upar
             return (b.l1Count + b.l2Count) - (a.l1Count + a.l2Count);
         });
 
