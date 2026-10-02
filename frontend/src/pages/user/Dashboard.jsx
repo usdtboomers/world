@@ -2220,6 +2220,11 @@ import QuickActions from "../../components/dashboard/QuickActions";
 import TotalEarningBox from "../../components/dashboard/TotalEarningBox"; 
 import MonthlySalaryCard from "../../components/MonthlySalaryCard"; 
 import UserInfoBoxes from "../../components/dashboard/UserInfoBoxes";
+
+import InstantSalaryPopup from '../../components/InstantSalaryPopup'; 
+
+// Path apne folder structure ke hisaab se adjust kar lena
+
 //import WithdrawalPopup from "../../components/WithdrawalPopup";
 // 🚀 NAYA: Heavy components 'Lazy Load'
 const Packages = lazy(() => import("../../components/Packages"));
@@ -2335,7 +2340,7 @@ const Dashboard = ({ modalState, setModalState }) => {
         
         {/* FAST LOADING SECTIONS */}
         <UserInfoBoxes />
-      
+      <InstantSalaryPopup />
         <div 
           className="grid grid-cols-2 gap-3 cursor-pointer hover:scale-[1.01] transition-transform duration-200"
           onClick={() => navigate("/system-live-feed")} 
