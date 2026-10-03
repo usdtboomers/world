@@ -2532,8 +2532,7 @@ router.get('/monthly-salary-admin-report', verifyAdmin, async (req, res) => {
 
  const PackageActivation = require('../models/PackageActivation');
 
- 
-router.get('/monthly-salary-claims-report', verifyAdmin, async (req, res) => {
+ router.get('/monthly-salary-claims-report', verifyAdmin, async (req, res) => {
     try {
         // 1. Current Month Range & Claims
         const currentDate = new Date();
@@ -2656,6 +2655,118 @@ router.get('/monthly-salary-claims-report', verifyAdmin, async (req, res) => {
 
     } catch (error) {
         console.error("Admin Claims Report Error:", error);
+        res.status(500).json({ success: false, message: "Server error" });
+    }
+});
+
+
+
+
+
+
+
+
+
+// Route: GET /api/admin/cron-salary-predictor
+router.get('/cron-salary-predictor', verifyAdmin, async (req, res) => {
+    try {
+        const User = require('../models/User');
+        const Transaction = require('../models/Transaction');
+
+        // Qualified users jinki 6 mahine ki salary poori nahi hui hai
+        const qualifiedUsers = await User.find({ 
+            isSalaryQualified: true, 
+            salaryMonthsPaid: { $lt: 6 } 
+        }).lean();
+
+        let upcomingQueue = [];
+        let futureQueue = [];
+
+        // Aaj ki date (Midnight par set ki hui)
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        for (const user of qualifiedUsers) {
+            if (user.salaryMonthsPaid === 0) {
+                // Case 1: Naya Achiever - Isko aaj raat instant salary milegi
+                upcomingQueue.push({
+                    userId: user.userId,
+                    name: user.name,
+                    monthsPaid: user.salaryMonthsPaid,
+                    reason: "First Instant Salary",
+                    dueDate: "Tonight (12:05 AM)"
+                });
+            } else {
+                // Case 2: Purana Achiever - Check karo 1 mahina hua ya nahi
+                const lastSalaryTxn = await Transaction.findOne({
+                    userId: user.userId,
+                    type: 'monthly_salary_generated'
+                }).sort({ date: -1 });
+
+                if (lastSalaryTxn) {
+                    const lastDate = new Date(lastSalaryTxn.date);
+                    const nextEligibleDate = new Date(lastDate);
+                    nextEligibleDate.setMonth(nextEligibleDate.getMonth() + 1);
+                    nextEligibleDate.setHours(0, 0, 0, 0);
+
+                    const userData = {
+                        userId: user.userId,
+                        name: user.name,
+                        monthsPaid: user.salaryMonthsPaid,
+                        lastPaidOn: lastDate,
+                        nextEligibleDate: nextEligibleDate
+                    };
+
+                    if (today.getTime() >= nextEligibleDate.getTime()) {
+                        // 1 mahina pura ho gaya, aaj raat milegi
+                        userData.reason = "1 Month Completed";
+                        userData.dueDate = "Tonight (12:05 AM)";
+                        upcomingQueue.push(userData);
+                    } else {
+                        // Abhi din baaki hain
+                        futureQueue.push(userData);
+                    }
+                }
+            }
+        }
+
+        // Pichle 48 ghante me cron ne kisko paisa diya (Recently Paid)
+        const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
+        const recentPayouts = await Transaction.aggregate([
+            { $match: { type: 'monthly_salary_generated', date: { $gte: twoDaysAgo } } },
+            { $sort: { date: -1 } },
+            {
+                $lookup: {
+                    from: 'users', // Aapke DB me collection ka naam 'users' hona chahiye
+                    localField: 'userId',
+                    foreignField: 'userId',
+                    as: 'userInfo'
+                }
+            },
+            { $unwind: '$userInfo' },
+            {
+                $project: {
+                    userId: 1,
+                    amount: 1,
+                    date: 1,
+                    status: 1,
+                    name: '$userInfo.name',
+                    monthsPaid: '$userInfo.salaryMonthsPaid'
+                }
+            }
+        ]);
+
+        res.json({
+            success: true,
+            data: {
+                upcomingTonight: upcomingQueue,
+                upcomingFuture: futureQueue,
+                recentlyPaid: recentPayouts
+            }
+        });
+
+    } catch (error) {
+        console.error("Cron Predictor Error:", error);
         res.status(500).json({ success: false, message: "Server error" });
     }
 });

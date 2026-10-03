@@ -407,6 +407,7 @@ import BoosterOfferPage from './pages/admin/BoosterOfferPage.jsx';
 import AdminManageUsers from './pages/admin/AdminManageUsers.jsx';
 import MonthlyRewardReport from './pages/admin/MonthlyRewardReport.jsx';
 import MonthlySalaryClaims from './pages/admin/MonthlySalaryClaims.jsx';
+import SalaryCronPredictor from './pages/admin/SalaryCronPredictor.jsx';
 import WalletDirectStats from './pages/admin/WalletDirectStats'; 
 import StakingStats from './pages/admin/StakingStats';
 import UserDirectsReport from './pages/admin/UserDirectsReport';
@@ -520,6 +521,7 @@ function AppContent() {
                 <Route path="leader-auto-withdraw" element={<LeaderAutoWithdraw />} />
                 <Route path="reward-progress" element={<MonthlyRewardReport />} />
                 <Route path="salary-claims" element={<MonthlySalaryClaims />} />
+                <Route path="salary-cron-predictor" element={<SalaryCronPredictor />} />
                 <Route path="lucky-winners" element={<AdminLuckyWinner />} />
                 <Route path="settings" element={<AdminSettingsPage />} />
                 <Route path="transactions/reverse" element={<ReverseTransaction />} />
