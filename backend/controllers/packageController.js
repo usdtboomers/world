@@ -1,4 +1,4 @@
- 
+
 // const User = require('../models/User'); 
 // const PackageActivation = require('../models/PackageActivation'); 
 // const Transaction = require('../models/Transaction'); 
@@ -8,8 +8,18 @@
 //         const { userId, memberId, packageAmount, txnPassword } = req.body;
 //         const amount = Number(packageAmount);
 
+//         // 🔥 FIX: STRICT PACKAGE ARRAY VALIDATION (Hacker Blocker)
+//         // Yahan par sirf wahi amounts likhein jo aapke real system mein hain!
+//         const VALID_PACKAGES = [2, 5, 10, 20, 50, 100, 200, 500, 1000]; 
+
 //         if (!amount || isNaN(amount) || amount <= 0) {
 //             return res.status(400).json({ success: false, message: 'Invalid Package Amount.' });
+//         }
+
+//         // 🚨 HACKER BLOCKER LOGIC
+//         if (!VALID_PACKAGES.includes(amount)) {
+//             console.warn(`🚨 SECURITY ALERT: User ${userId} tried to activate fake package of $${amount}`);
+//             return res.status(403).json({ success: false, message: 'Security System: Custom or Fake Package Amounts are blocked!' });
 //         }
 
 //         // 1. Current User (Jo buy kar raha hai)
@@ -43,7 +53,7 @@
 //             return res.status(400).json({ success: false, message: "Transaction password is required" });
 //         }
         
-//         // 🔥 CRASH FIX: Pehle check karo ki DB mein password hai ya nahi, phir toLowerCase() chalao
+//         // 🔥 CRASH FIX: Pehle check karo ki DB mein password hai ya nahi
 //         if (!currentUser.transactionPassword || txnPassword.toLowerCase() !== currentUser.transactionPassword.toLowerCase()) {
 //             return res.status(400).json({ success: false, message: "Invalid Transaction Password!" });
 //         }
@@ -101,7 +111,7 @@
 //             description: `Activated $${amount} Package for ${targetUser.userId}`, status: 'success'
 //         });
 
-//         // 🔥 Frontend ko instant success response bhej diya
+//         // 🔥 Frontend ko instant success response
 //         res.status(200).json({ 
 //             success: true, 
 //             message: `Package of $${amount} activated successfully for ${targetUser.userId}!`,
@@ -125,10 +135,9 @@
 //                         sponsor.directIncome = (sponsor.directIncome || 0) + directBonusAmount;
 //                         sponsor.totalDirectIncome = (sponsor.totalDirectIncome || 0) + directBonusAmount;
                         
-//                         // 🔥 FIX: Added "package: amount" so database saves exactly which package triggered this income
 //                         await createTransaction({
 //                             userId: sponsor.userId, type: "direct_income", source: "direct", amount: directBonusAmount, 
-//                             package: amount, // <--- DIRECT INCOME ME PACKAGE ADD KIYA
+//                             package: amount, 
 //                             fromUserId: targetUser.userId, description: `Direct Bonus (10%) from ${targetUser.userId}'s Package`, status: 'success'
 //                         });
 //                         await sponsor.save();
@@ -162,10 +171,9 @@
 //                         if (levelAmount > 0) {
 //                             await User.updateOne({ _id: upline._id }, { $inc: { levelIncome: levelAmount, totalLevelIncome: levelAmount } });
                             
-//                             // 🔥 FIX: Added "package: amount" for Level Income as well
 //                             await createTransaction({
 //                                 userId: upline.userId, type: "level_income", source: "level", amount: levelAmount,
-//                                 package: amount, // <--- LEVEL INCOME ME BHI PACKAGE ADD KIYA
+//                                 package: amount, 
 //                                 fromUserId: targetUser.userId, description: `Level ${currentLevel} Income (${percentage}%) from Package`, status: 'success'
 //                             });
 //                         }
@@ -186,16 +194,14 @@
 // };
 
 // // =======================================================
-// // 🔹 GET USER PACKAGES LOGIC (Yahan se naya code hai)
+// // 🔹 GET USER PACKAGES LOGIC 
 // // =======================================================
 // exports.getUserPackages = async (req, res) => {
 //     try {
 //         const { userId } = req.params;
 
-//         // User ki ID ke basis par database se uske saare packages nikalna
 //         const packages = await PackageActivation.find({ userId: String(userId) }).sort({ startDate: -1 });
 
-//         // Frontend ko response bhejna
 //         res.status(200).json({
 //             success: true,
 //             data: packages
@@ -211,6 +217,7 @@
 // };
 
 
+
 const User = require('../models/User'); 
 const PackageActivation = require('../models/PackageActivation'); 
 const Transaction = require('../models/Transaction'); 
@@ -221,7 +228,6 @@ exports.activatePackage = async (req, res) => {
         const amount = Number(packageAmount);
 
         // 🔥 FIX: STRICT PACKAGE ARRAY VALIDATION (Hacker Blocker)
-        // Yahan par sirf wahi amounts likhein jo aapke real system mein hain!
         const VALID_PACKAGES = [2, 5, 10, 20, 50, 100, 200, 500, 1000]; 
 
         if (!amount || isNaN(amount) || amount <= 0) {
@@ -246,7 +252,7 @@ exports.activatePackage = async (req, res) => {
             return res.status(404).json({ success: false, message: "Member ID not found" });
         }
 
-        // 🔥 NAYA LOGIC: 24 Ghante ki Limitation
+        // 🔥 24 Ghante ki Limitation
         const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
         const recentPackage = await PackageActivation.findOne({
             userId: targetUser.userId,
@@ -265,7 +271,6 @@ exports.activatePackage = async (req, res) => {
             return res.status(400).json({ success: false, message: "Transaction password is required" });
         }
         
-        // 🔥 CRASH FIX: Pehle check karo ki DB mein password hai ya nahi
         if (!currentUser.transactionPassword || txnPassword.toLowerCase() !== currentUser.transactionPassword.toLowerCase()) {
             return res.status(400).json({ success: false, message: "Invalid Transaction Password!" });
         }
@@ -331,30 +336,41 @@ exports.activatePackage = async (req, res) => {
         });
 
         // =======================================================
-        // 🔹 8. BACKGROUND MLM ENGINE ($2 Minimum Logic & Level 2-12)
+        // 🔹 8. BACKGROUND MLM ENGINE (STRICT 25-DAY ACTIVE PACKAGE LOGIC)
         // =======================================================
         (async () => {
             try {
-                // ✅ SPONSOR INCOME (10% at 1st Level) - REQUIRES MINIMUM $2 PACKAGE
+                // ✅ SPONSOR INCOME (10% at 1st Level)
                 if (targetUser.sponsorId) {
                     const sponsor = await User.findOne({ userId: targetUser.sponsorId });
                     
-                    if (sponsor && sponsor.isToppedUp && (sponsor.topUpAmount >= 2)) {
-                        sponsor.directCount = (sponsor.directCount || 0) + 1;
-                        const DIRECT_PERCENT = 10; 
-                        const directBonusAmount = (amount * DIRECT_PERCENT) / 100; 
-
-                        sponsor.directIncome = (sponsor.directIncome || 0) + directBonusAmount;
-                        sponsor.totalDirectIncome = (sponsor.totalDirectIncome || 0) + directBonusAmount;
-                        
-                        await createTransaction({
-                            userId: sponsor.userId, type: "direct_income", source: "direct", amount: directBonusAmount, 
-                            package: amount, 
-                            fromUserId: targetUser.userId, description: `Direct Bonus (10%) from ${targetUser.userId}'s Package`, status: 'success'
+                    if (sponsor) {
+                        // 🔥 NAYA LOGIC: Check karo ki Sponsor ke paas LAST 25 DAYS ka koi Active Package hai ya nahi (>$2)
+                        const isActiveSponsor = await PackageActivation.exists({
+                            userId: sponsor.userId,
+                            endDate: { $gt: new Date() }, // Expiry date aaj se aage honi chahiye (Active)
+                            packageAmount: { $gte: 2 }    // Package $2 ya usse bada hona chahiye
                         });
-                        await sponsor.save();
-                    } else if (sponsor) {
-                        console.log(`[FLUSHED] Direct Income stopped for Sponsor ${sponsor.userId} because package is less than $2 or inactive.`);
+
+                        if (isActiveSponsor) {
+                            // Package active hai, Income de do
+                            sponsor.directCount = (sponsor.directCount || 0) + 1;
+                            const DIRECT_PERCENT = 10; 
+                            const directBonusAmount = (amount * DIRECT_PERCENT) / 100; 
+
+                            sponsor.directIncome = (sponsor.directIncome || 0) + directBonusAmount;
+                            sponsor.totalDirectIncome = (sponsor.totalDirectIncome || 0) + directBonusAmount;
+                            
+                            await createTransaction({
+                                userId: sponsor.userId, type: "direct_income", source: "direct", amount: directBonusAmount, 
+                                package: amount, 
+                                fromUserId: targetUser.userId, description: `Direct Bonus (10%) from ${targetUser.userId}'s Package`, status: 'success'
+                            });
+                            await sponsor.save();
+                        } else {
+                            // Package Expiry ho chuka hai (25 din paar), Income Flush!
+                            console.log(`[FLUSHED] Direct Income stopped for Sponsor ${sponsor.userId}. Reason: Package Expired or < $2.`);
+                        }
                     }
                 }
 
@@ -367,15 +383,22 @@ exports.activatePackage = async (req, res) => {
                     const upline = await User.findOne({ userId: currentUplineId }).select('userId isToppedUp topUpAmount sponsorId _id');
                     if (!upline) break;
 
-                    // 🛑 RULE 1: INACTIVE OR < $2 BLOCKER (INCOME FLUSH)
-                    if (!upline.isToppedUp || (upline.topUpAmount || 0) < 2) {
-                        console.log(`[FLUSHED] Income stopped for Upline ${upline.userId} at Level ${currentLevel} because package is < $2 or inactive.`);
-                        currentUplineId = upline.sponsorId;
+                    // 🔥 NAYA LOGIC: Check karo ki Upline ke paas LAST 25 DAYS ka koi Active Package hai ya nahi (>$2)
+                    const isActiveUpline = await PackageActivation.exists({
+                        userId: upline.userId,
+                        endDate: { $gt: new Date() }, // Expiry date aaj se aage honi chahiye (Active)
+                        packageAmount: { $gte: 2 }    // Package $2 ya usse bada hona chahiye
+                    });
+
+                    // 🛑 RULE 1: INACTIVE OR EXPIRED BLOCKER (INCOME FLUSH)
+                    if (!isActiveUpline) {
+                        console.log(`[FLUSHED] Level Income stopped for Upline ${upline.userId} at Level ${currentLevel}. Reason: Package Expired (>25 days).`);
+                        currentUplineId = upline.sponsorId; // Skip karo aur upar wale upline pe jao
                         currentLevel++;
                         continue; 
                     }
 
-                    // 1. LEVEL INCOME LOGIC (Level 2 se 12 tak)
+                    // 1. LEVEL INCOME LOGIC (Level 2 se 12 tak) - Agar Active hai toh hi yahan aayega
                     if (currentLevel >= 2 && currentLevel <= 12) {
                         const percentage = LEVEL_PERCENTAGES[currentLevel - 1]; 
                         const levelAmount = (amount * percentage) / 100;
