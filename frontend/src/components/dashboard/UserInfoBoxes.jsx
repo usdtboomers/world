@@ -194,36 +194,37 @@ const UserInfoBoxes = () => {
   return (
     <>
       <div className="w-full mb-2 flex justify-center">
-        <div className="bg-[#1c2233] border border-gray-700/50 w-full max-w-4xl rounded-xl shadow-lg p-3 sm:p-5 flex justify-between items-center overflow-hidden">
+        
+        {/* 🔥 EXACT ORIGINAL DESIGN CLASS SE MATCH KIYA 🔥 */}
+        <div className="bg-[#1c2233] border border-gray-700/50 w-full max-w-4xl rounded-xl shadow-lg p-3 sm:p-5 flex justify-between items-center">
           
           {/* 1. NAME */}
           <div 
             onDoubleClick={() => handleDoubleClick('name')} 
-            className={`flex items-center gap-2 sm:gap-4 flex-shrink min-w-0 ${isPromo ? 'cursor-pointer hover:bg-white/5  rounded transition-colors' : ''}`}
+            className={`flex items-center gap-2 sm:gap-4 ${isPromo ? 'cursor-pointer' : ''}`}
           >
-            <div className="bg-white/5 p-1.5 sm:p-2.5 rounded-lg text-[#d89814] flex-shrink-0">
+            <div className="bg-white/5 p-1.5 sm:p-2.5 rounded-lg text-[#d89814]">
               <User className="w-4 h-4 sm:w-6 sm:h-6" />
             </div>
-            <div className="flex flex-col min-w-0">
-              <span className="text-gray-500 text-[9px] sm:text-xs font-bold uppercase tracking-wider mb-0.5 whitespace-nowrap">Name</span>
-              {/* 🔥 FIX: whitespace-nowrap se text totega nahi */}
-              <span className="text-white text-xs sm:text-base font-bold capitalize truncate max-w-[80px] sm:max-w-[150px] whitespace-nowrap">
+            <div className="flex flex-col">
+              <span className="text-gray-500 text-[9px] sm:text-xs font-bold uppercase tracking-wider mb-0.5">Name</span>
+              <span className="text-white text-xs sm:text-base font-bold capitalize truncate max-w-[80px] sm:max-w-[200px]">
                 {displayName}
               </span>
             </div>
           </div>
 
           {/* DIVIDER */}
-          <div className="w-[1px] h-8 sm:h-12 bg-gray-700/50 mx-2 sm:mx-4 flex-shrink-0"></div>
+          <div className="w-[1px] h-8 sm:h-12 bg-gray-700/50 mx-2 sm:mx-6"></div>
 
           {/* 2. USER ID */}
           <div 
             onDoubleClick={() => handleDoubleClick('userid')}
-            className={`flex items-center gap-2 sm:gap-4 flex-shrink-0 ${isPromo ? 'cursor-pointer hover:bg-white/5 p-1 rounded transition-colors' : ''}`}
+            className={`flex items-center gap-2 sm:gap-4 ${isPromo ? 'cursor-pointer' : ''}`}
           >
             <div className="flex flex-col">
-              <span className="text-gray-500 text-[9px] sm:text-xs font-bold uppercase tracking-wider mb-0.5 whitespace-nowrap">User ID</span>
-              <div className="flex items-center gap-1 sm:gap-2 whitespace-nowrap">
+              <span className="text-gray-500 text-[9px] sm:text-xs font-bold uppercase tracking-wider mb-0.5">User ID</span>
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <span className="text-[#d89814] text-xs sm:text-base font-extrabold">
                   {displayUserId}
                 </span>
@@ -233,7 +234,7 @@ const UserInfoBoxes = () => {
                     className="text-gray-400 hover:text-white transition-colors p-1"
                     title="Copy ID"
                   >
-                    {copied ? <Check size={14} className="text-green-500 sm:w-4 sm:h-4" /> : <Copy size={14} className="sm:w-4 sm:h-4" />}
+                    {copied ? <Check size={14} className="text-green-500 sm:w-5 sm:h-5" /> : <Copy size={14} className="sm:w-5 sm:h-5" />}
                   </button>
                 )}
               </div>
@@ -241,17 +242,16 @@ const UserInfoBoxes = () => {
           </div>
 
           {/* DIVIDER */}
-          <div className="w-[1px] h-8 sm:h-12 bg-gray-700/50 mx-2 sm:mx-4 flex-shrink-0"></div>
+          <div className="w-[1px] h-8 sm:h-12 bg-gray-700/50 mx-2 sm:mx-6"></div>
 
           {/* 3. JOINING DATE */}
           <div 
             onDoubleClick={() => handleDoubleClick('date')}
-            className={`flex items-center gap-2 sm:gap-4 flex-shrink-0 ${isPromo ? 'cursor-pointer hover:bg-white/5 p-1 rounded transition-colors' : ''}`}
+            className={`flex items-center gap-2 sm:gap-4 ${isPromo ? 'cursor-pointer' : ''}`}
           >
             <div className="flex flex-col">
-              <span className="text-gray-500 text-[9px] sm:text-xs font-bold uppercase tracking-wider mb-0.5 whitespace-nowrap">Joined</span>
-              {/* 🔥 FIX: whitespace-nowrap add kiya */}
-              <span className="text-gray-200 text-[11px] sm:text-base font-bold whitespace-nowrap">
+              <span className="text-gray-500 text-[9px] sm:text-xs font-bold uppercase tracking-wider mb-0.5">Joined</span>
+              <span className="text-gray-200 text-xs sm:text-base font-bold">
                 {displayJoinDate}
               </span>
             </div>
