@@ -99,6 +99,7 @@
 // };
 
 // export default UserInfoBoxes;
+
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext'; 
 import { Copy, Check, User, X } from 'lucide-react'; 
@@ -198,7 +199,7 @@ const UserInfoBoxes = () => {
           {/* 1. NAME */}
           <div 
             onDoubleClick={() => handleDoubleClick('name')} 
-            className={`flex items-center gap-2 sm:gap-4 flex-shrink min-w-0 ${isPromo ? 'cursor-pointer hover:bg-white/5 p-1 rounded transition-colors' : ''}`}
+            className={`flex items-center gap-2 sm:gap-4 flex-shrink min-w-0 ${isPromo ? 'cursor-pointer hover:bg-white/5  rounded transition-colors' : ''}`}
           >
             <div className="bg-white/5 p-1.5 sm:p-2.5 rounded-lg text-[#d89814] flex-shrink-0">
               <User className="w-4 h-4 sm:w-6 sm:h-6" />
