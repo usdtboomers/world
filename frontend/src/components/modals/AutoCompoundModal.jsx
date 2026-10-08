@@ -90,7 +90,7 @@ const AutoCompoundModal = ({ onClose, onSuccess, packageAmount }) => {
         if (response.data.success) {
           showMessage(
             "Success", 
-            `Auto Compound Package of $${packageAmount} activated for ${response.data.generatedId}!`, 
+            `Auto Compound Package of $${packageAmount} (Timer: 100 Days) activated for ${response.data.generatedId}!`, 
             "success"
           );
           setTransactionPassword("");
