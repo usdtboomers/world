@@ -2088,6 +2088,101 @@ router.get('/auto-compound-users', verifyAdmin, async (req, res) => {
 });
 
 
+ 
+ 
+router.get('/income-reports', verifyAdmin, async (req, res) => {
+    try {
+        const { date } = req.query; 
+
+        // 1. Fetching All Users Wallet Balances
+        const users = await User.find({}, {
+            userId: 1, name: 1,
+            directIncome: 1, totalDirectIncome: 1,
+            levelIncome: 1, totalLevelIncome: 1,
+            roiIncome: 1, totalRoiIncome: 1,
+            autoCompoundIncome: 1, totalAutoCompoundIncome: 1,
+            totalRewardIncome: 1, totalFastTrackIncome: 1
+        }).lean();
+
+        const parseNum = (val) => {
+            if (!val) return 0;
+            if (val.$numberDecimal) return parseFloat(val.$numberDecimal);
+            return parseFloat(val) || 0;
+        };
+
+        let lifeDirect = 0, lifeLevel = 0, lifeRoi = 0, lifeCompound = 0;
+        
+        const formattedUsers = users.map(u => {
+            // Lifetime System Calculations
+            const td = parseNum(u.totalDirectIncome);
+            const tl = parseNum(u.totalLevelIncome);
+            const tr = parseNum(u.totalRoiIncome);
+            const tc = parseNum(u.totalAutoCompoundIncome);
+            
+            lifeDirect += td;
+            lifeLevel += tl;
+            lifeRoi += tr;
+            lifeCompound += tc;
+
+            // 🔥 DYNAMIC TOTAL EARNINGS CALCULATION (Fix for $0.00 issue)
+            const calculatedTotalEarned = td + tl + tr + tc + parseNum(u.totalRewardIncome) + parseNum(u.totalFastTrackIncome);
+
+            return {
+                userId: u.userId,
+                name: u.name,
+                directIncome: parseNum(u.directIncome),
+                levelIncome: parseNum(u.levelIncome),
+                roiIncome: parseNum(u.roiIncome),
+                compoundIncome: parseNum(u.autoCompoundIncome),
+                totalEarned: calculatedTotalEarned // Ab exact sum aayega!
+            };
+        });
+
+        // 2. Fetching Daily Stats for Selected Date
+        let targetDate = new Date();
+        if (date) targetDate = new Date(date);
+        
+        const startOfDay = new Date(targetDate);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(targetDate);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        // 🔥 MATCHING EXACT CRON TRANSACTION TYPES
+        const dailyTxns = await Transaction.aggregate([
+            { 
+                $match: { 
+                    date: { $gte: startOfDay, $lte: endOfDay }, 
+                    type: { $in: ['direct_income', 'level_income', 'daily_level_income', 'daily_roi', 'roi_income', 'compound_release'] },
+                    status: 'success'
+                } 
+            },
+            { $group: { _id: "$type", totalAmount: { $sum: "$amount" } } }
+        ]);
+
+        let todayDirect = 0, todayLevel = 0, todayRoi = 0, todayCompound = 0;
+        dailyTxns.forEach(tx => {
+            const amt = parseNum(tx.totalAmount);
+            if (tx._id === 'direct_income') todayDirect += amt;
+            // Cron ki 'daily_level_income' aur normal 'level_income' dono count honge
+            if (tx._id === 'level_income' || tx._id === 'daily_level_income') todayLevel += amt;
+            // Cron ki 'daily_roi' count hogi
+            if (tx._id === 'daily_roi' || tx._id === 'roi_income') todayRoi += amt;
+            if (tx._id === 'compound_release') todayCompound += amt;
+        });
+
+        res.json({
+            success: true,
+            today: { direct: todayDirect, level: todayLevel, roi: todayRoi, compound: todayCompound },
+            lifetime: { direct: lifeDirect, level: lifeLevel, roi: lifeRoi, compound: lifeCompound },
+            users: formattedUsers
+        });
+
+    } catch (err) {
+        console.error("Income Report Error:", err);
+        res.status(500).json({ success: false, message: "Server Error" });
+    }
+});
+
 
 
 

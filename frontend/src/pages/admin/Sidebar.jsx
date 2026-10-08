@@ -1058,10 +1058,17 @@ const Sidebar = () => {
   <FaCheckCircle className="inline-block mr-2 text-emerald-400" /> Active Packages
 </NavLink>
 
-
 <NavLink to={`${BASE_PATH}/auto-compound`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/auto-compound`)}>
               <FaLayerGroup className="inline-block mr-2" /> Auto Compound
             </NavLink>
+
+           <NavLink 
+  to={`${BASE_PATH}/income-reports`} 
+  className={linkClass} 
+  onClick={(e) => handleNavClick(e, `${BASE_PATH}/income-reports`)}
+>
+  <FaWallet className="inline-block mr-2" /> Income & Wallets
+</NavLink>
 
             <NavLink to={`${BASE_PATH}/deposits`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/deposits`)}>
               <FaMoneyBill className="inline-block mr-2" /> Deposit Log
