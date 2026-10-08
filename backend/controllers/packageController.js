@@ -534,9 +534,17 @@ exports.activateAutoCompoundPackage = async (req, res) => {
             description: `Activated $${amount} Auto Compound (${cycleDays} Days Timer) for ${targetUser.userId}`, status: 'success'
         });
 
+        // res.status(200).json({ 
+        //     success: true, 
+        //     message: `Auto Compound Package of $${amount} (Timer: ${cycleDays} Days) activated successfully!`,
+        //     data: newCompoundPackage
+        // });
+
         res.status(200).json({ 
             success: true, 
-            message: `Auto Compound Package of $${amount} (Timer: ${cycleDays} Days) activated successfully!`,
+            message: `Auto Compound Package of $${amount} (Timer: ${cycleDays} Days) activated successfully for ${targetUser.userId}!`,
+            userId: targetUser.userId, // 🔥 Yeh raha naya userId
+            memberId: targetUser.userId, // 🔥 MemberId bhi add kar diya
             data: newCompoundPackage
         });
 
