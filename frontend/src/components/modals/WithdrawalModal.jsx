@@ -227,9 +227,7 @@ const WithdrawalModal = ({ onClose }) => {
             
             {/* 🔥 NAYE RULES */}
             <p className="text-[#d4af37]">Daily Withdrawal Limit: Equal to your highest active package amount.</p>
-             <p className="text-[#ff4d4d]">For Withdrawal Active package is mandatory. If expired, Direct & Level income will flush.</p>
-            <p className="text-[#00ff88]">Withdraw ROI Income daily OR use 'Wallet to Fund' for compounding.</p>
-            
+             
             <p>Receive time: 10:00 PM to 12:00 AM. 0% Fees via USDT BEP20.</p>
           </div>
 

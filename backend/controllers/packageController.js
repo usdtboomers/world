@@ -253,19 +253,19 @@ exports.activatePackage = async (req, res) => {
             return res.status(404).json({ success: false, message: "Member ID not found" });
         }
 
-        // 🔥 24 Ghante ki Limitation
-        const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-        const recentPackage = await PackageActivation.findOne({
-            userId: targetUser.userId,
-            startDate: { $gte: twentyFourHoursAgo }
-        });
+        // // 🔥 24 Ghante ki Limitation
+        // const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        // const recentPackage = await PackageActivation.findOne({
+        //     userId: targetUser.userId,
+        //     startDate: { $gte: twentyFourHoursAgo }
+        // });
 
-        if (recentPackage) {
-            return res.status(400).json({ 
-                success: false, 
-                message: "This user has already activated a package in the last 24 hours. Please try again after 24 hours." 
-            });
-        }
+        // if (recentPackage) {
+        //     return res.status(400).json({ 
+        //         success: false, 
+        //         message: "This user has already activated a package in the last 24 hours. Please try again after 24 hours." 
+        //     });
+        // }
 
         // 3. 🔐 PLAIN TEXT Transaction Password Verify
         if (!txnPassword) {
