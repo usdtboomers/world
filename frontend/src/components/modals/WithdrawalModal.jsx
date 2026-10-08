@@ -4,6 +4,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import Swal from 'sweetalert2';
 import { X, Eye, EyeOff, Zap, Users, RefreshCcw, ShieldCheck } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 const WithdrawalModal = ({ onClose }) => {
   const { user, token } = useAuth();
@@ -20,6 +21,8 @@ const WithdrawalModal = ({ onClose }) => {
   const [roiAmount, setRoiAmount] = useState("");
   const [transactionPassword, setTransactionPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [inlineMessage, setInlineMessage] = useState("");
+  const [isError, setIsError] = useState(false);
 
   useEffect(() => {
     fetchWalletData();
@@ -61,39 +64,89 @@ const WithdrawalModal = ({ onClose }) => {
     return Number(num).toFixed(4); 
   };
 
-  const handleSubmit = async () => {
-    if (!walletData.walletAddress) {
-      return Swal.fire({ icon: 'error', title: 'Address Missing', text: 'Please update your USDT BEP-20 Wallet Address in your profile first.', background: '#111827', color: '#ff4d4d' });
-    }
-    if (totalSelection < 2) {
-      return Swal.fire({ icon: 'warning', title: 'Invalid Amount', text: 'Minimum total withdrawal is $2.', background: '#111827', color: '#d4af37' });
-    }
-    if (totalSelection > walletData.balance) {
-      // 🔥 FIX: Error message me bhi formatExact laga diya
-      return Swal.fire({ icon: 'error', title: 'Insufficient Balance', text: `You only have $${formatExact(walletData.balance)} available to withdraw.`, background: '#111827', color: '#ff4d4d' });
-    }
-    if (!transactionPassword) {
-      return Swal.fire({ icon: 'warning', title: 'Password Required', text: 'Enter Transaction Password.', background: '#111827', color: '#d4af37' });
-    }
+  // const handleSubmit = async () => {
+  //   if (!walletData.walletAddress) {
+  //     return Swal.fire({ icon: 'error', title: 'Address Missing', text: 'Please update your USDT BEP-20 Wallet Address in your profile first.', background: '#111827', color: '#ff4d4d' });
+  //   }
+  //   if (totalSelection < 2) {
+  //     return Swal.fire({ icon: 'warning', title: 'Invalid Amount', text: 'Minimum total withdrawal is $2.', background: '#111827', color: '#d4af37' });
+  //   }
+  //   if (totalSelection > walletData.balance) {
+  //     // 🔥 FIX: Error message me bhi formatExact laga diya
+  //     return Swal.fire({ icon: 'error', title: 'Insufficient Balance', text: `You only have $${formatExact(walletData.balance)} available to withdraw.`, background: '#111827', color: '#ff4d4d' });
+  //   }
+  //   if (!transactionPassword) {
+  //     return Swal.fire({ icon: 'warning', title: 'Password Required', text: 'Enter Transaction Password.', background: '#111827', color: '#d4af37' });
+  //   }
 
-    setLoading(true);
-    try {
-      const response = await api.post('/wallet/withdraw', {
-        amount: totalSelection, 
-        transactionPassword,
-        details: { direct: directAmount, level: levelAmount, roi: roiAmount }
-      }, { headers: { Authorization: `Bearer ${token}` }});
+  //   setLoading(true);
+  //   try {
+  //     const response = await api.post('/wallet/withdraw', {
+  //       amount: totalSelection, 
+  //       transactionPassword,
+  //       details: { direct: directAmount, level: levelAmount, roi: roiAmount }
+  //     }, { headers: { Authorization: `Bearer ${token}` }});
 
-      if (response.data.success) {
-        Swal.fire({ icon: 'success', title: 'Success!', text: response.data.message, background: '#111827', color: '#d4af37' });
-        onClose();
-       }
-    } catch (err) {
-      Swal.fire({ icon: 'error', title: 'Request Failed', text: err.response?.data?.message || 'Something went wrong.', background: '#111827', color: '#ff4d4d' });
-    } finally {
-      setLoading(false);
+  //     if (response.data.success) {
+  //       Swal.fire({ icon: 'success', title: 'Success!', text: response.data.message, background: '#111827', color: '#d4af37' });
+  //       onClose();
+  //      }
+  //   } catch (err) {
+  //     Swal.fire({ icon: 'error', title: 'Request Failed', text: err.response?.data?.message || 'Something went wrong.', background: '#111827', color: '#ff4d4d' });
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
+
+ const handleSubmit = async (e) => {
+  if (e && e.preventDefault) e.preventDefault();
+
+  // 🔴 1. Purana Validation Logic (Swal Popups)
+  if (!walletData.walletAddress) {
+    return Swal.fire({ icon: 'error', title: 'Address Missing', text: 'Please update your USDT BEP-20 Wallet Address in your profile first.', background: '#111827', color: '#ff4d4d' });
+  }
+  if (totalSelection < 2) {
+    return Swal.fire({ icon: 'warning', title: 'Invalid Amount', text: 'Minimum total withdrawal is $2.', background: '#111827', color: '#d4af37' });
+  }
+  if (totalSelection > walletData.balance) {
+    return Swal.fire({ icon: 'error', title: 'Insufficient Balance', text: `You only have $${formatExact(walletData.balance)} available to withdraw.`, background: '#111827', color: '#ff4d4d' });
+  }
+  if (!transactionPassword) {
+    return Swal.fire({ icon: 'warning', title: 'Password Required', text: 'Enter Transaction Password.', background: '#111827', color: '#d4af37' });
+  }
+
+  // 🟡 2. Start Loading (Processing State)
+  setLoading(true);
+  setInlineMessage(""); // Reset inline message
+
+  try {
+    const response = await api.post('/wallet/withdraw', {
+      amount: totalSelection, 
+      transactionPassword,
+      details: { direct: directAmount, level: levelAmount, roi: roiAmount }
+    }, { headers: { Authorization: `Bearer ${token}` }});
+
+    // 🟢 3. Success Popup
+    if (response.data.success) {
+      Swal.fire({ icon: 'success', title: 'Success!', text: response.data.message, background: '#111827', color: '#d4af37' });
+      onClose();
     }
-  };
+  } catch (err) {
+    const errorMsg = err.response?.data?.message || 'Something went wrong.';
+
+    // 🔥 4. NAYA LOGIC: Sirf Heavy Traffic Error ke liye Inline Red Box
+    if (errorMsg.includes('experiencing heavy traffic') || errorMsg.includes('Server is currently')) {
+      setInlineMessage("SERVER IS CURRENTLY EXPERIENCING HEAVY TRAFFIC! PLEASE WAIT A WHILE OR CONTINUE.");
+    } else {
+      // Baki sabhi API errors ke liye wapas Swal Popup
+      Swal.fire({ icon: 'error', title: 'Request Failed', text: errorMsg, background: '#111827', color: '#ff4d4d' });
+    }
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-[99999] flex justify-center items-start sm:items-center pt-16 sm:pt-4 p-3 sm:p-4">
@@ -208,14 +261,58 @@ const WithdrawalModal = ({ onClose }) => {
           </div>
 
           {/* Submit Button */}
-          <button 
+          {/* <button 
             onClick={handleSubmit}
             disabled={loading || !walletData.walletAddress}
             className="w-full mt-2 bg-gradient-to-r from-[#d4af37] to-[#e4c568] hover:brightness-110 text-black font-extrabold py-3.5 rounded-lg shadow-[0_0_15px_rgba(228,197,104,0.3)] hover:scale-[1.02] transition-all disabled:opacity-50 disabled:hover:scale-100 uppercase tracking-widest text-[14px]"
           >
             {loading ? 'Processing...' : 'WITHDRAW NOW'}
-          </button>
+          </button> */}
 
+
+        {/* <div className="mt-2">
+  <button 
+    onClick={handleSubmit}
+    disabled={loading || !walletData?.walletAddress}
+    className="w-full bg-gradient-to-r from-[#d4af37] to-[#e4c568] hover:brightness-110 text-black font-extrabold py-3.5 px-4 rounded-xl shadow-[0_0_15px_rgba(228,197,104,0.3)] hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50 disabled:hover:scale-100 uppercase tracking-widest text-[12px] sm:text-[13px] leading-snug flex items-center justify-center"
+  >
+    {loading ? (
+      <div className="flex items-center gap-2">
+        <span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin shrink-0"></span>
+        <span>PROCESSING... PLEASE WAIT</span>
+      </div>
+    ) : inlineMessage ? (
+       <span className="animate-pulse text-center w-full">
+        {inlineMessage}
+      </span>
+    ) : (
+       <span>WITHDRAW NOW</span>
+    )}
+  </button>
+</div> */}
+
+
+<div className="mt-2">
+  <button 
+    onClick={handleSubmit}
+    disabled={loading || !walletData?.walletAddress}
+    className="w-full bg-gradient-to-r from-[#d4af37] to-[#e4c568] hover:brightness-110 text-black font-extrabold py-3.5 px-4 rounded-xl shadow-[0_0_15px_rgba(228,197,104,0.3)] hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50 disabled:hover:scale-100 uppercase tracking-widest text-[12px] sm:text-[14px] flex items-center justify-center gap-2 leading-snug"
+  >
+    {loading ? (
+      <>
+        {/* 🔥 Black Spinner & Processing Text */}
+        <span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin shrink-0"></span>
+        <span>PROCESSING... PLEASE WAIT</span>
+      </>
+    ) : inlineMessage ? (
+      /* 🔥 Heavy Traffic Message (In Gold Button Only) */
+      <span className="animate-pulse text-center">{inlineMessage}</span>
+    ) : (
+      /* 🔥 Default State */
+      <span>WITHDRAW NOW</span>
+    )}
+  </button>
+</div>
           {/* Terms and Conditions */}
           {/* <div className="mt-4 text-[#6b7280] text-[10px] leading-relaxed font-medium text-center px-2">
             <p>Minimum withdrawal is $2. Timing: 10:00 AM to 12:00 PM.</p>
