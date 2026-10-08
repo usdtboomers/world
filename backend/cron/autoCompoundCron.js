@@ -1,0 +1,136 @@
+const cron = require('node-cron');
+const User = require('../models/User');
+const AutoCompoundPackage = require('../models/AutoCompoundPackage'); // 🔥 Naya Model
+const Transaction = require('../models/Transaction');
+
+// 🔥 Sirf Instance '0' par chalega taaki double run na ho
+if (process.env.NODE_APP_INSTANCE === '0' || process.env.NODE_APP_INSTANCE === undefined) {
+
+    // 🕛 Run everyday at 12:30 AM (IST) - Normal ROI ke baad chalega
+    cron.schedule('30 0 * * *', async () => {
+        console.log('⏳ Running 6% AUTO COMPOUNDING Cron Job for World Finance...');
+        
+        try {
+            // Sirf wo packages nikalenge jo Active hain aur 25 din se kam ke hain
+            const activePackages = await AutoCompoundPackage.find({
+                status: 'active',
+                daysCompleted: { $lt: 25 }
+            }).lean();
+
+            const istDateString = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+            const startOfToday = new Date(istDateString);
+            startOfToday.setHours(0, 0, 0, 0);
+
+            const chunkSize = 50; 
+
+            for (let i = 0; i < activePackages.length; i += chunkSize) {
+                const chunk = activePackages.slice(i, i + chunkSize);
+
+                await Promise.all(chunk.map(async (pkg) => {
+                    try {
+                        // 🛑 DOUBLE PAYOUT PREVENTION
+                        const alreadyProcessed = await Transaction.findOne({
+                            userId: pkg.userId,
+                            type: { $in: ['compound_reinvest', 'compound_release'] },
+                            description: { $regex: `Day ${pkg.daysCompleted + 1}/25` },
+                            date: { $gte: startOfToday }
+                        }).lean();
+
+                        if (alreadyProcessed) return; 
+
+                        const user = await User.findOne({ userId: pkg.userId }).lean();
+                        if (!user) return; 
+
+                        // 🔥 6% DAILY CALCULATION
+                        const dailyAmount = Number((pkg.packageAmount * 0.06).toFixed(4)); 
+                        const newDays = pkg.daysCompleted + 1;
+
+                        // Check if Re-investment Phase is ON (today is before compoundingEndDate)
+                        const packageCompoundingEndDate = new Date(pkg.compoundingEndDate);
+                        packageCompoundingEndDate.setHours(23, 59, 59, 999);
+
+                        if (startOfToday <= packageCompoundingEndDate) {
+                            // ==========================================
+                            // 🔄 PHASE 1: RE-INVESTMENT (CHILD CYCLE BANEGA)
+                            // ==========================================
+                            // Paise wallet me nahi jayenge, ek NAYA 25-din ka package banega
+                            
+                            const childEndDate = new Date(startOfToday);
+                            childEndDate.setDate(childEndDate.getDate() + 25); // Naye package ki life 25 din
+
+                            await AutoCompoundPackage.create({
+                                userId: pkg.userId,
+                                memberId: pkg.memberId,
+                                purchasedBy: "SYSTEM_AUTO_COMPOUND",
+                                packageAmount: dailyAmount, // 6% amount se naya package 
+                                dailyPercentage: 6,
+                                totalDays: 25,
+                                compoundingDuration: pkg.compoundingDuration,
+                                compoundingEndDate: pkg.compoundingEndDate, // Inherit master's end date
+                                daysCompleted: 0,
+                                startDate: new Date(),
+                                endDate: childEndDate,
+                                status: 'active',
+                                packageType: 'child',
+                                masterId: pkg.masterId || pkg._id
+                            });
+
+                            // Reinvest Transaction Log (Alag naam)
+                            await Transaction.create({
+                                userId: user.userId,
+                                type: "compound_reinvest",
+                                source: "auto_compound",
+                                amount: dailyAmount,
+                                description: `Auto Compound Re-invested ($${dailyAmount}) - Day ${newDays}/25`,
+                                status: "success",
+                                date: new Date()
+                            });
+
+                        } else {
+                            // ==========================================
+                            // 💸 PHASE 2: RELEASE TO WALLET (WITHDRAWAL START)
+                            // ==========================================
+                            // Timer (50/100 days) khatam, ab seedha nayi wallet me paisa jayega
+                            
+                            await User.updateOne(
+                                { _id: user._id }, 
+                                // 🔥 Normal 'roiIncome' ki jagah nayi field 'autoCompoundIncome' use ki hai taaki mix na ho
+                                { $inc: { autoCompoundIncome: dailyAmount, totalAutoCompoundIncome: dailyAmount } }
+                            );
+
+                            // Release Transaction Log
+                            await Transaction.create({
+                                userId: user.userId,
+                                type: "compound_release",
+                                source: "auto_compound",
+                                amount: dailyAmount,
+                                description: `Auto Compound Wallet Release ($${dailyAmount}) - Day ${newDays}/25`,
+                                status: "success",
+                                date: new Date()
+                            });
+                        }
+
+                        // ==========================================
+                        // 🕒 PACKAGE EXPIRY UPDATE
+                        // ==========================================
+                        const pkgUpdate = { $inc: { daysCompleted: 1 } };
+                        // Agar package ke 25 din pure ho gaye toh usko complete (expire) mark kar do
+                        if (newDays >= pkg.totalDays) {
+                            pkgUpdate.$set = { status: 'completed' };
+                        }
+                        await AutoCompoundPackage.updateOne({ _id: pkg._id }, pkgUpdate);
+
+                    } catch (pkgError) {
+                        console.error(`❌ Error processing Auto Compound for package ${pkg._id}:`, pkgError);
+                    }
+                }));
+            }
+            console.log('🎉 6% Auto Compounding Cron Job Finished Successfully!');
+        } catch (error) {
+            console.error('❌ Auto Compound Cron Job Fatal Error:', error);
+        }
+    }, {
+        scheduled: true,
+        timezone: "Asia/Kolkata" 
+    });
+}

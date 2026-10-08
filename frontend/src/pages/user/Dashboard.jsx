@@ -2218,6 +2218,7 @@ import { useNavigate } from "react-router-dom";
 import ReferralLink from "../../components/dashboard/ReferralLink"; 
 import QuickActions from "../../components/dashboard/QuickActions"; 
 import TotalEarningBox from "../../components/dashboard/TotalEarningBox"; 
+// import LivePackageStatsBox from "../../components/dashboard/LivePackageStatsBox";
 import MonthlySalaryCard from "../../components/MonthlySalaryCard"; 
 import UserInfoBoxes from "../../components/dashboard/UserInfoBoxes";
 
@@ -2371,6 +2372,7 @@ const Dashboard = ({ modalState, setModalState }) => {
         </div>
 
         <TotalEarningBox user={user} />
+        {/* <LivePackageStatsBox user={user} /> */}
         <MonthlySalaryCard userId={user.userId} />
         <ReferralLink link={referralLink} />
 

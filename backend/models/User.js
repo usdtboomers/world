@@ -60,6 +60,10 @@ const userSchema = new mongoose.Schema({
     }
   ],
 
+
+
+ autoCompoundIncome: { type: Number, default: 0 },
+totalAutoCompoundIncome: { type: Number, default: 0 },
   // ==========================================
   // 💰 INCOME WALLETS (WITHDRAWABLE)
   // ==========================================

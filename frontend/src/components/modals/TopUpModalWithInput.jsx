@@ -1371,9 +1371,9 @@ const TopUpModalWithInput = ({ onClose, onSuccess, packageAmount }) => {
           login(refreshedRes.data.user, token);
           setFundWallet(refreshedRes.data.user.walletBalance);
 
-          if (onSuccess) {
-            onSuccess(); 
-          }
+          // if (onSuccess) {
+          //   onSuccess(); 
+          // }
         }
       }
     } catch (err) {

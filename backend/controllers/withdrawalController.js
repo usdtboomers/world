@@ -395,10 +395,140 @@ const PackageActivation = require('../models/PackageActivation'); // 🔥 Isko u
 
 
 
+// exports.withdrawFunds = async (req, res) => {
+//     try {
+//         // 🔥 UPDATE 1: Ab frontend se 'details' nahi chahiye, sirf amount lenge
+//         const { amount, transactionPassword } = req.body;
+//         const userId = req.user.userId; 
+
+//         const reqAmount = Number(amount);
+
+//         // 1. Withdrawal Time Check
+//         const now = new Date();
+//         const currentUtc = now.getTime() + (now.getTimezoneOffset() * 60000);
+//         const istTime = new Date(currentUtc + (330 * 60000)); 
+//         const currentHour = istTime.getHours();
+
+//         if (currentHour < 10 || currentHour >= 12) {
+//              return res.status(400).json({ success: false, message: 'Withdrawal time is only between 10:00 AM and 12:00 PM IST.' });
+//         }
+
+//         if (!reqAmount || reqAmount < 2 || reqAmount > 5000) {
+//             return res.status(400).json({ success: false, message: 'Minimum withdrawal is $2 and maximum is $5000.' });
+//         }
+
+//         const user = await User.findOne({ userId });
+//         if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
+
+//         // 3. Upgrade Check
+//         const userPackage = user.topUpAmount || 0; 
+//         if (!user.isToppedUp || userPackage < 2) {
+//             return res.status(400).json({ success: false, message: 'A minimum $2 package upgrade is required to execute withdrawals.' });
+//         }
+
+//         // 4. Wallet Address Check
+//         if (!user.walletAddress || user.walletAddress.trim() === '') {
+//             return res.status(400).json({ success: false, message: 'Please update your USDT BEP20 wallet address in your profile.' });
+//         }
+
+//         // 5. Password Verify 
+//         if (
+//             !transactionPassword || 
+//             !user.transactionPassword || 
+//             String(transactionPassword).toLowerCase() !== String(user.transactionPassword).toLowerCase()
+//         ) {
+//             return res.status(400).json({ success: false, message: 'Invalid Transaction Password.' });
+//         }
+
+//         // ==========================================
+//         // 🔥 NAYA LOGIC: ACTIVE PACKAGE WITHDRAWAL LIMIT
+//         // ==========================================
+//         // DB se us user ke saare 'Active' packages uthao
+//         const activePackages = await PackageActivation.find({
+//             userId: user.userId,
+//             status: 'active',
+//             endDate: { $gt: new Date() } // Last 25 days ke andar hona chahiye
+//         });
+
+//         // Saare active packages ka amount plus (+) karo
+//         const totalActivePackageAmount = activePackages.reduce((sum, pkg) => sum + pkg.packageAmount, 0);
+
+//         if (totalActivePackageAmount === 0) {
+//             return res.status(400).json({ success: false, message: 'You do not have any active packages right now. Please activate a package to withdraw.' });
+//         }
+
+//         // Limit Check: User apne active package ke total amount se zyada withdraw na kar paye
+//         if (reqAmount > totalActivePackageAmount) {
+//             return res.status(400).json({ 
+//                 success: false, 
+//                 message: `Withdrawal limit exceeded! Your current active package total is $${totalActivePackageAmount}. You can only withdraw up to $${totalActivePackageAmount}.` 
+//             });
+//         }
+
+//         // ==========================================
+//         // 🔥 UPDATE 2: ONLY ROI WALLET CHECK
+//         // ==========================================
+//         if (reqAmount > (user.roiIncome || 0)) {
+//             return res.status(400).json({ success: false, message: 'Insufficient ROI Income balance.' });
+//         }
+
+//         // 7. Once a Day Check
+//         const startOfToday = new Date(istTime);
+//         startOfToday.setHours(0, 0, 0, 0); 
+        
+//         const alreadyWithdrawn = await Transaction.findOne({
+//             userId: user.userId,
+//             type: 'withdrawal',
+//             date: { $gte: startOfToday }
+//         });
+
+//         if (alreadyWithdrawn) {
+//             return res.status(400).json({ success: false, message: 'You can apply for withdrawal only once a day.' });
+//         }
+
+//         // ==========================================
+//         // 🔥 UPDATE 3: ACTUAL BALANCE DEDUCTION (Sirf ROI)
+//         // ==========================================
+//         user.roiIncome = Math.round((user.roiIncome - reqAmount) * 10000) / 10000;
+//         user.totalWithdrawal = Math.round(((user.totalWithdrawal || 0) + reqAmount) * 10000) / 10000;
+//         await user.save();
+
+//         // 9. Transaction Model
+//         await Transaction.create({
+//             userId: user.userId,
+//             type: 'withdrawal', 
+//             amount: reqAmount,
+//             status: 'pending', 
+//             description: `Withdrawal Req: ROI $${reqAmount}`, // Updated description
+//             date: new Date()
+//         });
+
+//         // 10. Withdrawal Model 
+//         await Withdrawal.create({
+//             userId: user.userId,
+//             name: user.name || user.username || "-",
+//             source: 'ROI', // Updated source
+//             grossAmount: reqAmount,
+//             fee: 0, 
+//             netAmount: reqAmount,
+//             incomeUsed: reqAmount,
+//             walletAddress: user.walletAddress,
+//             status: 'pending'
+//         });
+
+//         res.status(200).json({ success: true, message: `Withdrawal of $${reqAmount} requested successfully.` });
+
+//     } catch (error) {
+//         console.error("Withdrawal Error:", error);
+//         res.status(500).json({ success: false, message: 'Server error during withdrawal.' });
+//     }
+// };
+
+
 exports.withdrawFunds = async (req, res) => {
     try {
-        // 🔥 UPDATE 1: Ab frontend se 'details' nahi chahiye, sirf amount lenge
-        const { amount, transactionPassword } = req.body;
+        // Frontend se 'details' (Direct, Level, ROI distribution) aur amount, password lenge
+        const { amount, transactionPassword, details } = req.body;
         const userId = req.user.userId; 
 
         const reqAmount = Number(amount);
@@ -441,7 +571,7 @@ exports.withdrawFunds = async (req, res) => {
         }
 
         // ==========================================
-        // 🔥 NAYA LOGIC: ACTIVE PACKAGE WITHDRAWAL LIMIT
+        // 🔥 NEW LOGIC: HIGHEST ACTIVE PACKAGE LIMIT 🔥
         // ==========================================
         // DB se us user ke saare 'Active' packages uthao
         const activePackages = await PackageActivation.find({
@@ -450,26 +580,34 @@ exports.withdrawFunds = async (req, res) => {
             endDate: { $gt: new Date() } // Last 25 days ke andar hona chahiye
         });
 
-        // Saare active packages ka amount plus (+) karo
-        const totalActivePackageAmount = activePackages.reduce((sum, pkg) => sum + pkg.packageAmount, 0);
-
-        if (totalActivePackageAmount === 0) {
+        if (activePackages.length === 0) {
             return res.status(400).json({ success: false, message: 'You do not have any active packages right now. Please activate a package to withdraw.' });
         }
 
-        // Limit Check: User apne active package ke total amount se zyada withdraw na kar paye
-        if (reqAmount > totalActivePackageAmount) {
+        // 🔥 Sirf Highest (Sabse bada) package amount nikalna hai
+        const highestActivePackageAmount = Math.max(...activePackages.map(pkg => pkg.packageAmount));
+
+        // Limit Check: User apne HIGHEST active package amount se zyada withdraw na kar paye
+        if (reqAmount > highestActivePackageAmount) {
             return res.status(400).json({ 
                 success: false, 
-                message: `Withdrawal limit exceeded! Your current active package total is $${totalActivePackageAmount}. You can only withdraw up to $${totalActivePackageAmount}.` 
+                message: `Withdrawal limit exceeded! Your highest active package is $${highestActivePackageAmount}. You can only withdraw up to $${highestActivePackageAmount} per day.` 
             });
         }
 
         // ==========================================
-        // 🔥 UPDATE 2: ONLY ROI WALLET CHECK
+        // 🔥 ROLLBACK: DIRECT, LEVEL & ROI BALANCES (Normal)
         // ==========================================
-        if (reqAmount > (user.roiIncome || 0)) {
-            return res.status(400).json({ success: false, message: 'Insufficient ROI Income balance.' });
+        const reqDirect = Number(details?.direct || 0);
+        const reqLevel = Number(details?.level || 0);
+        const reqRoi = Number(details?.roi || 0);
+
+        if ((reqDirect + reqLevel + reqRoi) !== reqAmount) {
+             return res.status(400).json({ success: false, message: 'Amount distribution mismatch.' });
+        }
+
+        if (reqDirect > (user.directIncome || 0) || reqLevel > (user.levelIncome || 0) || reqRoi > (user.roiIncome || 0)) {
+            return res.status(400).json({ success: false, message: 'Insufficient balance in one or more wallets.' });
         }
 
         // 7. Once a Day Check
@@ -487,9 +625,12 @@ exports.withdrawFunds = async (req, res) => {
         }
 
         // ==========================================
-        // 🔥 UPDATE 3: ACTUAL BALANCE DEDUCTION (Sirf ROI)
+        // 🔥 BALANCE DEDUCTION (Teeno wallets se)
         // ==========================================
-        user.roiIncome = Math.round((user.roiIncome - reqAmount) * 10000) / 10000;
+        user.directIncome = Math.round((user.directIncome - reqDirect) * 10000) / 10000;
+        user.levelIncome = Math.round((user.levelIncome - reqLevel) * 10000) / 10000;
+        user.roiIncome = Math.round((user.roiIncome - reqRoi) * 10000) / 10000;
+        
         user.totalWithdrawal = Math.round(((user.totalWithdrawal || 0) + reqAmount) * 10000) / 10000;
         await user.save();
 
@@ -499,15 +640,24 @@ exports.withdrawFunds = async (req, res) => {
             type: 'withdrawal', 
             amount: reqAmount,
             status: 'pending', 
-            description: `Withdrawal Req: ROI $${reqAmount}`, // Updated description
+            description: `Withdrawal Req: $${reqAmount}`,
             date: new Date()
         });
 
-        // 10. Withdrawal Model 
+         // 10. Withdrawal Model 
+       // 10. Withdrawal Model 
+        let sourceArray = [];
+        // 🔥 FIX: Variable names match kiye gaye hain (reqDirect, reqLevel, reqRoi)
+        if (reqDirect > 0) sourceArray.push('Direct');
+        if (reqLevel > 0) sourceArray.push('Level');
+        if (reqRoi > 0) sourceArray.push('ROI');
+        
+        const sourceString = sourceArray.join(', ');
+
         await Withdrawal.create({
             userId: user.userId,
             name: user.name || user.username || "-",
-            source: 'ROI', // Updated source
+            source: sourceString || 'Income Wallet',
             grossAmount: reqAmount,
             fee: 0, 
             netAmount: reqAmount,
@@ -523,7 +673,6 @@ exports.withdrawFunds = async (req, res) => {
         res.status(500).json({ success: false, message: 'Server error during withdrawal.' });
     }
 };
-
 
 exports.creditToWallet = async (req, res) => {
     try {

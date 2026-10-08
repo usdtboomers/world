@@ -221,6 +221,7 @@
 const User = require('../models/User'); 
 const PackageActivation = require('../models/PackageActivation'); 
 const Transaction = require('../models/Transaction'); 
+const AutoCompoundPackage = require('../models/AutoCompoundPackage');
 
 exports.activatePackage = async (req, res) => {
     try {
@@ -424,6 +425,192 @@ exports.activatePackage = async (req, res) => {
 
     } catch (error) {
         console.error("Package Activation Error:", error);
+        res.status(500).json({ success: false, message: "Server Error during activation" });
+    }
+};
+
+
+
+exports.activateAutoCompoundPackage = async (req, res) => {
+    try {
+        const { userId, memberId, packageAmount, txnPassword, duration } = req.body;
+        const amount = Number(packageAmount);
+        
+        // cycleDays = 25, 50, ya 100 (Yeh Compounding Mode ka timer hai)
+        const cycleDays = Number(duration); 
+        
+        // packageLife = 25 (Har package strictly 25 din hi zinda rahega)
+        const packageLife = 25; 
+
+        const VALID_PACKAGES = [2, 5, 10, 20, 50, 100, 200, 500, 1000]; 
+        const VALID_DURATIONS = [25, 50, 100]; 
+
+        if (!amount || isNaN(amount) || amount <= 0) {
+            return res.status(400).json({ success: false, message: 'Invalid Package Amount.' });
+        }
+
+        if (!VALID_DURATIONS.includes(cycleDays)) {
+            return res.status(400).json({ success: false, message: 'Invalid Duration. Choose 25, 50, or 100 days.' });
+        }
+
+        if (!VALID_PACKAGES.includes(amount)) {
+            console.warn(`🚨 SECURITY ALERT: User ${userId} tried fake Auto Compound package of $${amount}`);
+            return res.status(403).json({ success: false, message: 'Security System: Custom or Fake Package Amounts are blocked!' });
+        }
+
+        const currentUser = await User.findOne({ userId: String(userId) });
+        if (!currentUser) return res.status(404).json({ success: false, message: "Current user not found" });
+
+        const targetUser = await User.findOne({ userId: String(memberId) });
+        if (!targetUser) return res.status(404).json({ success: false, message: "Member ID not found" });
+
+        if (!txnPassword || !currentUser.transactionPassword || txnPassword.toLowerCase() !== currentUser.transactionPassword.toLowerCase()) {
+            return res.status(400).json({ success: false, message: "Invalid Transaction Password!" });
+        }
+
+        // Fund Wallet Check
+        if ((currentUser.walletBalance || 0) < amount) {
+            return res.status(400).json({ success: false, message: "Insufficient Fund Amount ($)!" });
+        }
+
+        currentUser.walletBalance -= amount;
+        await currentUser.save();
+
+        // =======================================================
+        // 🔥 NAYA MASTER LOGIC: DATES SEPARATION 🔥
+        // =======================================================
+        const startDate = new Date();
+        
+        // 1. Package ki asli Maut (Expiry Date) - Har package 25 din baad expire hoga
+        const endDate = new Date();
+        endDate.setDate(startDate.getDate() + packageLife); 
+
+        // 2. Compounding Phase ka End Date - Reinvestment kab tak chalega (25, 50, 100)
+        const compoundingEndDate = new Date();
+        compoundingEndDate.setDate(startDate.getDate() + cycleDays); 
+
+        const newCompoundPackage = await AutoCompoundPackage.create({
+            userId: targetUser.userId,         
+            memberId: targetUser.userId,       
+            purchasedBy: currentUser.userId,
+            packageAmount: amount,           
+            dailyPercentage: 6, // 6% Daily ROI
+            totalDays: packageLife, // 25 din ki package life
+            compoundingDuration: cycleDays, // User ne 50 ya 100 select kiya
+            compoundingEndDate: compoundingEndDate, // Is date tak daily naya package banega
+            daysCompleted: 0,
+            startDate: startDate,
+            endDate: endDate, // 25 din baad Master Package expire
+            status: 'active',
+            packageType: 'master', 
+            masterId: null 
+        });
+
+        // Target User ki basic info update
+        let isFirstTopup = !targetUser.isToppedUp;
+        if (!targetUser.packages) targetUser.packages = [];
+        targetUser.packages.push({ 
+            plan: "Auto Compound (6%)", 
+            amount: amount, 
+            duration: cycleDays, 
+            startDate: new Date() 
+        });
+        
+        targetUser.topUpAmount = Math.max(targetUser.topUpAmount || 0, amount);
+        targetUser.updatedAt = new Date(); 
+        if (isFirstTopup) {
+            targetUser.isToppedUp = true;
+            targetUser.topUpDate = new Date();
+        }
+        await targetUser.save();
+
+        const createTransaction = async (data) => {
+            return Transaction.create({ ...data, date: new Date() });
+        };
+
+        await createTransaction({
+            userId: currentUser.userId, type: "compound_activation", amount: amount,
+            fromUserId: currentUser.userId, toUserId: targetUser.userId,
+            description: `Activated $${amount} Auto Compound (${cycleDays} Days Timer) for ${targetUser.userId}`, status: 'success'
+        });
+
+        res.status(200).json({ 
+            success: true, 
+            message: `Auto Compound Package of $${amount} (Timer: ${cycleDays} Days) activated successfully!`,
+            data: newCompoundPackage
+        });
+
+        // =======================================================
+        // 🔹 BACKGROUND MLM ENGINE (DIRECT & LEVEL INSTANT DE RAHE HAIN)
+        // =======================================================
+        (async () => {
+            try {
+                // 1. DIRECT INCOME (10%)
+                if (targetUser.sponsorId) {
+                    const sponsor = await User.findOne({ userId: targetUser.sponsorId });
+                    
+                    if (sponsor) {
+                        const isActiveSponsor = sponsor.isToppedUp && sponsor.topUpAmount >= 2; 
+
+                        if (isActiveSponsor) {
+                            sponsor.directCount = (sponsor.directCount || 0) + 1;
+                            const directBonusAmount = (amount * 10) / 100; 
+
+                            sponsor.directIncome = (sponsor.directIncome || 0) + directBonusAmount;
+                            sponsor.totalDirectIncome = (sponsor.totalDirectIncome || 0) + directBonusAmount;
+                            
+                            await createTransaction({
+                                userId: sponsor.userId, type: "direct_income", source: "direct", amount: directBonusAmount, 
+                                package: amount, 
+                                fromUserId: targetUser.userId, description: `Direct Bonus (10%) from ${targetUser.userId}'s Compound Package`, status: 'success'
+                            });
+                            await sponsor.save();
+                        }
+                    }
+                }
+
+                // 2. LEVEL INCOME (0.25% upto 12 Levels)
+                const LEVEL_PERCENTAGES = [0, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25]; 
+                let currentUplineId = targetUser.sponsorId; 
+                let currentLevel = 1; 
+
+                while (currentUplineId && currentLevel <= 12) {
+                    const upline = await User.findOne({ userId: currentUplineId }).select('userId isToppedUp topUpAmount sponsorId _id');
+                    if (!upline) break;
+
+                    const isActiveUpline = upline.isToppedUp && upline.topUpAmount >= 2;
+
+                    if (!isActiveUpline) {
+                        currentUplineId = upline.sponsorId; 
+                        currentLevel++;
+                        continue; 
+                    }
+
+                    if (currentLevel >= 2 && currentLevel <= 12) {
+                        const percentage = LEVEL_PERCENTAGES[currentLevel - 1]; 
+                        const levelAmount = (amount * percentage) / 100;
+
+                        if (levelAmount > 0) {
+                            await User.updateOne({ _id: upline._id }, { $inc: { levelIncome: levelAmount, totalLevelIncome: levelAmount } });
+                            
+                            await createTransaction({
+                                userId: upline.userId, type: "level_income", source: "level", amount: levelAmount,
+                                package: amount, 
+                                fromUserId: targetUser.userId, description: `Level ${currentLevel} Income (${percentage}%) from Compound Package`, status: 'success'
+                            });
+                        }
+                    }
+
+                    currentUplineId = upline.sponsorId;
+                    currentLevel++;
+                }
+            } catch (bgError) {
+                console.error("Background MLM Engine Error (Compound Package):", bgError);
+            }
+        })();
+
+    } catch (error) {
+        console.error("Compound Package Activation Error:", error);
         res.status(500).json({ success: false, message: "Server Error during activation" });
     }
 };
