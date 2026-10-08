@@ -1926,6 +1926,112 @@ router.get('/topup-users', verifyAdmin, async (req, res) => {
 
 
 
+router.get('/highest-active-packages', verifyAdmin, async (req, res) => {
+  try {
+    const currentDate = new Date();
+
+    // 1. Last 25 Days ke sabhi ACTIVE packages fetch karo (jinka endDate aaj se aage hai)
+    const activePackages = await PackageActivation.find({
+      endDate: { $gt: currentDate },
+      status: 'active'
+    }).sort({ packageAmount: -1, endDate: -1 }).lean();
+
+    const highestPackageMap = new Map();
+    const allUserIds = new Set();
+
+    // 2. Har User ka HIGHEST active package filter karne ka logic
+    activePackages.forEach(pkg => {
+      const receiverId = String(pkg.userId || pkg.memberId);
+      if (!receiverId) return;
+
+      allUserIds.add(receiverId);
+      if (pkg.purchasedBy) allUserIds.add(String(pkg.purchasedBy));
+
+      if (!highestPackageMap.has(receiverId)) {
+        highestPackageMap.set(receiverId, pkg);
+      } else {
+        const existingPkg = highestPackageMap.get(receiverId);
+        
+        // Check 1: Agar current package ka amount bada hai
+        if (pkg.packageAmount > existingPkg.packageAmount) {
+          highestPackageMap.set(receiverId, pkg);
+        } 
+        // Check 2: Agar package amount SAME hai, toh sabse lambi validity (latest endDate) wala rakho
+        else if (pkg.packageAmount === existingPkg.packageAmount) {
+          if (new Date(pkg.endDate) > new Date(existingPkg.endDate)) {
+            highestPackageMap.set(receiverId, pkg);
+          }
+        }
+      }
+    });
+
+    // 3. User Details Fetch (String IDs se fix karke)
+    const users = await User.find(
+      { userId: { $in: Array.from(allUserIds) } }, 
+      { userId: 1, name: 1, mobile: 1 } 
+    ).lean();
+
+    const userMap = {};
+    users.forEach(u => {
+      if (u.userId) userMap[String(u.userId)] = u;
+    });
+
+    const packageMap = {
+      2: 'SAVING 1', 5: 'SAVING 2', 10: 'SAVING 3', 20: 'SAVING 4',
+      50: 'SAVING 5', 100: 'SAVING 6', 200: 'SAVING 7', 500: 'SAVING 8', 1000: 'SAVING 9'
+    };
+
+    // 4. Final Response Array construct karna
+    const result = Array.from(highestPackageMap.values()).map(pkg => {
+      const receiverId = String(pkg.userId || pkg.memberId);
+      
+      let amountStr = "0";
+      if (pkg.packageAmount !== undefined && pkg.packageAmount !== null) {
+        if (pkg.packageAmount.$numberDecimal) amountStr = pkg.packageAmount.$numberDecimal;
+        else amountStr = pkg.packageAmount.toString();
+      }
+      const amount = Number(amountStr) || 0;
+      const packageName = packageMap[amount] || `Custom ($${amount})`;
+
+      // TopUp / Purchased By Logic
+      let topUpByName = "Self"; 
+      if (pkg.purchasedBy && String(pkg.purchasedBy) !== receiverId) {
+        const senderIdStr = String(pkg.purchasedBy);
+        const senderName = userMap[senderIdStr]?.name || 'Unknown';
+        topUpByName = `${senderName} (#${senderIdStr})`; 
+      } else if (pkg.source === 'admin' || pkg.source === 'system') {
+        topUpByName = "System / Admin";
+      }
+
+      return {
+        _id: pkg._id,
+        userId: receiverId,
+        name: userMap[receiverId]?.name || 'Unknown',
+        mobile: userMap[receiverId]?.mobile || 'N/A', 
+        topUpAmount: amount,
+        highestPackageAmount: amount,
+        packageName: packageName,
+        topUpBy: topUpByName, 
+        purchasedBy: pkg.purchasedBy || receiverId,
+        startDate: pkg.startDate,
+        endDate: pkg.endDate,
+        daysCompleted: pkg.daysCompleted || 0,
+        totalDays: pkg.totalDays || 25,
+        status: pkg.status || 'active'
+      };
+    });
+
+    // Highest package amount ke hisaab se descending order me sort karo
+    result.sort((a, b) => b.highestPackageAmount - a.highestPackageAmount);
+
+    res.json(result);
+  } catch (err) {
+    console.error('Error in /highest-active-packages:', err);
+    res.status(500).json({ error: 'Failed to fetch highest active packages' });
+  }
+});
+
+
 
 
 

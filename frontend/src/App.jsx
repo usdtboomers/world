@@ -384,6 +384,7 @@ import UserListTable from './pages/admin/UserListTable.jsx';
 import DepositTable from './pages/admin/DepositTable.jsx';
 import AdminTransactions from './pages/admin/AdminTransactions.jsx';
 import TotalTopUpPage from './pages/admin/TotalTopUpPage.jsx';
+import HighestActivePackagesPage from './pages/admin/HighestActivePackagesPage.jsx';
 import AdminSettingsPage from './pages/admin/AdminSettingsPage.jsx';
 import RequestWithdrawalPage from './pages/admin/RequestWithdrawalPage.jsx';
 import AllWithdrawalsPage from './pages/admin/AllWithdrawalsPage.jsx';
@@ -494,6 +495,7 @@ function AppContent() {
                 <Route index element={<AdminDashboard />} />
                 <Route path="users" element={<UserListTable />} />
                 <Route path="topups" element={<TotalTopUpPage />} />
+                <Route path="highest-active-packages" element={<HighestActivePackagesPage />} />
                 <Route path="deposits" element={<DepositTable />} />
                 <Route path="address-monitor" element={<DepositAddressMonitor />} />
                 <Route path="india-boost" element={<IndiaBoostControl />} />

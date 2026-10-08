@@ -903,7 +903,7 @@ import { Timer, Users, Activity } from 'lucide-react';
 import {
   FaHome, FaUsers, FaMoneyBill, FaWallet, FaListAlt, FaCog, FaSignOutAlt,
   FaSitemap, FaProjectDiagram, FaExchangeAlt, FaFileAlt, FaUserPlus, FaGift,
-  FaArrowCircleUp, FaArrowCircleDown, FaBell, FaClipboardList, FaCoins,
+  FaArrowCircleUp, FaCheckCircle, FaArrowCircleDown, FaBell, FaClipboardList, FaCoins,
   FaUserSlash, FaBars, FaTimes, FaHistory, FaShieldAlt, FaBan,
   FaUserCog, FaYoutube, FaRocket, FaSearchDollar, FaPiggyBank, FaTrophy, FaChartPie, FaBolt, FaMoneyCheckAlt,
   FaClock // <-- NAYA ICON ADD KIYA HAI
@@ -1048,6 +1048,15 @@ const Sidebar = () => {
             <NavLink to={`${BASE_PATH}/topups`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/topups`)}>
               <FaArrowCircleUp className="inline-block mr-2" /> Top-Ups
             </NavLink>
+
+            <NavLink 
+  to={`${BASE_PATH}/highest-active-packages`} 
+  className={linkClass} 
+  onClick={(e) => handleNavClick(e, `${BASE_PATH}/highest-active-packages`)}
+>
+  <FaCheckCircle className="inline-block mr-2 text-emerald-400" /> Active Packages
+</NavLink>
+
             <NavLink to={`${BASE_PATH}/deposits`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/deposits`)}>
               <FaMoneyBill className="inline-block mr-2" /> Deposit Log
             </NavLink>
