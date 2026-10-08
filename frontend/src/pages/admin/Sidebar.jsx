@@ -902,7 +902,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { Timer, Users, Activity } from 'lucide-react'; 
 import {
   FaHome, FaUsers, FaMoneyBill, FaWallet, FaListAlt, FaCog, FaSignOutAlt,
-  FaSitemap, FaProjectDiagram, FaExchangeAlt, FaFileAlt, FaUserPlus, FaGift,
+  FaSitemap, FaProjectDiagram,FaLayerGroup, FaExchangeAlt, FaFileAlt, FaUserPlus, FaGift,
   FaArrowCircleUp, FaCheckCircle, FaArrowCircleDown, FaBell, FaClipboardList, FaCoins,
   FaUserSlash, FaBars, FaTimes, FaHistory, FaShieldAlt, FaBan,
   FaUserCog, FaYoutube, FaRocket, FaSearchDollar, FaPiggyBank, FaTrophy, FaChartPie, FaBolt, FaMoneyCheckAlt,
@@ -1049,6 +1049,7 @@ const Sidebar = () => {
               <FaArrowCircleUp className="inline-block mr-2" /> Top-Ups
             </NavLink>
 
+
             <NavLink 
   to={`${BASE_PATH}/highest-active-packages`} 
   className={linkClass} 
@@ -1056,6 +1057,11 @@ const Sidebar = () => {
 >
   <FaCheckCircle className="inline-block mr-2 text-emerald-400" /> Active Packages
 </NavLink>
+
+
+<NavLink to={`${BASE_PATH}/auto-compound`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/auto-compound`)}>
+              <FaLayerGroup className="inline-block mr-2" /> Auto Compound
+            </NavLink>
 
             <NavLink to={`${BASE_PATH}/deposits`} className={linkClass} onClick={(e) => handleNavClick(e, `${BASE_PATH}/deposits`)}>
               <FaMoneyBill className="inline-block mr-2" /> Deposit Log

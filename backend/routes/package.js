@@ -52,13 +52,14 @@ const router = express.Router();
 
 // 🔥 Auth middleware import
 const authMiddleware = require('../middleware/authMiddleware'); 
-
+const AutoCompoundPackage = require('../models/AutoCompoundPackage'); // 🔥 Yeh import zaroori hai
 // ✅ Naye 'activateAutoCompoundPackage' function ko import me add kiya hai
 const { 
     activatePackage, 
     getUserPackages, 
     activateAutoCompoundPackage 
 } = require('../controllers/packageController');
+
 
 // Yeh tumhara POST route hai (Normal 5% Package kharidne/activate karne ke liye)
 router.post('/activate', authMiddleware, activatePackage);
@@ -68,5 +69,21 @@ router.post('/activate-auto-compound', authMiddleware, activateAutoCompoundPacka
 
 // User ke packages list karne ke liye GET route
 router.get('/user/:userId', authMiddleware, getUserPackages);
+
+
+router.get('/auto-compound/:userId', authMiddleware, async (req, res) => {
+    try {
+        // User ke saare ACTIVE auto compound packages (Master + Child) utha lo
+        const packages = await AutoCompoundPackage.find({ 
+            userId: req.params.userId, 
+            status: 'active' 
+        }).lean();
+        
+        res.json({ success: true, packages });
+    } catch (error) {
+        console.error("Error fetching auto compound packages:", error);
+        res.status(500).json({ success: false });
+    }
+});
 
 module.exports = router;

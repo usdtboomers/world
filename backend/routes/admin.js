@@ -2032,6 +2032,61 @@ router.get('/highest-active-packages', verifyAdmin, async (req, res) => {
 });
 
 
+// NAYA ROUTE: Auto Compound Users List
+const AutoCompoundPackage = require('../models/AutoCompoundPackage'); // Upar import check kar lena
+
+router.get('/auto-compound-users', verifyAdmin, async (req, res) => {
+  try {
+    // Sirf 'master' packages laayenge taaki daily banne wale child packages ki bheed na dikhe
+    const packages = await AutoCompoundPackage.find({ packageType: 'master' }).sort({ createdAt: -1 }).lean();
+
+    const allUserIds = new Set();
+    packages.forEach(p => {
+      if (p.memberId) allUserIds.add(String(p.memberId));
+      if (p.purchasedBy) allUserIds.add(String(p.purchasedBy));
+    });
+
+    const users = await User.find(
+      { userId: { $in: Array.from(allUserIds) } }, 
+      { userId: 1, name: 1, mobile: 1 }
+    ).lean();
+
+    const userMap = {};
+    users.forEach(u => userMap[String(u.userId)] = u);
+
+    const result = packages.map(pkg => {
+      const receiverId = String(pkg.memberId);
+      const purchaserId = String(pkg.purchasedBy);
+
+      // Kisne Top-Up kiya?
+      let topUpByName = "Self"; 
+      if (purchaserId && purchaserId !== receiverId) {
+          const senderName = userMap[purchaserId]?.name || 'Unknown';
+          topUpByName = `${senderName} (#${purchaserId})`; 
+      } else if (purchaserId === "SYSTEM_AUTO_COMPOUND") {
+          topUpByName = "System";
+      }
+
+      return {
+        _id: pkg._id,
+        userId: receiverId,
+        name: userMap[receiverId]?.name || 'Unknown',
+        mobile: userMap[receiverId]?.mobile || 'N/A', 
+        amount: pkg.packageAmount,
+        duration: pkg.compoundingDuration, // 25, 50, 100 Days Timer
+        status: pkg.status,
+        topUpBy: topUpByName, 
+        date: pkg.createdAt
+      };
+    });
+
+    res.json(result);
+  } catch (err) {
+    console.error('Error in /auto-compound-users:', err);
+    res.status(500).json({ error: 'Failed to fetch auto compound users' });
+  }
+});
+
 
 
 

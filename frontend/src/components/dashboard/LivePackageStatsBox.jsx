@@ -1,17 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { X } from "lucide-react"; 
 import api from "../../api/axios"; 
-import { useAuth } from "../../context/AuthContext"; // 🔥 FIX 1: useAuth import kiya
+import { useAuth } from "../../context/AuthContext"; 
 
 const LivePackageStatsBox = ({ user }) => {
-  const { token } = useAuth(); // 🔥 FIX 2: Context se token nikala
+  const { token } = useAuth(); 
 
   const [highestActive, setHighestActive] = useState(0);
   const [totalCompound, setTotalCompound] = useState(0);
 
-  // PROMO ROLE LOGIC & STATES
   const isPromo = user?.role === 'promo';
-  
   const [promoCompound, setPromoCompound] = useState(() => localStorage.getItem(`promo_compound_${user?.userId}`) || null);
   const [promoHighest, setPromoHighest] = useState(() => localStorage.getItem(`promo_highest_${user?.userId}`) || null);
 
@@ -19,57 +17,74 @@ const LivePackageStatsBox = ({ user }) => {
   const [editType, setEditType] = useState(""); 
   const [editValue, setEditValue] = useState("");
 
-  // 🔥 CORE LOGIC: API se real-time user packages fetch karna
+  const getSafeAmount = (val) => {
+    if (!val) return 0;
+    if (val.$numberDecimal) return parseFloat(val.$numberDecimal);
+    return parseFloat(val) || 0;
+  };
+
   useEffect(() => {
-    const fetchUserPackages = async () => {
-      // Agar token ya userId nahi hai, toh wait karo
+    const fetchLiveStats = async () => {
       if (!user?.userId || !token) return; 
 
       try {
-        // 🔥 FIX 3: API call mein Token bhej diya!
-        const res = await api.get(`/user/${user.userId}`, {
+        // =======================================================
+        // 1. FETCH EXACT AUTO COMPOUND AMOUNT FROM DATABASE (NEW)
+        // =======================================================
+        const resCompound = await api.get(`/package/auto-compound/${user.userId}?t=${new Date().getTime()}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         
-        const freshUser = res.data.user;
+        if (resCompound.data.success && resCompound.data.packages) {
+          let exactCompoundTotal = 0;
+          // Database me jitne child+master active hain, unka sum kar do
+          resCompound.data.packages.forEach(pkg => {
+            exactCompoundTotal += Number(pkg.packageAmount);
+          });
+          setTotalCompound(exactCompoundTotal);
+          //console.log(`✅ [COMPOUND SYNC] Exact Database Amount: $${exactCompoundTotal}`);
+        }
 
-        if (freshUser?.packages && Array.isArray(freshUser.packages)) {
+        // =======================================================
+        // 2. FETCH HIGHEST ACTIVE NORMAL PACKAGE FROM HISTORY
+        // =======================================================
+        const resHistory = await api.get(`/wallet/topup-history/${user.userId}?t=${new Date().getTime()}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        if (Array.isArray(resHistory.data) && resHistory.data.length > 0) {
           let calcHighest = 0;
-          let calcCompound = 0;
           const now = new Date();
 
-          freshUser.packages.forEach(pkg => {
-            const pkgDate = new Date(pkg.startDate);
-            const diffDays = (now.getTime() - pkgDate.getTime()) / (1000 * 3600 * 24);
-            
-            // Name ko lowercase kar diya safe check ke liye
-            const planName = (pkg.plan || "").toLowerCase();
+          resHistory.data.forEach((tx) => {
+            let receiverId = tx.toUserId ? String(tx.toUserId) : String(tx.userId);
+            if (receiverId !== String(user.userId)) return; 
 
-            // 1. Auto Compound Package (Pehle isko check karte hain)
-            if (planName.includes("compound")) {
-              const cycle = pkg.duration || 25; 
-              if (diffDays <= cycle) {
-                calcCompound += Number(pkg.amount);
-              }
-            }
-            // 2. Normal Active Package (Agar compound nahi hai)
-            else if (planName.includes("investment") || planName !== "") {
-              if (diffDays <= 25 && pkg.amount > calcHighest) {
-                calcHighest = pkg.amount;
+            const txDate = new Date(tx.createdAt || tx.date);
+            const diffTime = Math.abs(now.getTime() - txDate.getTime());
+            const diffDays = Math.floor(diffTime / (1000 * 3600 * 24)); 
+            
+            const originalAmount = getSafeAmount(tx.amount || tx.grossAmount);
+            const typeStr = (tx.type || "").toLowerCase();
+            const descStr = (tx.description || "").toLowerCase();
+
+            if ((typeStr.includes("activation") || typeStr.includes("topup") || typeStr.includes("package")) && !typeStr.includes("compound")) {
+              if (!descStr.includes("promotion")) { 
+                if (diffDays <= 25 && originalAmount > calcHighest) {
+                  calcHighest = originalAmount;
+                }
               }
             }
           });
-
           setHighestActive(calcHighest);
-          setTotalCompound(calcCompound);
         }
       } catch (error) {
-        console.error("Error fetching live package stats:", error);
+        console.error("❌ [LIVE STATS] API Error:", error);
       }
     };
 
-    fetchUserPackages();
-  }, [user?.userId, token]); // Dependency me token add kiya
+    fetchLiveStats();
+  }, [user?.userId, token]); 
 
   // MODAL HANDLERS FOR PROMO USER
   const handleDoubleClick = (type) => {
@@ -102,14 +117,12 @@ const LivePackageStatsBox = ({ user }) => {
     setIsModalOpen(false);
   };
 
-  // Final display values
   const displayCompound = promoCompound !== null ? Number(promoCompound).toFixed(2) : totalCompound.toFixed(2);
   const displayHighest = promoHighest !== null ? Number(promoHighest).toFixed(2) : highestActive.toFixed(2);
 
   return (
     <>
       <div className="grid grid-cols-2 gap-3 mb-6">
-        
         {/* 🌑 DARK CARD 1: TOTAL AUTO COMPOUND */}
         <div 
           onDoubleClick={() => handleDoubleClick('compound')}
@@ -118,7 +131,7 @@ const LivePackageStatsBox = ({ user }) => {
           <h3 className="text-[#00ff88] font-extrabold text-[11px] sm:text-sm uppercase tracking-wider">
             Auto Compound Active
           </h3>
-          <p className="text-2xl sm:text-3xl font-black text-white mt-1 drop-shadow-md">
+          <p className="text-2xl sm:text-3xl font-black text-white mt-1 drop-shadow-md transition-all duration-500">
             ${displayCompound}
           </p>
         </div>
@@ -135,7 +148,6 @@ const LivePackageStatsBox = ({ user }) => {
             ${displayHighest}
           </p>
         </div>
-
       </div>
 
       {/* 🔥 PROMO EDIT MODAL 🔥 */}
@@ -160,18 +172,8 @@ const LivePackageStatsBox = ({ user }) => {
             />
             
             <div className="flex gap-3">
-              <button 
-                onClick={handleResetPromo}
-                className="flex-1 bg-red-500/10 text-red-500 border border-red-500/30 hover:bg-red-500/20 font-bold py-2.5 rounded-lg transition-colors"
-              >
-                Reset
-              </button>
-              <button 
-                onClick={handleSavePromo}
-                className="flex-1 bg-gradient-to-r from-[#d4af37] to-[#e4c568] text-black font-extrabold py-2.5 rounded-lg hover:brightness-110 transition-all"
-              >
-                Save
-              </button>
+              <button onClick={handleResetPromo} className="flex-1 bg-red-500/10 text-red-500 border border-red-500/30 hover:bg-red-500/20 font-bold py-2.5 rounded-lg transition-colors">Reset</button>
+              <button onClick={handleSavePromo} className="flex-1 bg-gradient-to-r from-[#d4af37] to-[#e4c568] text-black font-extrabold py-2.5 rounded-lg hover:brightness-110 transition-all">Save</button>
             </div>
           </div>
         </div>
