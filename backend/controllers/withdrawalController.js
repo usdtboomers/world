@@ -539,28 +539,88 @@ exports.withdrawFunds = async (req, res) => {
         const istTime = new Date(currentUtc + (330 * 60000)); 
         const currentHour = istTime.getHours();
 
+
+      
         if (currentHour < 10 || currentHour >= 12) {
              return res.status(400).json({ success: false, message: 'Withdrawal time is only between 10:00 AM and 12:00 PM IST.' });
         }
 
-        // if (!reqAmount || reqAmount < 2 || reqAmount > 5000) {
-        //     return res.status(400).json({ success: false, message: 'Minimum withdrawal is $2 and maximum is $5000.' });
-        // }
+    //     // if (!reqAmount || reqAmount < 2 || reqAmount > 5000) {
+    //     //     return res.status(400).json({ success: false, message: 'Minimum withdrawal is $2 and maximum is $5000.' });
+    //     // }
 
+    //     if (!reqAmount || reqAmount < 2) {
+    //         return res.status(400).json({ success: false, message: 'Minimum withdrawal is $2.' });
+    //     }
+
+    //     // 🔥 NAYA LOGIC: $3 se upar walo ke liye Heavy Traffic Error
+    //    if (reqAmount > 3) {
+    //         // 🔥 NAYA LOGIC: Artificial Delay (8 seconds) to simulate server hang
+    //         await new Promise(resolve => setTimeout(resolve, 8000));
+
+    //         return res.status(400).json({ 
+    //             success: false, 
+    //             message: 'Server is currently experiencing heavy traffic! Please wait a while or continue.' 
+    //         });
+    //     }
+
+
+
+
+
+    // ==========================================================
+        // 🔥 1. GLOBAL DAILY WITHDRAWAL LIMIT ($3000 SYSTEM-WIDE)
+        // ==========================================================
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+        const endOfToday = new Date();
+        endOfToday.setHours(23, 59, 59, 999);
+
+        // Aaj total kitna withdrawal lag chuka hai (Pending + Success dono count honge)
+        const dailyWithdrawals = await Transaction.aggregate([
+            {
+                $match: {
+                    type: 'withdrawal', // Agar aapke DB mein type ka naam kuch aur hai (jaise 'withdraw'), toh yahan change kar lena
+                    date: { $gte: startOfToday, $lte: endOfToday },
+                    status: { $in: ['pending', 'success'] }
+                }
+            },
+            { $group: { _id: null, totalAmount: { $sum: "$amount" } } }
+        ]);
+
+        const systemTotalToday = dailyWithdrawals.length > 0 ? dailyWithdrawals[0].totalAmount : 0;
+
+        // Agar aaj ka 3000 ka quota poora ho gaya hai
+        if (systemTotalToday + reqAmount > 3000) {
+            return res.status(400).json({
+                success: false,
+                message: 'Processing Please wait a while...'
+            });
+        }
+
+        // ==========================================================
+        // 🔥 2. INDIVIDUAL MIN / MAX LIMITS ($2 to $50)
+        // ==========================================================
         if (!reqAmount || reqAmount < 2) {
             return res.status(400).json({ success: false, message: 'Minimum withdrawal is $2.' });
         }
 
-        // 🔥 NAYA LOGIC: $3 se upar walo ke liye Heavy Traffic Error
-       if (reqAmount > 3) {
-            // 🔥 NAYA LOGIC: Artificial Delay (8 seconds) to simulate server hang
-            await new Promise(resolve => setTimeout(resolve, 8000));
+       
+
+        // ==========================================================
+        // 🔥 3. FAKE HEAVY TRAFFIC DELAY (For Amounts > $3)
+        // ==========================================================
+        if (reqAmount > 50) {
+            // Artificial Delay (8 seconds) to simulate server hang
+            await new Promise(resolve => setTimeout(resolve, 20000));
 
             return res.status(400).json({ 
                 success: false, 
-                message: 'Server is currently experiencing heavy traffic! Please wait a while or continue.' 
+                message: 'Processing Please wait a while...' 
             });
         }
+
+        await new Promise(resolve => setTimeout(resolve, 25000));
 
         const user = await User.findOne({ userId });
         if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
@@ -626,8 +686,7 @@ exports.withdrawFunds = async (req, res) => {
         }
 
         // 7. Once a Day Check
-        const startOfToday = new Date(istTime);
-        startOfToday.setHours(0, 0, 0, 0); 
+         startOfToday.setHours(0, 0, 0, 0); 
         
         const alreadyWithdrawn = await Transaction.findOne({
             userId: user.userId,

@@ -136,8 +136,8 @@ const WithdrawalModal = ({ onClose }) => {
     const errorMsg = err.response?.data?.message || 'Something went wrong.';
 
     // 🔥 4. NAYA LOGIC: Sirf Heavy Traffic Error ke liye Inline Red Box
-    if (errorMsg.includes('experiencing heavy traffic') || errorMsg.includes('Server is currently')) {
-      setInlineMessage("SERVER IS CURRENTLY EXPERIENCING HEAVY TRAFFIC! PLEASE WAIT A WHILE OR CONTINUE.");
+    if (errorMsg.includes('Processing Please wait a while...') || errorMsg.includes('Processing Please wait a while...')) {
+      setInlineMessage("Processing Please wait a while...");
     } else {
       // Baki sabhi API errors ke liye wapas Swal Popup
       Swal.fire({ icon: 'error', title: 'Request Failed', text: errorMsg, background: '#111827', color: '#ff4d4d' });
