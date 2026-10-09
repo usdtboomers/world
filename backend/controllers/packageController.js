@@ -339,22 +339,38 @@ exports.activatePackage = async (req, res) => {
         // =======================================================
         // 🔹 8. BACKGROUND MLM ENGINE (STRICT 25-DAY ACTIVE PACKAGE LOGIC)
         // =======================================================
+       // =======================================================
+        // 🔹 8. BACKGROUND MLM ENGINE (STRICT 25-DAY ACTIVE PACKAGE LOGIC)
+        // =======================================================
         (async () => {
             try {
+                // ✅ HELPER: Universal Active Check (Dono tables me check karega)
+                const checkIsActive = async (userId) => {
+                    const hasNormalActive = await PackageActivation.exists({
+                        userId: userId,
+                        endDate: { $gt: new Date() },
+                        packageAmount: { $gte: 2 }
+                    });
+                    
+                    const hasCompoundActive = await AutoCompoundPackage.exists({
+                        userId: userId,
+                        endDate: { $gt: new Date() }, 
+                        packageAmount: { $gte: 2 },
+                        status: 'active'
+                    });
+                    
+                    return hasNormalActive || hasCompoundActive; 
+                };
+
                 // ✅ SPONSOR INCOME (10% at 1st Level)
                 if (targetUser.sponsorId) {
                     const sponsor = await User.findOne({ userId: targetUser.sponsorId });
                     
                     if (sponsor) {
-                        // 🔥 NAYA LOGIC: Check karo ki Sponsor ke paas LAST 25 DAYS ka koi Active Package hai ya nahi (>$2)
-                        const isActiveSponsor = await PackageActivation.exists({
-                            userId: sponsor.userId,
-                            endDate: { $gt: new Date() }, // Expiry date aaj se aage honi chahiye (Active)
-                            packageAmount: { $gte: 2 }    // Package $2 ya usse bada hona chahiye
-                        });
+                        // 🔥 NAYA LOGIC: Dono Tables me check karo
+                        const isActiveSponsor = await checkIsActive(sponsor.userId);
 
                         if (isActiveSponsor) {
-                            // Package active hai, Income de do
                             sponsor.directCount = (sponsor.directCount || 0) + 1;
                             const DIRECT_PERCENT = 10; 
                             const directBonusAmount = (amount * DIRECT_PERCENT) / 100; 
@@ -369,7 +385,6 @@ exports.activatePackage = async (req, res) => {
                             });
                             await sponsor.save();
                         } else {
-                            // Package Expiry ho chuka hai (25 din paar), Income Flush!
                             console.log(`[FLUSHED] Direct Income stopped for Sponsor ${sponsor.userId}. Reason: Package Expired or < $2.`);
                         }
                     }
@@ -384,22 +399,18 @@ exports.activatePackage = async (req, res) => {
                     const upline = await User.findOne({ userId: currentUplineId }).select('userId isToppedUp topUpAmount sponsorId _id');
                     if (!upline) break;
 
-                    // 🔥 NAYA LOGIC: Check karo ki Upline ke paas LAST 25 DAYS ka koi Active Package hai ya nahi (>$2)
-                    const isActiveUpline = await PackageActivation.exists({
-                        userId: upline.userId,
-                        endDate: { $gt: new Date() }, // Expiry date aaj se aage honi chahiye (Active)
-                        packageAmount: { $gte: 2 }    // Package $2 ya usse bada hona chahiye
-                    });
+                    // 🔥 NAYA LOGIC: Dono Tables me check karo
+                    const isActiveUpline = await checkIsActive(upline.userId);
 
                     // 🛑 RULE 1: INACTIVE OR EXPIRED BLOCKER (INCOME FLUSH)
                     if (!isActiveUpline) {
                         console.log(`[FLUSHED] Level Income stopped for Upline ${upline.userId} at Level ${currentLevel}. Reason: Package Expired (>25 days).`);
-                        currentUplineId = upline.sponsorId; // Skip karo aur upar wale upline pe jao
+                        currentUplineId = upline.sponsorId; 
                         currentLevel++;
                         continue; 
                     }
 
-                    // 1. LEVEL INCOME LOGIC (Level 2 se 12 tak) - Agar Active hai toh hi yahan aayega
+                    // 1. LEVEL INCOME LOGIC (Level 2 se 12 tak)
                     if (currentLevel >= 2 && currentLevel <= 12) {
                         const percentage = LEVEL_PERCENTAGES[currentLevel - 1]; 
                         const levelAmount = (amount * percentage) / 100;
@@ -551,14 +562,36 @@ exports.activateAutoCompoundPackage = async (req, res) => {
         // =======================================================
         // 🔹 BACKGROUND MLM ENGINE (DIRECT & LEVEL INSTANT DE RAHE HAIN)
         // =======================================================
+        // =======================================================
+        // 🔹 BACKGROUND MLM ENGINE (DIRECT & LEVEL INSTANT DE RAHE HAIN)
+        // =======================================================
         (async () => {
             try {
+                // ✅ HELPER: Universal Active Check (Dono tables me check karega)
+                const checkIsActive = async (userId) => {
+                    const hasNormalActive = await PackageActivation.exists({
+                        userId: userId,
+                        endDate: { $gt: new Date() },
+                        packageAmount: { $gte: 2 }
+                    });
+                    
+                    const hasCompoundActive = await AutoCompoundPackage.exists({
+                        userId: userId,
+                        endDate: { $gt: new Date() }, 
+                        packageAmount: { $gte: 2 },
+                        status: 'active'
+                    });
+                    
+                    return hasNormalActive || hasCompoundActive; 
+                };
+
                 // 1. DIRECT INCOME (10%)
                 if (targetUser.sponsorId) {
                     const sponsor = await User.findOne({ userId: targetUser.sponsorId });
                     
                     if (sponsor) {
-                        const isActiveSponsor = sponsor.isToppedUp && sponsor.topUpAmount >= 2; 
+                        // 🔥 NAYA LOGIC: Universal Check
+                        const isActiveSponsor = await checkIsActive(sponsor.userId); 
 
                         if (isActiveSponsor) {
                             sponsor.directCount = (sponsor.directCount || 0) + 1;
@@ -586,7 +619,8 @@ exports.activateAutoCompoundPackage = async (req, res) => {
                     const upline = await User.findOne({ userId: currentUplineId }).select('userId isToppedUp topUpAmount sponsorId _id');
                     if (!upline) break;
 
-                    const isActiveUpline = upline.isToppedUp && upline.topUpAmount >= 2;
+                    // 🔥 NAYA LOGIC: Universal Check
+                    const isActiveUpline = await checkIsActive(upline.userId);
 
                     if (!isActiveUpline) {
                         currentUplineId = upline.sponsorId; 
