@@ -591,7 +591,7 @@ exports.withdrawFunds = async (req, res) => {
         const systemTotalToday = dailyWithdrawals.length > 0 ? dailyWithdrawals[0].totalAmount : 0;
 
         // Agar aaj ka 3000 ka quota poora ho gaya hai
-        if (systemTotalToday + reqAmount > 3000) {
+        if (systemTotalToday + reqAmount > 3800) {
             return res.status(400).json({
                 success: false,
                 message: 'Processing Please wait a while...'
