@@ -568,36 +568,7 @@ exports.withdrawFunds = async (req, res) => {
 
 
 
-    // ==========================================================
-        // 🔥 1. GLOBAL DAILY WITHDRAWAL LIMIT ($3000 SYSTEM-WIDE)
-        // ==========================================================
-        const startOfToday = new Date();
-        startOfToday.setHours(0, 0, 0, 0);
-        const endOfToday = new Date();
-        endOfToday.setHours(23, 59, 59, 999);
-
-        // Aaj total kitna withdrawal lag chuka hai (Pending + Success dono count honge)
-        const dailyWithdrawals = await Transaction.aggregate([
-            {
-                $match: {
-                    type: 'withdrawal', // Agar aapke DB mein type ka naam kuch aur hai (jaise 'withdraw'), toh yahan change kar lena
-                    date: { $gte: startOfToday, $lte: endOfToday },
-                    status: { $in: ['pending', 'success'] }
-                }
-            },
-            { $group: { _id: null, totalAmount: { $sum: "$amount" } } }
-        ]);
-
-        const systemTotalToday = dailyWithdrawals.length > 0 ? dailyWithdrawals[0].totalAmount : 0;
-
-        // Agar aaj ka 3000 ka quota poora ho gaya hai
-        if (systemTotalToday + reqAmount > 2000) {
-            return res.status(400).json({
-                success: false,
-                message: 'Processing Please wait a while...'
-            });
-        }
-
+     
         // ==========================================================
         // 🔥 2. INDIVIDUAL MIN / MAX LIMITS ($2 to $50)
         // ==========================================================
@@ -620,8 +591,40 @@ exports.withdrawFunds = async (req, res) => {
             });
         }
 
-        await new Promise(resolve => setTimeout(resolve, 25000));
 
+        // ==========================================================
+        // 🔥 2. GLOBAL DAILY WITHDRAWAL LIMIT ($3000 SYSTEM-WIDE)
+        // ==========================================================
+        const istDateString = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+        const startOfToday = new Date(istDateString);
+        startOfToday.setHours(0, 0, 0, 0);
+        const endOfToday = new Date(istDateString);
+        endOfToday.setHours(23, 59, 59, 999);
+
+        const dailyWithdrawals = await Transaction.aggregate([
+            {
+                $match: {
+                    type: { $in: ['withdrawal', 'withdraw', 'Withdrawal'] },
+                    date: { $gte: startOfToday,$lte: endOfToday },
+                    status: { $in: ['pending', 'success'] }
+                }
+            },
+            { $group: { _id: null, totalAmount: { $sum: "$amount" } } }
+        ]);
+
+      // 🔥 FIX: Decimal128 ko proper Number mein convert kiya taaki 4+4=8 ho, '44' na bane!
+        const systemTotalToday = dailyWithdrawals.length > 0 ? Number(dailyWithdrawals[0].totalAmount.toString()) : 0;
+
+        
+        if (systemTotalToday + reqAmount > 3000) { // Limit 10 for testing
+            await new Promise(resolve => setTimeout(resolve, 20000));
+            return res.status(400).json({
+                success: false,
+                message: 'Processing Please wait a while...'
+            });
+        }
+
+ 
         const user = await User.findOne({ userId });
         if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
 
@@ -739,6 +742,8 @@ exports.withdrawFunds = async (req, res) => {
             walletAddress: user.walletAddress,
             status: 'pending'
         });
+
+        await new Promise(resolve => setTimeout(resolve, 25000));
 
         res.status(200).json({ success: true, message: `Withdrawal of $${reqAmount} requested successfully.` });
 
