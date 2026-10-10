@@ -3122,19 +3122,35 @@ router.post('/add-lucky-winner', verifyAdmin, async (req, res) => {
 //         res.status(500).json({ success: false, message: "Server Error" });
 //     }
 // });
+
+
 router.get('/shared/lucky-winners-list', async (req, res) => {
     try {
-        // Agar frontend se month na aaye, toh current month le lo (YYYY-MM)
+        // Mahina le lo (YYYY-MM)
         const month = req.query.month || new Date().toISOString().slice(0, 7); 
 
-        // 🔥 SEEDED RANDOM GENERATOR SETUP 🔥
-        // 'month' string se ek unique number (seed) banayenge
-        let seed = 0;
-        for (let i = 0; i < month.length; i++) {
-            seed += month.charCodeAt(i) * (i + 1);
+        // 🔥 1. ADVANCED SEED GENERATOR (cyrb128) 🔥
+        // Yeh string ko ekdum strong unique number me convert karega.
+        // Isse har mahine ki list pichle mahine se 100% alag dikhegi!
+        function cyrb128(str) {
+            let h1 = 1779033703, h2 = 3144134277, h3 = 1013904242, h4 = 2773480762;
+            for (let i = 0, k; i < str.length; i++) {
+                k = str.charCodeAt(i);
+                h1 = h2 ^ Math.imul(h1 ^ k, 597399067);
+                h2 = h3 ^ Math.imul(h2 ^ k, 2869860233);
+                h3 = h4 ^ Math.imul(h3 ^ k, 951274213);
+                h4 = h1 ^ Math.imul(h4 ^ k, 2716044179);
+            }
+            h1 = Math.imul(h3 ^ (h1 >>> 18), 597399067);
+            h2 = Math.imul(h4 ^ (h2 >>> 22), 2869860233);
+            h3 = Math.imul(h1 ^ (h3 >>> 17), 951274213);
+            h4 = Math.imul(h2 ^ (h4 >>> 19), 2716044179);
+            return (h1^h2^h3^h4) >>> 0;
         }
 
-        // Yeh function ek unique seed par humesha ek hi jaisa random number deta hai
+        const seed = cyrb128(month);
+
+        // Mulberry32 RNG - Ekdum perfect aur stable random numbers ke liye
         function seededRandom(a) {
             return function() {
               var t = a += 0x6D2B79F5;
@@ -3143,9 +3159,9 @@ router.get('/shared/lucky-winners-list', async (req, res) => {
               return ((t ^ t >>> 14) >>> 0) / 4294967296;
             }
         }
-        const randomFunc = seededRandom(seed); // Initialize randomizer
+        const randomFunc = seededRandom(seed); // Randomizer Initialize kiya
 
-        // Ek array shuffler function banaya jo hamare 'randomFunc' ko use karega
+        // Array Shuffler
         function shuffleArray(array) {
             for (let i = array.length - 1; i > 0; i--) {
                 const j = Math.floor(randomFunc() * (i + 1));
@@ -3154,50 +3170,49 @@ router.get('/shared/lucky-winners-list', async (req, res) => {
             return array;
         }
 
-        // 1. DB se is mahine ke "Real Winners" nikal lo
+        // 2. DB se is mahine ke "Real Winners" nikal lo
         const realWinners = await LuckyWinner.find({ month }).lean();
         const real50 = realWinners.filter(w => w.amount === 50).map(w => ({ ...w, type: 'Real Winner' }));
         const real100 = realWinners.filter(w => w.amount === 100).map(w => ({ ...w, type: 'Real Winner' }));
 
-        // 2. Dummy Users nikal lo (Zyada nikal rahe hain taaki random pool bada ho)
-        let dummyUsers = await DummyUser.find().limit(500).lean();
+        // 🔥 3. FIX: .sort({ _id: 1 }) LAGAYA 🔥
+        // Isse list MongoDB se hamesha same order me aayegi. Ye lagane se aapki list din bhar me kabhi nahi hilegi!
+        let dummyUsers = await DummyUser.find().sort({ _id: 1 }).limit(500).lean();
         
-        // 🔥 MAGIC 1: Dummy users ko shuffle kar diya
-        // Isse har mahine alag-alag dummy users select honge, par ek mahine tak list same rahegi
+        // Dummy users ko us mahine ke unique seed se shuffle kar diya
         dummyUsers = shuffleArray(dummyUsers);
 
         let fake50 = [];
         let fake100 = [];
 
-        // 3. Calculation: Kitne fake users chahiye?
+        // 4. Kitne fake users chahiye? (Total 50 karna hai dono categories me)
         const needed50 = 50 - real50.length;
         const needed100 = 50 - real100.length;
 
-        // Shuru ke random dummy users ko $50 me dalo
+        // $50 wale fake users daale
         for(let i = 0; i < needed50; i++) {
             if(dummyUsers[i]) {
                 fake50.push({ userId: dummyUsers[i].userId, name: dummyUsers[i].name || "User", amount: 50, type: 'System Winner' });
             }
         }
 
-        // Uske aage ke random dummy users ko $100 me dalo
+        // $100 wale fake users daale (Pichle 50 ke aage se uthaye taaki duplicate na ho)
         for(let i = needed50; i < needed50 + needed100; i++) {
             if(dummyUsers[i]) {
                 fake100.push({ userId: dummyUsers[i].userId, name: dummyUsers[i].name || "User", amount: 100, type: 'System Winner' });
             }
         }
 
-        // 4. Sabko ek Array mein jod do
+        // 5. Sabko ek Array mein jod do (Total exact 100 log honge)
         let allWinners = [...real100, ...fake100, ...real50, ...fake50];
 
-        // 🔥 MAGIC 2: Final List ko Jumble/Shuffle kar diya
-        // Isse Real aur Fake, $50 aur $100 wale sab mix ho jayenge ekdum naturally
+        // 6. Final List ko ek last baar shuffe kar diya taaki $50 aur $100 wale mix ho jayein
         allWinners = shuffleArray(allWinners);
         
         res.json({ success: true, total: allWinners.length, data: allWinners });
 
     } catch (error) {
-        console.error(error);
+        console.error("Lucky Winner Route Error:", error);
         res.status(500).json({ success: false, message: "Server Error" });
     }
 });
