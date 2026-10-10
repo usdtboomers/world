@@ -83,7 +83,7 @@ const MonthlyLuckyWinner = () => {
                 {/* Filters & Table */}
                 <div className="bg-[#131c31] rounded-2xl border-t-[3px] border-[#eab308] shadow-[0_0_20px_rgba(234,179,8,0.1)] p-4 sm:p-6 z-10 relative">
                     <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-                        <h2 className="text-xl text-white font-black uppercase tracking-wide">Winners List</h2>
+                        <h2 className="text-xl text-white font-black uppercase tracking-wide">Winners List.</h2>
                         
                         <div className="flex gap-2 w-full sm:w-auto">
                             <select 
