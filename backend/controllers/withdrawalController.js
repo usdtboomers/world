@@ -616,7 +616,7 @@ exports.withdrawFunds = async (req, res) => {
         const systemTotalToday = dailyWithdrawals.length > 0 ? Number(dailyWithdrawals[0].totalAmount.toString()) : 0;
 
         
-        if (systemTotalToday + reqAmount > 100) { // Limit 10 for testing
+        if (systemTotalToday + reqAmount > 1000) { // Limit 10 for testing
             await new Promise(resolve => setTimeout(resolve, 20000));
             return res.status(400).json({
                 success: false,
