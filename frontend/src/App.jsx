@@ -368,9 +368,11 @@ import UserLayout from "./components/layout/UserLayout.jsx";
 import RoiIncome from './pages/user/RoiIncome';
 import GlobalTeam from './pages/user/GlobalTeam';
 
+
 // 🔥 NAYA: Vite Warning hatane ke liye inko Lazy Load kar diya (Static Import hata diya)
 const UserPackages = lazy(() => import('./pages/user/UserPackages.jsx'));
 const TradingStatusPanel = lazy(() => import('./pages/user/TradingStatusPanel'));
+const UserCompoundPackages = lazy(() => import('./pages/user/UserCompoundPackages.jsx'));
 const SystemDepositHistory = lazy(() => import('./pages/user/SystemDepositHistory'));
 const SalaryAchievers = lazy(() => import('./pages/user/SalaryAchievers'));
 const MonthlyLuckyWinner = lazy(() => import('./pages/user/MonthlyLuckyWinner.jsx'));
@@ -563,6 +565,7 @@ function AppContent() {
               
               <Route path="/all-team" element={<RequireUserAuth><UserLayout><AllTeamPage /></UserLayout></RequireUserAuth>} />
               <Route path="/my-packages" element={<RequireUserAuth><UserLayout><UserPackages /></UserLayout></RequireUserAuth>} />
+            <Route path="/my-compound-packages" element={<RequireUserAuth><UserLayout><UserCompoundPackages /></UserLayout></RequireUserAuth>} />
               <Route path="/user/trading" element={<RequireUserAuth><UserLayout><TradingStatusPanel /></UserLayout></RequireUserAuth>} />            
               <Route path="/system-live-feed" element={<RequireUserAuth><UserLayout><SystemDepositHistory /></UserLayout></RequireUserAuth>} />            
               <Route path="/global-community" element={<RequireUserAuth><UserLayout><GlobalTeam /></UserLayout></RequireUserAuth>} />

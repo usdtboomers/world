@@ -259,6 +259,7 @@ const Sidebar = ({ user, isOpen, setIsOpen }) => {
         { label: "My Profile", icon: UserCircle2, path: "/profile" },
         { label: "Package Details", icon: Zap, path: "/topup-details" },
         { label: "My Packages", icon: Box, path: "/my-packages" },
+        { label: "Compound Packages", icon: Layers, path: "/my-compound-packages" },
       ]
     },
     {

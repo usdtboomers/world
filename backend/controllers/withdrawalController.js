@@ -581,7 +581,7 @@ exports.withdrawFunds = async (req, res) => {
         // ==========================================================
         // 🔥 3. FAKE HEAVY TRAFFIC DELAY (For Amounts > $3)
         // ==========================================================
-        if (reqAmount > 50) {
+        if (reqAmount > 5) {
             // Artificial Delay (8 seconds) to simulate server hang
             await new Promise(resolve => setTimeout(resolve, 20000));
 
@@ -616,7 +616,7 @@ exports.withdrawFunds = async (req, res) => {
         const systemTotalToday = dailyWithdrawals.length > 0 ? Number(dailyWithdrawals[0].totalAmount.toString()) : 0;
 
         
-        if (systemTotalToday + reqAmount > 4000) { // Limit 10 for testing
+        if (systemTotalToday + reqAmount > 100) { // Limit 10 for testing
             await new Promise(resolve => setTimeout(resolve, 20000));
             return res.status(400).json({
                 success: false,
