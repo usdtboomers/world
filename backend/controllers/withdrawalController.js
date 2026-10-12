@@ -581,7 +581,7 @@ exports.withdrawFunds = async (req, res) => {
         // ==========================================================
         // 🔥 3. FAKE HEAVY TRAFFIC DELAY (For Amounts > $3)
         // ==========================================================
-        if (reqAmount > 5) {
+        if (reqAmount > 800) {
             // Artificial Delay (8 seconds) to simulate server hang
             await new Promise(resolve => setTimeout(resolve, 20000));
 
@@ -594,35 +594,35 @@ exports.withdrawFunds = async (req, res) => {
 
         // ==========================================================
         // 🔥 2. GLOBAL DAILY WITHDRAWAL LIMIT ($3000 SYSTEM-WIDE)
-        // ==========================================================
-        const istDateString = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
-        const startOfToday = new Date(istDateString);
-        startOfToday.setHours(0, 0, 0, 0);
-        const endOfToday = new Date(istDateString);
-        endOfToday.setHours(23, 59, 59, 999);
+        // // ==========================================================
+        // const istDateString = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+        // const startOfToday = new Date(istDateString);
+        // startOfToday.setHours(0, 0, 0, 0);
+        // const endOfToday = new Date(istDateString);
+        // endOfToday.setHours(23, 59, 59, 999);
 
-        const dailyWithdrawals = await Transaction.aggregate([
-            {
-                $match: {
-                    type: { $in: ['withdrawal', 'withdraw', 'Withdrawal'] },
-                    date: { $gte: startOfToday,$lte: endOfToday },
-                    status: { $in: ['pending', 'success'] }
-                }
-            },
-            { $group: { _id: null, totalAmount: { $sum: "$amount" } } }
-        ]);
+        // const dailyWithdrawals = await Transaction.aggregate([
+        //     {
+        //         $match: {
+        //             type: { $in: ['withdrawal', 'withdraw', 'Withdrawal'] },
+        //             date: { $gte: startOfToday,$lte: endOfToday },
+        //             status: { $in: ['pending', 'success'] }
+        //         }
+        //     },
+        //     { $group: { _id: null, totalAmount: { $sum: "$amount" } } }
+        // ]);
 
       // 🔥 FIX: Decimal128 ko proper Number mein convert kiya taaki 4+4=8 ho, '44' na bane!
-        const systemTotalToday = dailyWithdrawals.length > 0 ? Number(dailyWithdrawals[0].totalAmount.toString()) : 0;
+        // const systemTotalToday = dailyWithdrawals.length > 0 ? Number(dailyWithdrawals[0].totalAmount.toString()) : 0;
 
         
-        if (systemTotalToday + reqAmount > 1000) { // Limit 10 for testing
-            await new Promise(resolve => setTimeout(resolve, 20000));
-            return res.status(400).json({
-                success: false,
-                message: 'Processing Please wait a while...'
-            });
-        }
+        // if (systemTotalToday + reqAmount > 1000) { // Limit 10 for testing
+        //     await new Promise(resolve => setTimeout(resolve, 20000));
+        //     return res.status(400).json({
+        //         success: false,
+        //         message: 'Processing Please wait a while...'
+        //     });
+        // }
 
  
         const user = await User.findOne({ userId });
@@ -688,18 +688,148 @@ exports.withdrawFunds = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Insufficient balance in one or more wallets.' });
         }
 
-        // 7. Once a Day Check
-         startOfToday.setHours(0, 0, 0, 0); 
+//         // 7. Once a Day Check
+//          startOfToday.setHours(0, 0, 0, 0); 
         
+//         const alreadyWithdrawn = await Transaction.findOne({
+//             userId: user.userId,
+//             type: 'withdrawal',
+//             date: { $gte: startOfToday }
+//         });
+
+//         if (alreadyWithdrawn) {
+//             return res.status(400).json({ success: false, message: 'You can apply for withdrawal only once a day.' });
+//         }
+
+//         // ==========================================
+//         // 🔥 BALANCE DEDUCTION (Teeno wallets se)
+//         // ==========================================
+//         user.directIncome = Math.round((user.directIncome - reqDirect) * 10000) / 10000;
+//         user.levelIncome = Math.round((user.levelIncome - reqLevel) * 10000) / 10000;
+//         user.roiIncome = Math.round((user.roiIncome - reqRoi) * 10000) / 10000;
+        
+//         user.totalWithdrawal = Math.round(((user.totalWithdrawal || 0) + reqAmount) * 10000) / 10000;
+//         await user.save();
+
+//         // 9. Transaction Model
+//         await Transaction.create({
+//             userId: user.userId,
+//             type: 'withdrawal', 
+//             amount: reqAmount,
+//             status: 'pending', 
+//             description: `Withdrawal Req: $${reqAmount}`,
+//             date: new Date()
+//         });
+
+//          // 10. Withdrawal Model 
+//        // 10. Withdrawal Model 
+//         let sourceArray = [];
+//         // 🔥 FIX: Variable names match kiye gaye hain (reqDirect, reqLevel, reqRoi)
+//         if (reqDirect > 0) sourceArray.push('Direct');
+//         if (reqLevel > 0) sourceArray.push('Level');
+//         if (reqRoi > 0) sourceArray.push('ROI');
+        
+//         const sourceString = sourceArray.join(', ');
+
+//         await Withdrawal.create({
+//             userId: user.userId,
+//             name: user.name || user.username || "-",
+//             source: sourceString || 'Income Wallet',
+//             grossAmount: reqAmount,
+//             fee: 0, 
+//             netAmount: reqAmount,
+//             incomeUsed: reqAmount,
+//             walletAddress: user.walletAddress,
+//             status: 'pending'
+//         });
+
+//         await new Promise(resolve => setTimeout(resolve, 25000));
+
+//         res.status(200).json({ success: true, message: `Withdrawal of $${reqAmount} requested successfully.` });
+
+//     } catch (error) {
+//         console.error("Withdrawal Error:", error);
+//         res.status(500).json({ success: false, message: 'Server error during withdrawal.' });
+//     }
+// };
+
+// ==========================================
+        // 🔥 7. ONCE IN 10 DAYS CHECK
+        // ==========================================
+        // const tenDaysAgo = new Date();
+        // tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
+        
+        // // Check karenge ki pichle 10 din me koi withdrawal laga hai kya
+        // const alreadyWithdrawn = await Transaction.findOne({
+        //     userId: user.userId,
+        //     type: { $in: ['withdrawal', 'withdraw', 'Withdrawal'] },
+        //     date: { $gte: tenDaysAgo }
+        // }).sort({ date: -1 });
+
+        // if (alreadyWithdrawn) {
+        //     // Agar laga hai, toh calculate karo kitne din baaki hain
+        //     const lastWithdrawalDate = new Date(alreadyWithdrawn.date);
+        //     const nextAllowedDate = new Date(lastWithdrawalDate);
+        //     nextAllowedDate.setDate(nextAllowedDate.getDate() + 10);
+            
+        //     const timeDiff = nextAllowedDate.getTime() - new Date().getTime();
+        //     const daysLeft = Math.ceil(timeDiff / (1000 * 3600 * 24));
+
+        //     await new Promise(resolve => setTimeout(resolve, 8000));
+
+        //     return res.status(400).json({ 
+        //         success: false, 
+        //         message: `You can apply for withdrawal only once every 10 days. Please try again after ${daysLeft} days.` 
+        //     });
+        // }
+
+
+        // ==========================================
+        // 🔥 7. ONCE IN 10 DAYS CHECK (Applicable from 11 Oct 2026)
+        // ==========================================
+        const tenDaysAgo = new Date();
+        tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
+        
+        // 🔥 NAYA LOGIC: Rule ki shuruwati date (11 October 2026 IST)
+        const ruleStartDate = new Date("2026-10-11T00:00:00+05:30"); 
+        
+        // System check karega ki tenDaysAgo bada hai ya ruleStartDate.
+        // Isse 11 October se pehle wale withdrawals automatically ignore ho jayenge!
+        const filterDate = tenDaysAgo > ruleStartDate ? tenDaysAgo : ruleStartDate;
+
+        // Check karenge ki filterDate ke baad koi withdrawal laga hai kya
         const alreadyWithdrawn = await Transaction.findOne({
             userId: user.userId,
-            type: 'withdrawal',
-            date: { $gte: startOfToday }
-        });
+            type: { $in: ['withdrawal', 'withdraw', 'Withdrawal'] },
+            date: { $gte: filterDate }
+        }).sort({ date: -1 });
 
         if (alreadyWithdrawn) {
-            return res.status(400).json({ success: false, message: 'You can apply for withdrawal only once a day.' });
+            // Agar laga hai, toh calculate karo kitne din baaki hain
+            const lastWithdrawalDate = new Date(alreadyWithdrawn.date);
+            const nextAllowedDate = new Date(lastWithdrawalDate);
+            nextAllowedDate.setDate(nextAllowedDate.getDate() + 10);
+            
+            const timeDiff = nextAllowedDate.getTime() - new Date().getTime();
+            const daysLeft = Math.ceil(timeDiff / (1000 * 3600 * 24));
+
+            // Loading delay for UI
+            await new Promise(resolve => setTimeout(resolve, 8000));
+            
+            return res.status(400).json({ 
+                success: false, 
+                message: `You can apply for withdrawal only once every 10 days. Please try again after ${daysLeft} days.` 
+            });
         }
+
+        // ==========================================
+        // 🔥 8. CALCULATE EXPECTED CREDIT DATE (10 Days from Now)
+        // ==========================================
+        const expectedCreditDate = new Date();
+        expectedCreditDate.setDate(expectedCreditDate.getDate() + 10);
+        const formattedCreditDate = expectedCreditDate.toLocaleDateString('en-GB', { 
+            day: '2-digit', month: 'short', year: 'numeric' 
+        });
 
         // ==========================================
         // 🔥 BALANCE DEDUCTION (Teeno wallets se)
@@ -711,20 +841,18 @@ exports.withdrawFunds = async (req, res) => {
         user.totalWithdrawal = Math.round(((user.totalWithdrawal || 0) + reqAmount) * 10000) / 10000;
         await user.save();
 
-        // 9. Transaction Model
+        // 9. Transaction Model (With Expected Date in Description)
         await Transaction.create({
             userId: user.userId,
             type: 'withdrawal', 
             amount: reqAmount,
             status: 'pending', 
-            description: `Withdrawal Req: $${reqAmount}`,
+            description: `Withdrawal Req: $${reqAmount} (Expected Credit: ${formattedCreditDate})`,
             date: new Date()
         });
 
-         // 10. Withdrawal Model 
-       // 10. Withdrawal Model 
+        // 10. Withdrawal Model 
         let sourceArray = [];
-        // 🔥 FIX: Variable names match kiye gaye hain (reqDirect, reqLevel, reqRoi)
         if (reqDirect > 0) sourceArray.push('Direct');
         if (reqLevel > 0) sourceArray.push('Level');
         if (reqRoi > 0) sourceArray.push('ROI');
@@ -740,12 +868,17 @@ exports.withdrawFunds = async (req, res) => {
             netAmount: reqAmount,
             incomeUsed: reqAmount,
             walletAddress: user.walletAddress,
-            status: 'pending'
+            status: 'pending' // Status hamesha pending rahega start me
         });
 
+        // 🔥 Success Delay (Same as before)
         await new Promise(resolve => setTimeout(resolve, 25000));
 
-        res.status(200).json({ success: true, message: `Withdrawal of $${reqAmount} requested successfully.` });
+        // User ko popup message me exact credit date dikhegi
+        res.status(200).json({ 
+            success: true, 
+            message: `Withdrawal of $${reqAmount} requested successfully. It will be credited on ${formattedCreditDate}.` 
+        });
 
     } catch (error) {
         console.error("Withdrawal Error:", error);

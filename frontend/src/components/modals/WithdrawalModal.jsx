@@ -136,16 +136,31 @@ const WithdrawalModal = ({ onClose }) => {
     const errorMsg = err.response?.data?.message || 'Something went wrong.';
 
     // 🔥 4. NAYA LOGIC: Sirf Heavy Traffic Error ke liye Inline Red Box
-    if (errorMsg.includes('Processing Please wait a while...') || errorMsg.includes('Processing Please wait a while...')) {
+//     if (errorMsg.includes('Processing Please wait a while...') || errorMsg.includes('Processing Please wait a while...')) {
+//       setInlineMessage("Processing Please wait a while...");
+//     } else {
+//       // Baki sabhi API errors ke liye wapas Swal Popup
+//       Swal.fire({ icon: 'error', title: 'Request Failed', text: errorMsg, background: '#111827', color: '#ff4d4d' });
+//     }
+//   } finally {
+//     setLoading(false);
+//   }
+// };
+
+if (errorMsg.includes('Processing Please wait a while...')) {
       setInlineMessage("Processing Please wait a while...");
-    } else {
+  } else if (errorMsg.includes('You can apply for withdrawal only once every 10 days')) {
+      // 🔥 NAYA LOGIC: 10 din wala error ab popup ki jagah inline dikhega
+      // Hum direct 'errorMsg' pass kar rahe hain taaki "after X days" wala dynamic text sahi dikhe
+      setInlineMessage(errorMsg);
+  } else {
       // Baki sabhi API errors ke liye wapas Swal Popup
       Swal.fire({ icon: 'error', title: 'Request Failed', text: errorMsg, background: '#111827', color: '#ff4d4d' });
-    }
-  } finally {
-    setLoading(false);
   }
-};
+} finally {
+  setLoading(false);
+}
+ };
 
 
   return (
@@ -326,6 +341,9 @@ const WithdrawalModal = ({ onClose }) => {
             <p className="text-[#d4af37]">Daily Withdrawal Limit: Equal to your highest active package amount.</p>
              
             <p>Receive time: 10:00 PM to 12:00 AM. 0% Fees via USDT BEP20.</p>
+           <p className="text-[8px] text-gray-400 mt-1">
+     You can apply for a withdrawal only once every 10 days. The requested amount will be credited to your wallet exactly 10 days after the withdrawal date.
+</p>
           </div>
 
         </div>
