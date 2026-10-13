@@ -340,7 +340,7 @@ const TELEGRAM_CHANNEL_ID = "@worldfinance01";
 if (process.env.NODE_APP_INSTANCE === '0' || process.env.NODE_APP_INSTANCE === undefined) {
 
     // Abhi time 23:59 (00:01) set hai. 
-    cron.schedule('01 0 * * *', async () => {
+    cron.schedule('10 0 * * *', async () => {
         console.log("⏳ Telegram Bot: Calculating Daily Summary...");
         try {
             const todayStr = getFormattedDate();
@@ -431,86 +431,86 @@ if (process.env.NODE_APP_INSTANCE === '0' || process.env.NODE_APP_INSTANCE === u
     // ==========================================
     // 💸 TELEGRAM DAILY WITHDRAWAL BOT (12:30 PM)
     // ==========================================
-    cron.schedule('01 14 * * *', async () => {
-        console.log("⏳ Telegram Bot: Calculating Daily Withdrawal Summary...");
-        try {
-            const todayStr = getFormattedDate();
+//     cron.schedule('01 14 * * *', async () => {
+//         console.log("⏳ Telegram Bot: Calculating Daily Withdrawal Summary...");
+//         try {
+//             const todayStr = getFormattedDate();
             
-            // 1. Kal (Yesterday) ki exact IST Date nikalna taaki kal ka total investment pata chale
-            const istTimeStr = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
-            const istDate = new Date(istTimeStr);
-            istDate.setDate(istDate.getDate() - 1); // 1 din piche
-            const yesterdayStr = istDate.getFullYear() + "-" +
-                   String(istDate.getMonth() + 1).padStart(2, '0') + "-" +
-                   String(istDate.getDate()).padStart(2, '0');
+//             // 1. Kal (Yesterday) ki exact IST Date nikalna taaki kal ka total investment pata chale
+//             const istTimeStr = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+//             const istDate = new Date(istTimeStr);
+//             istDate.setDate(istDate.getDate() - 1); // 1 din piche
+//             const yesterdayStr = istDate.getFullYear() + "-" +
+//                    String(istDate.getMonth() + 1).padStart(2, '0') + "-" +
+//                    String(istDate.getDate()).padStart(2, '0');
 
-            // 2. Calculate REAL Investments (for yesterday)
-            const realTxns = await Transaction.find({
-                type: 'package_activation', 
-                status: { $regex: /^success$\vert{}^completed$/i } 
-            });
+//             // 2. Calculate REAL Investments (for yesterday)
+//             const realTxns = await Transaction.find({
+//                 type: 'package_activation', 
+//                 status: { $regex: /^success$\vert{}^completed$/i } 
+//             });
 
-            let yesterdayRealAmount = 0;
-            realTxns.forEach(tx => {
-                const amt = Number(tx.amount) || 0;
-                const txDateStr = getFormattedDate(new Date(tx.createdAt || tx.date));
-                if (txDateStr === yesterdayStr) {
-                    yesterdayRealAmount += amt;
-                }
-            });
+//             let yesterdayRealAmount = 0;
+//             realTxns.forEach(tx => {
+//                 const amt = Number(tx.amount) || 0;
+//                 const txDateStr = getFormattedDate(new Date(tx.createdAt || tx.date));
+//                 if (txDateStr === yesterdayStr) {
+//                     yesterdayRealAmount += amt;
+//                 }
+//             });
 
-            // 3. Calculate FAKE BOT Investments (for yesterday)
-            const allFakeStats = await SystemStat.find();
-            let yesterdayBotAmount = 0;
+//             // 3. Calculate FAKE BOT Investments (for yesterday)
+//             const allFakeStats = await SystemStat.find();
+//             let yesterdayBotAmount = 0;
 
-            allFakeStats.forEach(stat => {
-                if (stat.date) {
-                    const statDateObj = new Date(stat.date);
-                    const statDateStr = isNaN(statDateObj.getTime()) ? String(stat.date).substring(0, 10) : getFormattedDate(statDateObj);
+//             allFakeStats.forEach(stat => {
+//                 if (stat.date) {
+//                     const statDateObj = new Date(stat.date);
+//                     const statDateStr = isNaN(statDateObj.getTime()) ? String(stat.date).substring(0, 10) : getFormattedDate(statDateObj);
                     
-                    if (statDateStr === yesterdayStr) {
-                        yesterdayBotAmount += (stat.todayFakeUsdtAmount || 0);
-                    }
-                }
-            });
+//                     if (statDateStr === yesterdayStr) {
+//                         yesterdayBotAmount += (stat.todayFakeUsdtAmount || 0);
+//                     }
+//                 }
+//             });
 
-            // 4. Kal ka Total Investment = (Real + Fake)
-            const yesterdayTotalInvestment = yesterdayRealAmount + yesterdayBotAmount;
+//             // 4. Kal ka Total Investment = (Real + Fake)
+//             const yesterdayTotalInvestment = yesterdayRealAmount + yesterdayBotAmount;
 
-            // 5. Withdrawal Logic: 20% se 30% ke beech random percentage nikalna
-            // const randomPercent = Math.floor(Math.random() * (30 - 20 + 1)) + 20; // 20 se 30 ke beech ka number
-            // const withdrawalAmount = (yesterdayTotalInvestment * randomPercent) / 100;
+//             // 5. Withdrawal Logic: 20% se 30% ke beech random percentage nikalna
+//             // const randomPercent = Math.floor(Math.random() * (30 - 20 + 1)) + 20; // 20 se 30 ke beech ka number
+//             // const withdrawalAmount = (yesterdayTotalInvestment * randomPercent) / 100;
 
-            const randomPercent = Math.floor(Math.random() * (45 - 35 + 1)) + 35; // 35 se 45 ke beech ka number
-const withdrawalAmount = (yesterdayTotalInvestment * randomPercent) / 100;
-            // 6. Format Telegram Message
-            const message = `
-💸 *World Finance Withdrawal Report* 💸
+//             const randomPercent = Math.floor(Math.random() * (45 - 35 + 1)) + 35; // 35 se 45 ke beech ka number
+// const withdrawalAmount = (yesterdayTotalInvestment * randomPercent) / 100;
+//             // 6. Format Telegram Message
+//             const message = `
+// 💸 *World Finance Withdrawal Report* 💸
 
-📅 *Date:* ${todayStr}
-✅ *Status:* All Withdrawals Processed Successfully!
-💰 *Total Withdrawn Today:* $${withdrawalAmount.toFixed(2)}
+// 📅 *Date:* ${todayStr}
+// ✅ *Status:* All Withdrawals Processed Successfully!
+// 💰 *Total Withdrawn Today:* $${withdrawalAmount.toFixed(2)}
 
-⚡️ _Fast & Secure Transactions!_
-            `;
+// ⚡️ _Fast & Secure Transactions!_
+//             `;
 
-            // 7. Send to Telegram
-            await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-                chat_id: TELEGRAM_CHANNEL_ID,
-                text: message,
-                parse_mode: "Markdown"
-            });
+//             // 7. Send to Telegram
+//             await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+//                 chat_id: TELEGRAM_CHANNEL_ID,
+//                 text: message,
+//                 parse_mode: "Markdown"
+//             });
 
-            console.log("✅ Telegram Bot: Daily Withdrawal sent successfully at 12:30 PM!");
+//             console.log("✅ Telegram Bot: Daily Withdrawal sent successfully at 12:30 PM!");
 
-        } catch (error) {
-            console.error("❌ Telegram Withdrawal Bot Error:", error.message);
-        }
-    }, {
-        scheduled: true,
-        timezone: "Asia/Kolkata" 
-    });
+//         } catch (error) {
+//             console.error("❌ Telegram Withdrawal Bot Error:", error.message);
+//         }
+//     }, {
+//         scheduled: true,
+//         timezone: "Asia/Kolkata" 
+//     });
 
-    console.log("🚀 Telegram Withdrawal Report Cron initialized (Scheduled at 12:30 PM IST)");
+//     console.log("🚀 Telegram Withdrawal Report Cron initialized (Scheduled at 12:30 PM IST)");
 
 } // 🔥 YAHAN UPDATE KIYA HAI: if condition yahan close ho rahi hai
