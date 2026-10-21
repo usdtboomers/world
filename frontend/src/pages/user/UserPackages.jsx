@@ -73,7 +73,7 @@
 //       <div className="mb-6 flex items-center justify-between">
 //         <div>
 //           <h2 className="text-xl sm:text-2xl font-black text-white tracking-wide uppercase">My Packages</h2>
-//           <p className="text-[10px] sm:text-xs text-gray-400 font-medium tracking-widest mt-1 uppercase">World Finance</p>
+//           <p className="text-[10px] sm:text-xs text-gray-400 font-medium tracking-widest mt-1 uppercase">World together</p>
 //         </div>
 //       </div>
 
@@ -243,7 +243,7 @@ const UserPackages = () => {
       <div className="mb-1 flex items-center justify-between">
         <div>
           <h2 className="text-lg sm:text-xl font-black text-white tracking-wide uppercase">My Packages</h2>
-          <p className="text-[9px] sm:text-[10px] text-gray-400 font-medium tracking-widest mt-0.5 uppercase">World Finance</p>
+          <p className="text-[9px] sm:text-[10px] text-gray-400 font-medium tracking-widest mt-0.5 uppercase">World together</p>
         </div>
       </div>
 

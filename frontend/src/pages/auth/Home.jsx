@@ -851,7 +851,7 @@ const Home = () => {
           </div>
         </div>
         <div className="max-w-7xl mx-auto border-t border-[#2d3748] pt-6 flex flex-col md:flex-row justify-between items-center text-xs">
-          <p>&copy; {new Date().getFullYear()} worldfinance24. All Rights Reserved.</p>
+          <p>&copy; {new Date().getFullYear()} worldtogether24. All Rights Reserved.</p>
           <p className="mt-2 md:mt-0 text-gray-500">Secured via 256-Bit SSL Encryption.</p>
         </div>
       </footer>

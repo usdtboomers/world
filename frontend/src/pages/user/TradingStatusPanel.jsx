@@ -1344,7 +1344,7 @@ export default function TradingStatusPanel() {
           rel="noopener noreferrer"
           className="text-gray-600 hover:text-[#eab308] text-[9px] font-bold tracking-widest transition-colors"
         >
-                  www.worldfinance24.online
+                  www.worldtogether24.online
         </a>
       </div>
     </div>

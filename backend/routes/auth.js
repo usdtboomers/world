@@ -365,7 +365,7 @@ router.post('/register', checkFeature('allowRegistrations'), async (req, res) =>
     // Background Email
     sendEmail({
         email: user.email,
-        subject: '🎉 Welcome to World Finance 24!',
+        subject: '🎉 Welcome to World together 24!',
         html: `
         <div style="font-family: Arial; padding: 20px;">
             <h2 style="color: #03a9f4;">🚀 Welcome to World Finance 24</h2>
@@ -553,12 +553,12 @@ router.post('/forgot-password', checkFeature(), async (req, res) => {
 
     await user.save();
 
-    const resetLink = `https://worldfinance24.online/reset-password/${resetToken}`;
+    const resetLink = `https://worldtogether24.online/reset-password/${resetToken}`;
     
     // 📧 SEND EMAIL (PREMIUM FORMAT)
     await sendEmail({
       email: user.email,
-      subject: '🔐 worldfinance24 - Password Reset Request',
+      subject: '🔐 worldtogether24 - Password Reset Request',
       html: `
         <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: auto; background: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 1px solid #eaeaea;">
           <div style="background: linear-gradient(135deg, #03a9f4 0%, #0083b0 100%); padding: 25px; text-align: center;">
@@ -566,14 +566,14 @@ router.post('/forgot-password', checkFeature(), async (req, res) => {
           </div>
           <div style="padding: 30px; color: #444;">
             <p style="font-size: 16px;">Hello <strong style="color: #0083b0;">${user.name}</strong>,</p>
-            <p style="font-size: 15px; line-height: 1.6;">We received a request to reset the password for your worldfinance24 account associated with User ID: <b>${user.userId}</b>.</p>
+            <p style="font-size: 15px; line-height: 1.6;">We received a request to reset the password for your worldtogether24 account associated with User ID: <b>${user.userId}</b>.</p>
             <div style="text-align: center; margin: 35px 0;">
               <a href="${resetLink}" style="background: #03a9f4; color: #ffffff; padding: 14px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 4px 10px rgba(3,169,244,0.3);">Reset My Password</a>
             </div>
             <p style="font-size: 14px; color: #888;"><i>Note: This secure link will expire in exactly 1 hour. If you did not request this, please ignore this email.</i></p>
           </div>
           <div style="background: #f9f9f9; padding: 15px; text-align: center; font-size: 12px; color: #999; border-top: 1px solid #eaeaea;">
-            &copy; ${new Date().getFullYear()} worldfinance24. All rights reserved.
+            &copy; ${new Date().getFullYear()} worldtogether24. All rights reserved.
           </div>
         </div>
       `,
@@ -614,7 +614,7 @@ router.post('/reset-password/:token', async (req, res) => {
     try {
       await sendEmail({
         email: user.email,
-        subject: '✅ worldfinance24 - Password Reset Successful',
+        subject: '✅ worldtogether24 - Password Reset Successful',
         html: `
         <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: auto; background: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 1px solid #eaeaea;">
           <div style="background: linear-gradient(135deg, #28a745 0%, #218838 100%); padding: 25px; text-align: center;">
@@ -631,11 +631,11 @@ router.post('/reset-password/:token', async (req, res) => {
             </div>
 
             <div style="text-align: center; margin: 35px 0;">
-              <a href="https://worldfinance24.online/login" style="background: #03a9f4; color: #ffffff; padding: 14px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 4px 10px rgba(3,169,244,0.3);">Login to Dashboard</a>
+              <a href="https://worldtogether24.online/login" style="background: #03a9f4; color: #ffffff; padding: 14px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 4px 10px rgba(3,169,244,0.3);">Login to Dashboard</a>
             </div>
           </div>
           <div style="background: #f9f9f9; padding: 15px; text-align: center; font-size: 12px; color: #999; border-top: 1px solid #eaeaea;">
-            &copy; ${new Date().getFullYear()} worldfinance24. All rights reserved.
+            &copy; ${new Date().getFullYear()} worldtogether24. All rights reserved.
           </div>
         </div>
         `,

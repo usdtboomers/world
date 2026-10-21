@@ -45,7 +45,7 @@ const WithdrawalPopup = () => {
           </h2>
           
           <p className="text-slate-300 font-medium mb-5 text-sm">
-            Dear World Finance members, the daily withdrawal window is open between:
+            Dear World together members, the daily withdrawal window is open between:
           </p>
 
           {/* TIME HIGHLIGHT BOX */}

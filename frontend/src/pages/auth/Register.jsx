@@ -237,7 +237,7 @@
 
 // //                 <div style={contentWrapper}>
 // //                     <div style={{ textAlign: 'center', marginBottom: '25px', marginTop: '10px' }}>
-// //                         <img src="/logo.jpg" alt="World Finance" style={{ height: '55px', borderRadius: '8px', marginBottom: '10px' }} />
+// //                         <img src="/logo.jpg" alt="World together" style={{ height: '55px', borderRadius: '8px', marginBottom: '10px' }} />
 // //                         <h3 style={{ color: '#fff', fontWeight: '600', fontSize: '20px', margin: 0 }}>Create An Account</h3>
 // //                     </div>
 
@@ -311,7 +311,7 @@
 // //                         <div style={successCircle}>✓</div>
                         
 // //                         <h2 style={{ color: '#0ea5e9', textAlign: 'center', fontSize: '22px', margin: '0 0 5px 0' }}>Registration Successful!</h2>
-// //                         <p style={{ color: '#e5e5e5', textAlign: 'center', fontSize: '14px', margin: '0 0 20px 0' }}>Welcome to World Finance</p>
+// //                         <p style={{ color: '#e5e5e5', textAlign: 'center', fontSize: '14px', margin: '0 0 20px 0' }}>Welcome to World together</p>
 
 // //                         <div style={detailsBox}>
 // //                             <div style={dataRow}>
@@ -609,7 +609,7 @@
 
 //                 <div style={contentWrapper}>
 //                     <div style={{ textAlign: 'center', marginBottom: '25px', marginTop: '10px' }}>
-//                         <img src="/logo.jpg" alt="World Finance" style={{ height: '55px', borderRadius: '8px', marginBottom: '10px' }} />
+//                         <img src="/logo.jpg" alt="World together" style={{ height: '55px', borderRadius: '8px', marginBottom: '10px' }} />
 //                         <h3 style={{ color: '#fff', fontWeight: '600', fontSize: '20px', margin: 0 }}>Create An Account</h3>
 //                     </div>
 
@@ -743,7 +743,7 @@
 //                         <div style={successCircle}>✓</div>
                         
 //                         <h2 style={{ color: '#0ea5e9', textAlign: 'center', fontSize: '22px', margin: '0 0 5px 0' }}>Registration Successful!</h2>
-//                         <p style={{ color: '#e5e5e5', textAlign: 'center', fontSize: '14px', margin: '0 0 20px 0' }}>Welcome to World Finance</p>
+//                         <p style={{ color: '#e5e5e5', textAlign: 'center', fontSize: '14px', margin: '0 0 20px 0' }}>Welcome to World together</p>
 
 //                         <div style={detailsBox}>
 //                             <div style={dataRow}>
@@ -1088,7 +1088,7 @@ const Register = () => {
 
                 <div style={contentWrapper}>
                     <div style={{ textAlign: 'center', marginBottom: '25px', marginTop: '10px' }}>
-                        <img src="/logo.jpg" alt="World Finance" style={{ height: '55px', borderRadius: '8px', marginBottom: '10px' }} />
+                        <img src="/logo.jpg" alt="World together" style={{ height: '55px', borderRadius: '8px', marginBottom: '10px' }} />
                         <h3 style={{ color: '#fff', fontWeight: '600', fontSize: '20px', margin: 0 }}>Create An Account</h3>
                     </div>
 
@@ -1236,7 +1236,7 @@ const Register = () => {
                         <div style={successCircle}>✓</div>
                         
                         <h2 style={{ color: '#0ea5e9', textAlign: 'center', fontSize: '22px', margin: '0 0 5px 0' }}>Registration Successful!</h2>
-                        <p style={{ color: '#e5e5e5', textAlign: 'center', fontSize: '14px', margin: '0 0 20px 0' }}>Welcome to World Finance</p>
+                        <p style={{ color: '#e5e5e5', textAlign: 'center', fontSize: '14px', margin: '0 0 20px 0' }}>Welcome to World together</p>
 
                         <div style={detailsBox}>
                             <div style={dataRow}>

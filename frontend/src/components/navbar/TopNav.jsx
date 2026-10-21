@@ -24,7 +24,7 @@ const TopNav = ({ onHamburgerClick }) => {
             onClick={handleLogoClick}
           >
             <span className="text-[1.2rem] md:text-2xl font-black tracking-wider uppercase text-[#d4af37] whitespace-nowrap">
-World Finance            </span>
+World Together            </span>
           </div>
 
           {/* 2. Right Section: Logout & Hamburger */}
