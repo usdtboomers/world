@@ -1,6 +1,13 @@
 const express = require('express');
 const router = express.Router();
 
+
+
+// process.on('uncaughtException', (err) => {
+//     console.error("🔥 ERROR YAHAN HAI:", err.stack);
+// });
+
+
 router.use('/setting', require('./setting')); // 👈 TOP pe le aao
 
 // 🔐 Auth routes

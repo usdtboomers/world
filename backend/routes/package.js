@@ -62,7 +62,7 @@ const {
 
 
 // Yeh tumhara POST route hai (Normal 5% Package kharidne/activate karne ke liye)
-router.post('/activate', authMiddleware, activatePackage);
+//router.post('/activate', authMiddleware, activatePackage);
 
 // 🔥 YEH RAHA NAYA POST ROUTE (Auto Compound 6% Package activate karne ke liye)
 router.post('/activate-auto-compound', authMiddleware, activateAutoCompoundPackage);
