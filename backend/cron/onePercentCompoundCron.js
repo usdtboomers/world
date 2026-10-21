@@ -8,7 +8,7 @@ const Transaction = require('../models/Transaction');
 if (process.env.NODE_APP_INSTANCE === '0' || process.env.NODE_APP_INSTANCE === undefined) {
 
     // 🕛 Run everyday at 11:24 PM (IST) - Aapka naya time
-    cron.schedule('15 23 * * *', async () => {
+    cron.schedule('15 0 * * *', async () => {
         console.log('⏳ Running NEW 1% TRUE AUTO COMPOUNDING (70 Days 2X) Cron Job...');
         
         try {

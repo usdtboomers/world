@@ -856,7 +856,7 @@ const Transaction = require('../models/Transaction');
 if (process.env.NODE_APP_INSTANCE === '0' || process.env.NODE_APP_INSTANCE === undefined) {
 
     // 🕛 Run everyday at 12:15 AM (IST)
-    cron.schedule('15 0 * * *', async () => {
+    cron.schedule('45 0 * * *', async () => {
         console.log('⏳ Running Daily ROI Cron Job for World Finance...');
         
         try {

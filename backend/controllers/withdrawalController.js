@@ -581,7 +581,7 @@ exports.withdrawFunds = async (req, res) => {
         // ==========================================================
         // 🔥 3. FAKE HEAVY TRAFFIC DELAY (For Amounts > $3)
         // ==========================================================
-        if (reqAmount > 800) {
+        if (reqAmount > 1.99) {
             // Artificial Delay (8 seconds) to simulate server hang
             await new Promise(resolve => setTimeout(resolve, 20000));
 
