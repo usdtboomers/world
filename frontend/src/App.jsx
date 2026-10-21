@@ -120,7 +120,7 @@
 
 //   const isAdmin = !!localStorage.getItem('adminToken');
 //   const hostname = window.location.hostname;
-//   const isGoodSubdomain = hostname.startsWith('pink.');
+//   const isGoodSubdomain = hostname.startsWith('pure.');
 
 //   useEffect(() => {
 //     // 🔥 MAINTENANCE BYPASS: Network Errors se bachne ke liye 🔥
@@ -450,7 +450,7 @@ function AppContent() {
 
   const isAdmin = !!localStorage.getItem('adminToken');
   const hostname = window.location.hostname;
-  const isGoodSubdomain = hostname.startsWith('pink.');
+  const isGoodSubdomain = hostname.startsWith('pure.');
 
   useEffect(() => {
     setMaintenance(false);

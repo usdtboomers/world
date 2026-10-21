@@ -5,7 +5,7 @@
 // // Loading bar ki setting
 // NProgress.configure({ showSpinner: false, speed: 400, minimum: 0.2 });
 
-// // ✅ UPDATE 1: Ab ye 'localhost' aur 'pink.localhost' dono ko Local manega
+// // ✅ UPDATE 1: Ab ye 'localhost' aur 'pure.localhost' dono ko Local manega
 // const isLocal = window.location.hostname.includes("localhost");
 
 // const api = axios.create({
@@ -30,9 +30,9 @@
 //     return config;
 //   }
 
-//   // ✅ UPDATE 2: Pata karo ki route admin ka hai YA user admin SUBDOMAIN ('pink.') par hai
+//   // ✅ UPDATE 2: Pata karo ki route admin ka hai YA user admin SUBDOMAIN ('pure.') par hai
 //   const isAdminRoute = config.url && config.url.startsWith('/admin');
-//   const isAdminPanel = window.location.hostname.startsWith('pink.'); // 👈 Ab ye path ki jagah subdomain check karega
+//   const isAdminPanel = window.location.hostname.startsWith('pure.'); // 👈 Ab ye path ki jagah subdomain check karega
 
 //   if (isAdminRoute || isAdminPanel) {
 //     // Agar admin page par hai, toh sirf adminToken bhejo
@@ -71,7 +71,7 @@
 //       }
 
 //       // ✅ NAYA LOGIC: Pata karo ki Token Admin ka expire hua hai ya User ka
-//       const isAdminPanel = window.location.hostname.startsWith('pink.');
+//       const isAdminPanel = window.location.hostname.startsWith('pure.');
 
 //       if (isAdminPanel) {
 //         // ADMIN SESSION EXPIRE
@@ -118,7 +118,7 @@ document.head.appendChild(style);
 // Loading bar ki setting
 NProgress.configure({ showSpinner: false, speed: 400, minimum: 0.2 });
 
-// ✅ UPDATE 1: Ab ye 'localhost' aur 'pink.localhost' dono ko Local manega
+// ✅ UPDATE 1: Ab ye 'localhost' aur 'pure.localhost' dono ko Local manega
 const isLocal = window.location.hostname.includes("localhost");
 
 const api = axios.create({
@@ -143,9 +143,9 @@ api.interceptors.request.use((config) => {
     return config;
   }
 
-  // ✅ UPDATE 2: Pata karo ki route admin ka hai YA user admin SUBDOMAIN ('pink.') par hai
+  // ✅ UPDATE 2: Pata karo ki route admin ka hai YA user admin SUBDOMAIN ('pure.') par hai
   const isAdminRoute = config.url && config.url.startsWith('/admin');
-  const isAdminPanel = window.location.hostname.startsWith('pink.'); // 👈 Ab ye path ki jagah subdomain check karega
+  const isAdminPanel = window.location.hostname.startsWith('pure.'); // 👈 Ab ye path ki jagah subdomain check karega
 
   if (isAdminRoute || isAdminPanel) {
     // Agar admin page par hai, toh sirf adminToken bhejo
@@ -184,7 +184,7 @@ api.interceptors.response.use(
       }
 
       // ✅ NAYA LOGIC: Pata karo ki Token Admin ka expire hua hai ya User ka
-      const isAdminPanel = window.location.hostname.startsWith('pink.');
+      const isAdminPanel = window.location.hostname.startsWith('pure.');
 
       if (isAdminPanel) {
         // ADMIN SESSION EXPIRE

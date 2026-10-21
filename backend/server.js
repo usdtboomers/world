@@ -24,21 +24,21 @@ const allowedOrigins = [
   // --- Local Testing ke liye ---
   'http://localhost:3000',
   'http://127.0.0.1:3000',
-  'http://pink.localhost:3000',
+  'http://pure.localhost:3000',
   'http://localhost:5000',       
   'http://127.0.0.1:5000',
   'http://localhost:5173',       
   'http://127.0.0.1:5173',
-  'http://pink.localhost:5173', 
+  'http://pure.localhost:5173', 
 
   // --- LIVE SERVER KE LIYE ---
   'https://worldfinance24.online',        
   'https://www.worldfinance24.online',    
-  'https://pink.worldfinance24.online',   
+  'https://pure.worldfinance24.online',   
 
   'https://worldtogether24.online',
   'https://www.worldtogether24.online',
-  'https://pink.worldtogether24.online' // Agar naye domain par bhi pink subdomain banana ho
+  'https://pure.worldtogether24.online' // Agar naye domain par bhi pure subdomain banana ho
 ];
 
 app.use(cors({
