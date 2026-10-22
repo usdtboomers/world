@@ -1,0 +1,72 @@
+[
+  {
+    "_id": "6a6b64b976d86c9a7ea1c503",
+    "userId": "WF1757652",
+    "oldWalletBalance": 7178.2234,
+    "oldDirectIncome": 137.7,
+    "oldLevelIncome": 7.872600000000003
+  },
+  {
+    "_id": "6a6b82da50d56cebfa9c1fe1",
+    "userId": "WF8489157",
+    "oldWalletBalance": 76.6,
+    "oldDirectIncome": 0,
+    "oldLevelIncome": 0.55
+  },
+  {
+    "_id": "6a6cdea232b91030c3638061",
+    "userId": "WF2196379",
+    "oldWalletBalance": 109.47500000000002,
+    "oldDirectIncome": 10.2,
+    "oldLevelIncome": 8.582500000000005
+  },
+  {
+    "_id": "6a6dad9a8ed31325d2311e55",
+    "userId": "WF9272743",
+    "oldWalletBalance": 787.9999999999999,
+    "oldDirectIncome": 27.5,
+    "oldLevelIncome": 13.127500000000026
+  },
+  {
+    "_id": "6a6db145933c0c8c22667f8a",
+    "userId": "WF6346425",
+    "oldWalletBalance": 14.5,
+    "oldDirectIncome": 22.5,
+    "oldLevelIncome": 1.175
+  },
+  {
+    "_id": "6a7da840d574c99510339164",
+    "userId": "WF6923712",
+    "oldWalletBalance": 306,
+    "oldDirectIncome": 4,
+    "oldLevelIncome": 0.875
+  },
+  {
+    "_id": "6a807c9d18b5333eb80ace6a",
+    "userId": "WF1450538",
+    "oldWalletBalance": 25,
+    "oldDirectIncome": 110,
+    "oldLevelIncome": 31.75
+  },
+  {
+    "_id": "6ac90bcb2b39d161f5858466",
+    "userId": "WF3616715",
+    "oldWalletBalance": 0,
+    "oldDirectIncome": 0,
+    "oldLevelIncome": 0.2625
+  },
+  {
+    "_id": "6ac90bf62b39d161f5858476",
+    "userId": "WF1496577",
+    "oldWalletBalance": 5,
+    "oldDirectIncome": 0,
+    "oldLevelIncome": 0.1375
+  },
+  {
+    "_id": "6ac90e33cd75b197c91d983d",
+    "userId": "WF6107606",
+    "oldWalletBalance": 0,
+    "oldDirectIncome": 0.5,
+    "oldLevelIncome": 0
+  }
+]

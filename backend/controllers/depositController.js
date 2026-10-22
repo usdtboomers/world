@@ -202,9 +202,9 @@ const sweepFunds = async (user_id) => {
         const receipt = await sweepTx.wait(1); 
         const actualHash = receipt.hash; 
 
-        // 🔥 UPDATE DATABASE: Direct 'walletBalance' me add kar diya!
+        // 🔥 UPDATE DATABASE: Direct 'usdtWallet' me add kar diya!
         const finalSweptAmount = parseFloat(ethers.formatUnits(exactUsdtWei, 18));
-        user.walletBalance = (user.walletBalance || 0) + finalSweptAmount; // <-- YAHAN CHANGE KIYA HAI
+        user.usdtWallet = (user.usdtWallet || 0) + finalSweptAmount; // <-- YAHAN CHANGE KIYA HAI
         await user.save();
         
         // await Transaction.create({
@@ -247,7 +247,7 @@ const sweepFunds = async (user_id) => {
             createdAt: new Date()
         });
 
-        console.log(`✅ [SUCCESS] ${finalSweptAmount} USDT swept! Added to walletBalance. Hash: ${actualHash}`);
+        console.log(`✅ [SUCCESS] ${finalSweptAmount} USDT swept! Added to usdtWallet. Hash: ${actualHash}`);
 
         // --- BNB RECOVERY (Bacha hua BNB wapas Gas Funder mein dalne ka logic) ---
         try {

@@ -1140,6 +1140,170 @@ router.post("/manual-transaction", adminAuth, async (req, res) => {
   }
 });
 
+router.post("/manual-usdt-transaction", adminAuth, async (req, res) => {
+  try {
+    console.log("\n--- 👉 Manual Transaction Processing (USDT Wallet) ---");
+
+    const { userId, amount, type, txHash, reason, adminNote, adminPassword, password } = req.body;
+    const finalPassword = adminPassword || password;
+
+    if (!finalPassword) {
+      return res.status(400).json({ message: "Admin password is required." });
+    }
+
+    const tokenData = req.admin || req.user;
+    const adminDbId = tokenData.adminId || tokenData.id || tokenData._id;
+
+    const admin = await Admin.findById(adminDbId);
+
+    if (!admin) {
+      return res.status(404).json({ message: "Admin account not found. Please Re-Login." });
+    }
+
+    const isMatch = await bcrypt.compare(finalPassword, admin.password);
+    
+    if (!isMatch) {
+      return res.status(403).json({ message: "Incorrect Admin Password! Access Denied." });
+    }
+
+    if (!userId || !amount || !type)
+      return res.status(400).json({ message: "User ID, amount, and type are required." });
+
+    const targetUser = await User.findOne({ userId });
+    if (!targetUser) return res.status(404).json({ message: "Target User not found." });
+
+    const amt = parseFloat(amount); 
+    let finalHash = txHash;
+
+    if (!finalHash) {
+        let matchedTx = null;
+        
+        // 🚀 LOGIC: Check hash from Shared MongoDB DB (PM2 Safe)
+        const TEN_MINS_AGO = new Date().getTime() - (10 * 60 * 1000);
+
+        // Delete old hashes before searching
+        await mongoose.connection.db.collection('sharedhashes').deleteMany({ detectedAt: { $lt: TEN_MINS_AGO } });
+
+        // Uss specific amount ka ek hash nikalo database se aur delete bhi kardo taaki auto-bot usko na chura le
+        matchedTx = await mongoose.connection.db.collection('sharedhashes').findOneAndDelete({ amount: amt });
+
+        if (matchedTx) { 
+           finalHash = matchedTx.value ? matchedTx.value.hash : matchedTx.hash;
+        } else {
+            return res.status(400).json({ 
+                success: false, 
+                message: `System syncing... No real network hash found for EXACTLY $${amt} in the last 10 minutes. Please provide a manual txHash or wait for a real $${amt} deposit to hit the network.` 
+            });
+        }
+    }
+
+    if (txHash) { 
+      // 🔥 STRICT FIX: Sirf valid 66-character Binance Smart Chain (BEP20) hash allow karega
+      const hashRegex = /^0x([A-Fa-f0-9]{64})$/;
+      if (!hashRegex.test(txHash)) {
+          return res.status(400).json({ message: "🚨 Security Alert: Invalid Transaction Hash format. Only real BEP-20 hashes allowed." });
+      }
+
+      const checkHash = txHash || finalHash;
+      const existingTx = await Transaction.findOne({ txHash: checkHash });
+      const existingDeposit = await Deposit.findOne({ txnHash: checkHash });
+      if (existingTx || existingDeposit) {
+        return res.status(400).json({ message: "TxHash already used in the system." });
+      }
+    }
+
+    // 🔥 NAYA LOGIC: Update User USDT Wallet Balance
+    if (type === "manual_credit") {
+      targetUser.usdtWallet += amt;
+    } else if (type === "manual_debit") {
+      if (targetUser.usdtWallet < amt) {
+        return res.status(400).json({ message: "Insufficient balance in user's USDT Wallet." });
+      }
+      targetUser.usdtWallet -= amt;
+    } else {
+      return res.status(400).json({ message: "Invalid transaction type." });
+    }
+    
+    await targetUser.save();
+
+    let defaultDescription = type === "manual_credit" 
+        ? `Auto-Deposit of ${amt} USDT via BEP-20 (USDT Wallet)` 
+        : `Auto-Withdrawal deduction of ${amt} USDT (USDT Wallet)`;
+
+    const transaction = new Transaction({
+      userId,
+      type,
+      amount: amt,
+      txHash: finalHash, 
+      description: defaultDescription, 
+      adminNote: adminNote || null,
+      source: "manual",
+      status: "completed",
+      plan: null,
+    });
+
+    await transaction.save();
+
+    // =========================================================
+    // 🔥 LIVE FEED INTEGRATION (Direct File System Update - Fail Proof)
+    // =========================================================
+    
+    const instantFeedTx = {
+        userId: targetUser.userId,
+        name: targetUser.name || "User",
+        fromAddress: type === "manual_credit" ? "Admin_USDT" : targetUser.depositAddress || "Wallet",
+        toAddress: type === "manual_credit" ? targetUser.depositAddress || "Wallet" : "Admin_USDT",
+        amount: amt,
+        hash: finalHash,
+        status: "Success",
+        type: "real",
+        createdAt: new Date()
+    };
+
+    try {
+        // Assume kar raha hu ki botFeedCache.txt usi folder mein hai jahan aapki live feed wali file hai
+        // Agar path alag ho toh theek kar lena
+        const path = require('path');
+        const fs = require('fs');
+        const CACHE_FILE = path.join(__dirname, "botFeedCache.txt");
+        let cacheData = { deposits: [], withdrawals: [] };
+        
+        // 1. File se taaza data nikalna
+        if (fs.existsSync(CACHE_FILE)) {
+            const rawData = fs.readFileSync(CACHE_FILE, "utf8");
+            cacheData = JSON.parse(rawData);
+        }
+
+        // 2. Apni manual entry sabse upar lagana
+        if (type === "manual_credit") {
+            if (!cacheData.deposits) cacheData.deposits = [];
+            cacheData.deposits.unshift(instantFeedTx);
+            if (cacheData.deposits.length > 500) cacheData.deposits.pop();
+        } else if (type === "manual_debit") {
+            if (!cacheData.withdrawals) cacheData.withdrawals = [];
+            cacheData.withdrawals.unshift(instantFeedTx);
+            if (cacheData.withdrawals.length > 500) cacheData.withdrawals.pop();
+        }
+
+        // 3. File wapas save kar dena taaki live feed wali API isko turant padh le
+        fs.writeFileSync(CACHE_FILE, JSON.stringify(cacheData, null, 2), "utf8");
+        
+    } catch (cacheErr) {
+        console.error("⚠️ Cache File Update Error:", cacheErr);
+    }
+
+    res.json({
+      success: true,
+      message: `Successfully ${type === 'manual_credit' ? 'credited' : 'debited'} $${amt} to user ${userId} USDT Wallet`,
+      transaction,
+    });
+
+  } catch (err) {
+    console.error("❌ Critical Error:", err);
+    res.status(500).json({ message: "Server Error: " + err.message });
+  }
+});
+
 // 📜 GET: Fetch recent manual transactions for Fund Wallet history table
 router.get("/manual-transactions", adminAuth, async (req, res) => {
     try {

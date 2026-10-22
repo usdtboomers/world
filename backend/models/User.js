@@ -45,6 +45,11 @@ const userSchema = new mongoose.Schema({
   // ==========================================
    walletBalance: { type: Number, default: 0 }, // Activation/Top-up wallet
 
+   usdtWallet: { 
+        type: Number, 
+        default: 0 
+    },
+
    depositAddress: { type: String, default: null }, // User ka unique crypto address
 
    
@@ -72,6 +77,10 @@ totalAutoCompoundIncome: { type: Number, default: 0 },
   
   levelIncome: { type: Number, default: 0 },
   totalLevelIncome: { type: Number, default: 0 },
+
+  // 🔥 NAYA WALA: ROI on ROI Level Income ke liye
+    levelRoiIncome: { type: Number, default: 0 },
+    totalLevelRoiIncome: { type: Number, default: 0 },
   
   roiIncome: { type: Number, default: 0 }, // 🔥 NAYA: Daily 25-day cycle ROI yahan aayega
   totalRoiIncome: { type: Number, default: 0 },

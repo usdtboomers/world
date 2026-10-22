@@ -947,12 +947,20 @@ if (process.env.NODE_APP_INSTANCE === '0' || process.env.NODE_APP_INSTANCE === u
                                 const percentage = LEVEL_PERCENTAGES[currentLevel - 1];
                                 const dailyLevelBonus = (roiAmount * percentage) / 100; 
 
-                                if (dailyLevelBonus > 0) {
+                                // if (dailyLevelBonus > 0) {
                                     // 🔥 RACE CONDITION FIX: $inc use kiya hai
-                                    await User.updateOne(
-                                        { _id: upline._id }, 
-                                        { $inc: { levelIncome: dailyLevelBonus, totalLevelIncome: dailyLevelBonus } }
-                                    );
+                                    // await User.updateOne(
+                                    //     { _id: upline._id }, 
+                                    //     { $inc: { levelIncome: dailyLevelBonus, totalLevelIncome: dailyLevelBonus } }
+                                    // );
+
+
+                                    if (dailyLevelBonus > 0) {
+                                         await User.updateOne(
+                                          { _id: upline._id }, 
+        // 🔥 CHANGE: Ab paisa 'levelIncome' ki jagah naye 'levelRoiIncome' wallet mein jayega
+                                  { $inc: { levelRoiIncome: dailyLevelBonus, totalLevelRoiIncome: dailyLevelBonus } }
+                                                     );
 
                                     await Transaction.create({
                                         userId: upline.userId,

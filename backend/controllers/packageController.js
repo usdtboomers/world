@@ -621,6 +621,7 @@ const AutoCompoundPackage = require('../models/AutoCompoundPackage');
 //     }
 // };
 
+
 // exports.activateAutoCompoundPackage = async (req, res) => {
 //     try {
 //         const { userId, memberId, packageAmount, txnPassword, duration } = req.body;
@@ -840,23 +841,19 @@ const AutoCompoundPackage = require('../models/AutoCompoundPackage');
 // 🔹 GET USER PACKAGES LOGIC 
 // =======================================================
 
-
-
-
 exports.activateAutoCompoundPackage = async (req, res) => {
     try {
         // ==========================================================
         // 🔥 TOP-UP TIME RESTRICTION (Starts strictly after Tonight 12:00 AM IST)
         // ==========================================================
-        // Aaj raat 12 baje (23 Oct 2026, 00:00:00 IST) ka exact time lock
-        const goLiveTime = new Date("2026-10-23T00:00:00+05:30").getTime();
+        // const goLiveTime = new Date("2026-10-23T00:00:00+05:30").getTime();
         
-        if (Date.now() < goLiveTime) {
-             return res.status(400).json({ 
-                 success: false, 
-                 message: 'Topup will start tonight after 12:00 AM.' 
-             });
-        }
+        // if (Date.now() < goLiveTime) {
+        //      return res.status(400).json({ 
+        //          success: false, 
+        //          message: 'Topup will start tonight after 12:00 AM.' 
+        //      });
+        // }
 
         // ==========================================================
         // NORMAL LOGIC STARTS HERE
@@ -864,11 +861,9 @@ exports.activateAutoCompoundPackage = async (req, res) => {
         const { userId, memberId, packageAmount, txnPassword } = req.body;
         const amount = Number(packageAmount);
         
-        // 🔥 NAYA LOGIC: Strictly 70 Days Timer
         const cycleDays = 70; 
         const packageLife = 70; 
 
-        // 🔥 NAYA LOGIC: Valid packages list (Poster ke hisaab se)
         const VALID_PACKAGES = [2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]; 
 
         if (!amount || isNaN(amount) || amount <= 0) {
@@ -890,12 +885,34 @@ exports.activateAutoCompoundPackage = async (req, res) => {
             return res.status(400).json({ success: false, message: "Invalid Transaction Password!" });
         }
 
-        // Fund Wallet Check
-        if ((currentUser.walletBalance || 0) < amount) {
-            return res.status(400).json({ success: false, message: "Insufficient Fund Amount ($)!" });
+        // =======================================================
+        // 🔥 NAYA LOGIC: 50% USDT Wallet + 50% Main Wallet Check
+        // =======================================================
+        const mainBal = currentUser.walletBalance || 0;
+        const usdtBal = currentUser.usdtWallet || 0; // Naya USDT Wallet field
+
+        const minRequiredUsdt = amount / 2; // Kam se kam 50% USDT wallet se chahiye
+
+        // Condition 1: Total balance check
+        if ((mainBal + usdtBal) < amount) {
+            return res.status(400).json({ success: false, message: "Insufficient total balance for this package." });
         }
 
-        currentUser.walletBalance -= amount;
+        // Condition 2: 50% Mandatory in USDT Wallet check
+        if (usdtBal < minRequiredUsdt) {
+            return res.status(400).json({ 
+                success: false, 
+                message: `You must have at least 50% ($${minRequiredUsdt}) in your USDT Wallet to activate this package.` 
+            });
+        }
+
+        // 🔥 Deduction Math: Agar main wallet me 50% se kam hai, toh baaki ka hissa USDT wallet se lenge
+        const amountFromUSDT = Math.max(minRequiredUsdt, amount - mainBal);
+        const amountFromMain = amount - amountFromUSDT;
+
+        // Dono wallets se balance deduct karna
+        currentUser.walletBalance -= amountFromMain;
+        currentUser.usdtWallet -= amountFromUSDT;
         await currentUser.save();
 
         // =======================================================
@@ -913,9 +930,9 @@ exports.activateAutoCompoundPackage = async (req, res) => {
             memberId: targetUser.userId,       
             purchasedBy: currentUser.userId,
             packageAmount: amount,           
-            dailyPercentage: 1, // 🔥 NAYA LOGIC: 1% Daily ROI
-            totalDays: packageLife, // 70 Din
-            compoundingDuration: cycleDays, // 70 Din
+            dailyPercentage: 1, 
+            totalDays: packageLife, 
+            compoundingDuration: cycleDays, 
             compoundingEndDate: compoundingEndDate, 
             daysCompleted: 0,
             startDate: startDate,
@@ -947,15 +964,16 @@ exports.activateAutoCompoundPackage = async (req, res) => {
             return Transaction.create({ ...data, date: new Date() });
         };
 
+        // Transaction logs for deduction (Optional, par record rakhna achha hai)
         await createTransaction({
             userId: currentUser.userId, type: "compound_activation", amount: amount,
             fromUserId: currentUser.userId, toUserId: targetUser.userId,
-            description: `Activated $${amount} Auto Compound (70 Days Timer) for ${targetUser.userId}`, status: 'success'
+            description: `Activated $${amount} Package (Deducted: $${amountFromUSDT} from USDT Wallet, $${amountFromMain} from Main Wallet) for ${targetUser.userId}`, status: 'success'
         });
 
         res.status(200).json({ 
             success: true, 
-            message: `Auto Compound Package of $${amount} (Timer: 70 Days) activated successfully for ${targetUser.userId}!`,
+            message: `Auto Compound Package of $${amount} activated successfully for ${targetUser.userId}!`,
             userId: targetUser.userId, 
             memberId: targetUser.userId, 
             data: newCompoundPackage
@@ -1038,6 +1056,7 @@ exports.activateAutoCompoundPackage = async (req, res) => {
     }
 };
 
+ 
 exports.getUserPackages = async (req, res) => {
     try {
         const { userId } = req.params;

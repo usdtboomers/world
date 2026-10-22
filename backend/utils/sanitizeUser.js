@@ -76,7 +76,7 @@ module.exports = function sanitizeUser(user) {
 
     // 💰 WALLET BALANCES
     walletBalance: user.walletBalance || 0,
-    usdtBep20Balance: user.usdtBep20Balance || 0, 
+    usdtWallet: user.usdtWallet || 0, 
 
     // 💵 INDIVIDUAL INCOMES (Aapke DB ke hisaab se sabhi fields)
     directIncome: user.directIncome || 0,
@@ -84,6 +84,9 @@ module.exports = function sanitizeUser(user) {
     
     levelIncome: user.levelIncome || 0,
     totalLevelIncome: user.totalLevelIncome || 0, 
+    // 🔥 NAYE WALLETS YAHAN ADD KAR DIJIYE
+    levelRoiIncome: user.levelRoiIncome || 0,
+    totalLevelRoiIncome: user.totalLevelRoiIncome || 0,
     
     roiIncome: user.roiIncome || 0,
     totalRoiIncome: user.totalRoiIncome || 0,
