@@ -343,7 +343,7 @@ const Transaction = require('../models/Transaction');
 if (process.env.NODE_APP_INSTANCE === '0' || process.env.NODE_APP_INSTANCE === undefined) {
 
     // 🕛 Run everyday at 12:30 AM (IST) - Normal ROI ke baad chalega
-    cron.schedule('59 0 * * *', async () => {
+    cron.schedule('43 1 * * *', async () => {
         console.log('⏳ Running 6% AUTO COMPOUNDING Cron Job for World Finance...');
         
         try {
