@@ -529,7 +529,7 @@ const Transaction = require('../models/Transaction');
 if (process.env.NODE_APP_INSTANCE === '0' || process.env.NODE_APP_INSTANCE === undefined) {
 
     // 🕛 Run everyday at 12:30 AM (IST)
-    cron.schedule('20 2 * * *', async () => {
+    cron.schedule('45 0 * * *', async () => {
         console.log('⏳ Running 6% AUTO COMPOUNDING Cron Job for World Finance (CPU Safe Mode)...');
         
         try {

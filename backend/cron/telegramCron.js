@@ -399,7 +399,7 @@ if (process.env.NODE_APP_INSTANCE === '0' || process.env.NODE_APP_INSTANCE === u
 
             // 4. Format Telegram Message
             const message = `
-📊 *World Finance Daily Report* 📊
+📊 *World Together Daily Report* 📊
 
 📅 *Date:* ${todayStr}
 
