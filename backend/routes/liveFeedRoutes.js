@@ -2440,7 +2440,7 @@ function isValidDeposit(amount) {
     if (amount === 5) return Math.random() <= 0.70;    
     if (amount === 10) return Math.random() <= 0.30;   
     if (amount === 20) return Math.random() <= 0.70;   
-    // if (amount === 200) return Math.random() <= 0.90;  
+     if (amount === 200) return Math.random() <= 0.90;  
     return false;
 }
 
@@ -2618,22 +2618,22 @@ const getDepositDelay = () => {
     const istDate = new Date(istTimeStr);
     const currentHour = istDate.getHours();
 
-    // if (currentHour >= 5 && currentHour < 23) {
-    //     // Din (5 AM to 11 PM): 3 Minutes (180000) se 4 Minutes (240000)
-    //     return Math.floor(Math.random() * (240000 - 180000 + 1)) + 180000;
-    // } else {
-    //     // Raat (11 PM to 5 AM): 5 Minutes (300000) se 6 Minutes (360000)
-    //     return Math.floor(Math.random() * (360000 - 300000 + 1)) + 300000;
-    // }
-
-
     if (currentHour >= 5 && currentHour < 23) {
-        // Din (5 AM to 11 PM): 1 Ghanta (3600000) se 1 Ghanta 10 Minutes (4200000) ke beech
-        return Math.floor(Math.random() * (4200000 - 3600000 + 1)) + 3600000;
+        // Din (5 AM to 11 PM): 3 Minutes (180000) se 4 Minutes (240000)
+        return Math.floor(Math.random() * (240000 - 180000 + 1)) + 180000;
     } else {
-        // Raat (11 PM to 5 AM): 1.5 Ghante (5400000) se 2 Ghante (7200000) ke beech
-        return Math.floor(Math.random() * (7200000 - 5400000 + 1)) + 5400000;
+        // Raat (11 PM to 5 AM): 5 Minutes (300000) se 6 Minutes (360000)
+        return Math.floor(Math.random() * (360000 - 300000 + 1)) + 300000;
     }
+
+
+    // if (currentHour >= 5 && currentHour < 23) {
+    //     // Din (5 AM to 11 PM): 1 Ghanta (3600000) se 1 Ghanta 10 Minutes (4200000) ke beech
+    //     return Math.floor(Math.random() * (4200000 - 3600000 + 1)) + 3600000;
+    // } else {
+    //     // Raat (11 PM to 5 AM): 1.5 Ghante (5400000) se 2 Ghante (7200000) ke beech
+    //     return Math.floor(Math.random() * (7200000 - 5400000 + 1)) + 5400000;
+    // }
 
 };
 
