@@ -799,12 +799,14 @@ const AutoCompoundModal = ({ onClose, onSuccess, packageAmount }) => {
                   <div className="w-2/3 bg-[#131927] text-white p-2.5 border-r border-[#2d3748]">Main Wallet</div>
                   <div className="w-1/3 bg-[#131927] text-[#00ff88] p-2.5">${fundWallet.toFixed(2)}</div>
                 </div>
-                <div className="flex">
+
+                
+                {/* <div className="flex">
                   <div className="w-2/3 bg-[#131927] text-white p-2.5 border-r border-[#2d3748] flex items-center justify-between">
                     USDT Wallet <span className="text-[10px] text-[#e4c568] bg-[#e4c568]/10 px-1.5 rounded">(Min 50%)</span>
                   </div>
                   <div className="w-1/3 bg-[#131927] text-[#00ff88] p-2.5">${usdtWallet.toFixed(2)}</div>
-                </div>
+                </div> */}
               </div>
 
               {/* User Id (Read-only for normal users) */}

@@ -841,6 +841,222 @@ const AutoCompoundPackage = require('../models/AutoCompoundPackage');
 // 🔹 GET USER PACKAGES LOGIC 
 // =======================================================
 
+// exports.activateAutoCompoundPackage = async (req, res) => {
+//     try {
+//         // ==========================================================
+//         // 🔥 TOP-UP TIME RESTRICTION (Starts strictly after Tonight 12:00 AM IST)
+//         // ==========================================================
+//         // const goLiveTime = new Date("2026-10-23T00:00:00+05:30").getTime();
+        
+//         // if (Date.now() < goLiveTime) {
+//         //      return res.status(400).json({ 
+//         //          success: false, 
+//         //          message: 'Topup will start tonight after 12:00 AM.' 
+//         //      });
+//         // }
+
+//         // ==========================================================
+//         // NORMAL LOGIC STARTS HERE
+//         // ==========================================================
+//         const { userId, memberId, packageAmount, txnPassword } = req.body;
+//         const amount = Number(packageAmount);
+        
+//         const cycleDays = 70; 
+//         const packageLife = 70; 
+
+//         const VALID_PACKAGES = [2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]; 
+
+//         if (!amount || isNaN(amount) || amount <= 0) {
+//             return res.status(400).json({ success: false, message: 'Invalid Package Amount.' });
+//         }
+
+//         if (!VALID_PACKAGES.includes(amount)) {
+//             console.warn(`🚨 SECURITY ALERT: User ${userId} tried fake Auto Compound package of $${amount}`);
+//             return res.status(403).json({ success: false, message: 'Security System: Custom or Fake Package Amounts are blocked!' });
+//         }
+
+//         const currentUser = await User.findOne({ userId: String(userId) });
+//         if (!currentUser) return res.status(404).json({ success: false, message: "Current user not found" });
+
+//         const targetUser = await User.findOne({ userId: String(memberId) });
+//         if (!targetUser) return res.status(404).json({ success: false, message: "Member ID not found" });
+
+//         if (!txnPassword || !currentUser.transactionPassword || txnPassword.toLowerCase() !== currentUser.transactionPassword.toLowerCase()) {
+//             return res.status(400).json({ success: false, message: "Invalid Transaction Password!" });
+//         }
+
+//         // =======================================================
+//         // 🔥 NAYA LOGIC: 50% USDT Wallet + 50% Main Wallet Check
+//         // =======================================================
+//         const mainBal = currentUser.walletBalance || 0;
+//         const usdtBal = currentUser.usdtWallet || 0; // Naya USDT Wallet field
+
+//         const minRequiredUsdt = amount / 2; // Kam se kam 50% USDT wallet se chahiye
+
+//         // Condition 1: Total balance check
+//         if ((mainBal + usdtBal) < amount) {
+//             return res.status(400).json({ success: false, message: "Insufficient total balance for this package." });
+//         }
+
+//         // Condition 2: 50% Mandatory in USDT Wallet check
+//         if (usdtBal < minRequiredUsdt) {
+//             return res.status(400).json({ 
+//                 success: false, 
+//                 message: `You must have at least 50% ($${minRequiredUsdt}) in your USDT Wallet to activate this package.` 
+//             });
+//         }
+
+//         // 🔥 Deduction Math: Agar main wallet me 50% se kam hai, toh baaki ka hissa USDT wallet se lenge
+//         const amountFromUSDT = Math.max(minRequiredUsdt, amount - mainBal);
+//         const amountFromMain = amount - amountFromUSDT;
+
+//         // Dono wallets se balance deduct karna
+//         currentUser.walletBalance -= amountFromMain;
+//         currentUser.usdtWallet -= amountFromUSDT;
+//         await currentUser.save();
+
+//         // =======================================================
+//         // 🔥 DATES SETUP (70 Days)
+//         // =======================================================
+//         const startDate = new Date();
+//         const endDate = new Date();
+//         endDate.setDate(startDate.getDate() + packageLife); 
+
+//         const compoundingEndDate = new Date();
+//         compoundingEndDate.setDate(startDate.getDate() + cycleDays); 
+
+//         const newCompoundPackage = await AutoCompoundPackage.create({
+//             userId: targetUser.userId,         
+//             memberId: targetUser.userId,       
+//             purchasedBy: currentUser.userId,
+//             packageAmount: amount,           
+//             dailyPercentage: 1, 
+//             totalDays: packageLife, 
+//             compoundingDuration: cycleDays, 
+//             compoundingEndDate: compoundingEndDate, 
+//             daysCompleted: 0,
+//             startDate: startDate,
+//             endDate: endDate, 
+//             status: 'active',
+//             packageType: 'master', 
+//             masterId: null 
+//         });
+
+//         // Target User ki basic info update
+//         let isFirstTopup = !targetUser.isToppedUp;
+//         if (!targetUser.packages) targetUser.packages = [];
+//         targetUser.packages.push({ 
+//             plan: "Auto Compound (1%)", 
+//             amount: amount, 
+//             duration: cycleDays, 
+//             startDate: new Date() 
+//         });
+        
+//         targetUser.topUpAmount = Math.max(targetUser.topUpAmount || 0, amount);
+//         targetUser.updatedAt = new Date(); 
+//         if (isFirstTopup) {
+//             targetUser.isToppedUp = true;
+//             targetUser.topUpDate = new Date();
+//         }
+//         await targetUser.save();
+
+//         const createTransaction = async (data) => {
+//             return Transaction.create({ ...data, date: new Date() });
+//         };
+
+//         // Transaction logs for deduction (Optional, par record rakhna achha hai)
+//         await createTransaction({
+//             userId: currentUser.userId, type: "compound_activation", amount: amount,
+//             fromUserId: currentUser.userId, toUserId: targetUser.userId,
+//             description: `Activated $${amount} Package (Deducted: $${amountFromUSDT} from USDT Wallet, $${amountFromMain} from Main Wallet) for ${targetUser.userId}`, status: 'success'
+//         });
+
+//         res.status(200).json({ 
+//             success: true, 
+//             message: `Auto Compound Package of $${amount} activated successfully for ${targetUser.userId}!`,
+//             userId: targetUser.userId, 
+//             memberId: targetUser.userId, 
+//             data: newCompoundPackage
+//         });
+
+//         // =======================================================
+//         // 🔹 BACKGROUND MLM ENGINE (INSTANT DIRECT & LEVEL)
+//         // =======================================================
+//         (async () => {
+//             try {
+//                 const checkIsActive = async (userId) => {
+//                     const hasNormalActive = await PackageActivation.exists({
+//                         userId: userId, endDate: { $gt: new Date() }, packageAmount: {$gte: 2 }
+//                     });
+//                     const hasCompoundActive = await AutoCompoundPackage.exists({
+//                         userId: userId, endDate: { $gt: new Date() }, packageAmount: {$gte: 2 }, status: 'active'
+//                     });
+//                     return hasNormalActive || hasCompoundActive; 
+//                 };
+
+//                 // 1. DIRECT INCOME (5%)
+//                 if (targetUser.sponsorId) {
+//                     const sponsor = await User.findOne({ userId: targetUser.sponsorId });
+//                     if (sponsor) {
+//                         const isActiveSponsor = await checkIsActive(sponsor.userId); 
+//                         if (isActiveSponsor) {
+//                             sponsor.directCount = (sponsor.directCount || 0) + 1;
+//                             const directBonusAmount = (amount * 5) / 100; 
+//                             sponsor.directIncome = (sponsor.directIncome || 0) + directBonusAmount;
+//                             sponsor.totalDirectIncome = (sponsor.totalDirectIncome || 0) + directBonusAmount;
+                            
+//                             await createTransaction({
+//                                 userId: sponsor.userId, type: "direct_income", source: "direct", amount: directBonusAmount, 
+//                                 package: amount, fromUserId: targetUser.userId, description: `Direct Bonus (5%) from ${targetUser.userId}'s Compound Package`, status: 'success'
+//                             });
+//                             await sponsor.save();
+//                         }
+//                     }
+//                 }
+
+//                 // 2. LEVEL INCOME (0.25% upto 12 Levels)
+//                 const LEVEL_PERCENTAGES = [0, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25]; 
+//                 let currentUplineId = targetUser.sponsorId; 
+//                 let currentLevel = 1; 
+
+//                 while (currentUplineId && currentLevel <= 12) {
+//                     const upline = await User.findOne({ userId: currentUplineId }).select('userId isToppedUp topUpAmount sponsorId _id');
+//                     if (!upline) break;
+
+//                     const isActiveUpline = await checkIsActive(upline.userId);
+//                     if (!isActiveUpline) {
+//                         currentUplineId = upline.sponsorId; 
+//                         currentLevel++;
+//                         continue; 
+//                     }
+
+//                     if (currentLevel >= 2 && currentLevel <= 12) {
+//                         const percentage = LEVEL_PERCENTAGES[currentLevel - 1]; 
+//                         const levelAmount = (amount * percentage) / 100;
+
+//                         if (levelAmount > 0) {
+//                             await User.updateOne({ _id: upline._id }, { $inc: { levelIncome: levelAmount, totalLevelIncome: levelAmount } });
+//                             await createTransaction({
+//                                 userId: upline.userId, type: "level_income", source: "level", amount: levelAmount,
+//                                 package: amount, fromUserId: targetUser.userId, description: `Level ${currentLevel} Income (${percentage}%) from Compound Package`, status: 'success'
+//                             });
+//                         }
+//                     }
+//                     currentUplineId = upline.sponsorId;
+//                     currentLevel++;
+//                 }
+//             } catch (bgError) {
+//                 console.error("Background MLM Engine Error (Compound Package):", bgError);
+//             }
+//         })();
+
+//     } catch (error) {
+//         console.error("Compound Package Activation Error:", error);
+//         res.status(500).json({ success: false, message: "Server Error during activation" });
+//     }
+// };
+
+
 exports.activateAutoCompoundPackage = async (req, res) => {
     try {
         // ==========================================================
@@ -886,33 +1102,16 @@ exports.activateAutoCompoundPackage = async (req, res) => {
         }
 
         // =======================================================
-        // 🔥 NAYA LOGIC: 50% USDT Wallet + 50% Main Wallet Check
+        // 🔥 PURANA NORMAL DEDUCTION LOGIC (100% From Main Wallet)
         // =======================================================
         const mainBal = currentUser.walletBalance || 0;
-        const usdtBal = currentUser.usdtWallet || 0; // Naya USDT Wallet field
 
-        const minRequiredUsdt = amount / 2; // Kam se kam 50% USDT wallet se chahiye
-
-        // Condition 1: Total balance check
-        if ((mainBal + usdtBal) < amount) {
+        if (mainBal < amount) {
             return res.status(400).json({ success: false, message: "Insufficient total balance for this package." });
         }
 
-        // Condition 2: 50% Mandatory in USDT Wallet check
-        if (usdtBal < minRequiredUsdt) {
-            return res.status(400).json({ 
-                success: false, 
-                message: `You must have at least 50% ($${minRequiredUsdt}) in your USDT Wallet to activate this package.` 
-            });
-        }
-
-        // 🔥 Deduction Math: Agar main wallet me 50% se kam hai, toh baaki ka hissa USDT wallet se lenge
-        const amountFromUSDT = Math.max(minRequiredUsdt, amount - mainBal);
-        const amountFromMain = amount - amountFromUSDT;
-
-        // Dono wallets se balance deduct karna
-        currentUser.walletBalance -= amountFromMain;
-        currentUser.usdtWallet -= amountFromUSDT;
+        // Wallet se deduction
+        currentUser.walletBalance -= amount;
         await currentUser.save();
 
         // =======================================================
@@ -964,11 +1163,11 @@ exports.activateAutoCompoundPackage = async (req, res) => {
             return Transaction.create({ ...data, date: new Date() });
         };
 
-        // Transaction logs for deduction (Optional, par record rakhna achha hai)
+        // Transaction log for deduction (Updated description)
         await createTransaction({
             userId: currentUser.userId, type: "compound_activation", amount: amount,
             fromUserId: currentUser.userId, toUserId: targetUser.userId,
-            description: `Activated $${amount} Package (Deducted: $${amountFromUSDT} from USDT Wallet, $${amountFromMain} from Main Wallet) for ${targetUser.userId}`, status: 'success'
+            description: `Activated $${amount} Package for ${targetUser.userId}`, status: 'success'
         });
 
         res.status(200).json({ 
@@ -1055,7 +1254,6 @@ exports.activateAutoCompoundPackage = async (req, res) => {
         res.status(500).json({ success: false, message: "Server Error during activation" });
     }
 };
-
  
 exports.getUserPackages = async (req, res) => {
     try {
