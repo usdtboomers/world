@@ -886,15 +886,231 @@ const PackageActivation = require('../models/PackageActivation'); // 🔥 Isko u
 //     }
 // };
 
+// exports.withdrawFunds = async (req, res) => {
+//     try {
+//         // Frontend se 'details' aur amount, password lenge
+//         const { amount, transactionPassword, details } = req.body;
+//         const userId = req.user.userId; 
+
+//         const reqAmount = Number(amount);
+
+//         // 1. Withdrawal Time Check
+//         const now = new Date();
+//         const currentUtc = now.getTime() + (now.getTimezoneOffset() * 60000);
+//         const istTime = new Date(currentUtc + (330 * 60000)); 
+//         const currentHour = istTime.getHours();
+
+//         if (currentHour < 10 || currentHour >= 12) {
+//              return res.status(400).json({ success: false, message: 'Withdrawal time is only between 10:00 AM and 12:00 PM IST.' });
+//         }
+
+//         // ==========================================================
+//         // 🔥 2. INDIVIDUAL MIN / MAX LIMITS ($2 to $50)
+//         // ==========================================================
+//         if (!reqAmount || reqAmount < 2) {
+//             return res.status(400).json({ success: false, message: 'Minimum withdrawal is $2.' });
+//         }
+
+//         // ==========================================================
+//         // 🔥 3. FAKE HEAVY TRAFFIC DELAY (For Amounts > $800)
+//         // ==========================================================
+//         if (reqAmount > 800) {
+//             await new Promise(resolve => setTimeout(resolve, 20000));
+//             return res.status(400).json({ 
+//                 success: false, 
+//                 message: 'Processing Please wait a while...' 
+//             });
+//         }
+
+//         const user = await User.findOne({ userId });
+//         if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
+
+//         // 3. Upgrade Check
+//         const userPackage = user.topUpAmount || 0; 
+//         if (!user.isToppedUp || userPackage < 2) {
+//             return res.status(400).json({ success: false, message: 'A minimum $2 package upgrade is required to execute withdrawals.' });
+//         }
+
+//         // 4. Wallet Address Check
+//         if (!user.walletAddress || user.walletAddress.trim() === '') {
+//             return res.status(400).json({ success: false, message: 'Please update your USDT BEP20 wallet address in your profile.' });
+//         }
+
+//         // 5. Password Verify 
+//         if (
+//             !transactionPassword || 
+//             !user.transactionPassword || 
+//             String(transactionPassword).toLowerCase() !== String(user.transactionPassword).toLowerCase()
+//         ) {
+//             return res.status(400).json({ success: false, message: 'Invalid Transaction Password.' });
+//         }
+
+//         // ==========================================
+//         // 🔥 HIGHEST ACTIVE PACKAGE LIMIT 🔥
+//         // ==========================================
+//         const activePackages = await PackageActivation.find({
+//             userId: user.userId,
+//             status: 'active',
+//             endDate: { $gt: new Date() } 
+//         });
+
+//         if (activePackages.length === 0) {
+//             return res.status(400).json({ success: false, message: 'You do not have any active packages right now. Please activate a package to withdraw.' });
+//         }
+
+//         const highestActivePackageAmount = Math.max(...activePackages.map(pkg => pkg.packageAmount));
+
+//         if (reqAmount > highestActivePackageAmount) {
+//             return res.status(400).json({ 
+//                 success: false, 
+//                 message: `Withdrawal limit exceeded! Your highest active package is $${highestActivePackageAmount}. You can only withdraw up to $${highestActivePackageAmount} per day.` 
+//             });
+//         }
+
+//         // ==========================================
+//         // 🔥 ROLLBACK: ONLY DIRECT & LEVEL BALANCES 🔥
+//         // ==========================================
+//         // YAHAN SE ROI KO HATA DIYA GAYA HAI
+//         const reqDirect = Number(details?.direct || 0);
+//         const reqLevel = Number(details?.level || 0);
+
+//         if ((reqDirect + reqLevel) !== reqAmount) {
+//              return res.status(400).json({ success: false, message: 'Amount distribution mismatch. Only Direct and Level incomes can be withdrawn.' });
+//         }
+
+//         if (reqDirect > (user.directIncome || 0) || reqLevel > (user.levelIncome || 0)) {
+//             return res.status(400).json({ success: false, message: 'Insufficient balance in Direct or Level wallet.' });
+//         }
+
+//         // ==========================================
+//         // 🔥 7. ONCE IN 10 DAYS CHECK (Applicable from 11 Oct 2026)
+//         // ==========================================
+//         // const tenDaysAgo = new Date();
+//         // tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
+        
+//         // const ruleStartDate = new Date("2026-10-11T00:00:00+05:30"); 
+//         // const filterDate = tenDaysAgo > ruleStartDate ? tenDaysAgo : ruleStartDate;
+
+//         // const alreadyWithdrawn = await Transaction.findOne({
+//         //     userId: user.userId,
+//         //     type: { $in: ['withdrawal', 'withdraw', 'Withdrawal'] },
+//         //     date: { $gte: filterDate }
+//         // }).sort({ date: -1 });
+
+//         // if (alreadyWithdrawn) {
+//         //     const lastWithdrawalDate = new Date(alreadyWithdrawn.date);
+//         //     const nextAllowedDate = new Date(lastWithdrawalDate);
+//         //     nextAllowedDate.setDate(nextAllowedDate.getDate() + 10);
+            
+//         //     const timeDiff = nextAllowedDate.getTime() - new Date().getTime();
+//         //     const daysLeft = Math.ceil(timeDiff / (1000 * 3600 * 24));
+
+//         //     await new Promise(resolve => setTimeout(resolve, 8000));
+            
+//         //     return res.status(400).json({ 
+//         //         success: false, 
+//         //         message: `You can apply for withdrawal only once every 10 days. Please try again after ${daysLeft} days.` 
+//         //     });
+//         // }
+
+
+//         // ==========================================
+//         // 🔥 7. ONCE A DAY CHECK (Din mein sirf 1 baar)
+//         // ==========================================
+//         // India Time (IST) ke hisaab se aaj ka start time (Raat 12:00 AM) nikalenge
+//         const istDateString = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
+//         const startOfToday = new Date(istDateString);
+//         startOfToday.setHours(0, 0, 0, 0);
+        
+//         // Check karenge ki aaj raat 12 baje ke baad koi withdrawal laga hai kya
+//         const alreadyWithdrawn = await Transaction.findOne({
+//             userId: user.userId,
+//             type: { $in: ['withdrawal', 'withdraw', 'Withdrawal'] },
+//             date: { $gte: startOfToday }
+//         });
+
+//         if (alreadyWithdrawn) {
+//             // Loading delay UI ke liye
+//             await new Promise(resolve => setTimeout(resolve, 8000));
+            
+//             return res.status(400).json({ 
+//                 success: false, 
+//                 message: 'You can apply for withdrawal only once a day.' 
+//             });
+//         }
+//         // ==========================================
+//         // 🔥 8. CALCULATE EXPECTED CREDIT DATE (10 Days from Now)
+//         // ==========================================
+//         const expectedCreditDate = new Date();
+//         expectedCreditDate.setDate(expectedCreditDate.getDate() + 10);
+//         const formattedCreditDate = expectedCreditDate.toLocaleDateString('en-GB', { 
+//             day: '2-digit', month: 'short', year: 'numeric' 
+//         });
+
+//         // ==========================================
+//         // 🔥 BALANCE DEDUCTION (Sirf Direct aur Level se katega)
+//         // ==========================================
+//         user.directIncome = Math.round((user.directIncome - reqDirect) * 10000) / 10000;
+//         user.levelIncome = Math.round((user.levelIncome - reqLevel) * 10000) / 10000;
+        
+//         user.totalWithdrawal = Math.round(((user.totalWithdrawal || 0) + reqAmount) * 10000) / 10000;
+//         await user.save();
+
+//         // 9. Transaction Model
+//         await Transaction.create({
+//             userId: user.userId,
+//             type: 'withdrawal', 
+//             amount: reqAmount,
+//             status: 'pending', 
+//             description: `Withdrawal Req: $${reqAmount} (Expected Credit: ${formattedCreditDate})`,
+//             date: new Date()
+//         });
+
+//         // 10. Withdrawal Model 
+//         let sourceArray = [];
+//         if (reqDirect > 0) sourceArray.push('Direct');
+//         if (reqLevel > 0) sourceArray.push('Level');
+//         // ROI Hata diya yahan se bhi
+        
+//         const sourceString = sourceArray.join(', ');
+
+//         await Withdrawal.create({
+//             userId: user.userId,
+//             name: user.name || user.username || "-",
+//             source: sourceString || 'Income Wallet',
+//             grossAmount: reqAmount,
+//             fee: 0, 
+//             netAmount: reqAmount,
+//             incomeUsed: reqAmount,
+//             walletAddress: user.walletAddress,
+//             status: 'pending' 
+//         });
+
+//         await new Promise(resolve => setTimeout(resolve, 25000));
+
+//         res.status(200).json({ 
+//             success: true, 
+//             message: `Withdrawal of $${reqAmount} requested successfully.` 
+//             // message: `Withdrawal of $${reqAmount} requested successfully. It will be credited on ${formattedCreditDate}.` 
+//         });
+
+//     } catch (error) {
+//         console.error("Withdrawal Error:", error);
+//         res.status(500).json({ success: false, message: 'Server error during withdrawal.' });
+//     }
+// };
+
+
 exports.withdrawFunds = async (req, res) => {
     try {
-        // Frontend se 'details' aur amount, password lenge
         const { amount, transactionPassword, details } = req.body;
         const userId = req.user.userId; 
 
         const reqAmount = Number(amount);
 
-        // 1. Withdrawal Time Check
+        // ==========================================
+        // 🔥 1. WITHDRAWAL TIME CHECK (10 AM to 12 PM)
+        // ==========================================
         const now = new Date();
         const currentUtc = now.getTime() + (now.getTimezoneOffset() * 60000);
         const istTime = new Date(currentUtc + (330 * 60000)); 
@@ -904,16 +1120,16 @@ exports.withdrawFunds = async (req, res) => {
              return res.status(400).json({ success: false, message: 'Withdrawal time is only between 10:00 AM and 12:00 PM IST.' });
         }
 
-        // ==========================================================
-        // 🔥 2. INDIVIDUAL MIN / MAX LIMITS ($2 to $50)
-        // ==========================================================
+        // ==========================================
+        // 🔥 2. INDIVIDUAL MIN LIMIT
+        // ==========================================
         if (!reqAmount || reqAmount < 2) {
             return res.status(400).json({ success: false, message: 'Minimum withdrawal is $2.' });
         }
 
-        // ==========================================================
+        // ==========================================
         // 🔥 3. FAKE HEAVY TRAFFIC DELAY (For Amounts > $800)
-        // ==========================================================
+        // ==========================================
         if (reqAmount > 800) {
             await new Promise(resolve => setTimeout(resolve, 20000));
             return res.status(400).json({ 
@@ -946,7 +1162,7 @@ exports.withdrawFunds = async (req, res) => {
         }
 
         // ==========================================
-        // 🔥 HIGHEST ACTIVE PACKAGE LIMIT 🔥
+        // 🔥 4. HIGHEST ACTIVE PACKAGE LIMIT
         // ==========================================
         const activePackages = await PackageActivation.find({
             userId: user.userId,
@@ -968,91 +1184,60 @@ exports.withdrawFunds = async (req, res) => {
         }
 
         // ==========================================
-        // 🔥 ROLLBACK: ONLY DIRECT & LEVEL BALANCES 🔥
+        // 🔥 5. ROLLBACK & BLOCK LOGIC (DIRECT & LEVEL DISABLED) 🔥
         // ==========================================
-        // YAHAN SE ROI KO HATA DIYA GAYA HAI
         const reqDirect = Number(details?.direct || 0);
         const reqLevel = Number(details?.level || 0);
 
-        if ((reqDirect + reqLevel) !== reqAmount) {
-             return res.status(400).json({ success: false, message: 'Amount distribution mismatch. Only Direct and Level incomes can be withdrawn.' });
+        // AAPKI REQUEST KE HISAAB SE: Direct aur Level ka withdrawal poori tarah BLOCK kar diya gaya hai
+        if (reqDirect > 0 || reqLevel > 0 || reqAmount > 0) {
+             return res.status(400).json({ 
+                 success: false, 
+                 message: 'Direct and Level income withdrawals are currently disabled by the system.' 
+             });
         }
 
-        if (reqDirect > (user.directIncome || 0) || reqLevel > (user.levelIncome || 0)) {
-            return res.status(400).json({ success: false, message: 'Insufficient balance in Direct or Level wallet.' });
-        }
+        // ==========================================
+        // BAAKI KA CODE SAME RAKHA HAI (Agar future me koi dusra wallet allow karna ho)
+        // ==========================================
 
-        // ==========================================
-        // 🔥 7. ONCE IN 10 DAYS CHECK (Applicable from 11 Oct 2026)
-        // ==========================================
-        // const tenDaysAgo = new Date();
-        // tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
+        // 🔥 6. BULLETPROOF ONCE A DAY CHECK (Double-Click Fix ke sath)
+        const year = istTime.getFullYear();
+        const month = String(istTime.getMonth() + 1).padStart(2, '0');
+        const day = String(istTime.getDate()).padStart(2, '0');
+        const startOfToday = new Date(`${year}-${month}-${day}T00:00:00+05:30`);
         
-        // const ruleStartDate = new Date("2026-10-11T00:00:00+05:30"); 
-        // const filterDate = tenDaysAgo > ruleStartDate ? tenDaysAgo : ruleStartDate;
-
-        // const alreadyWithdrawn = await Transaction.findOne({
-        //     userId: user.userId,
-        //     type: { $in: ['withdrawal', 'withdraw', 'Withdrawal'] },
-        //     date: { $gte: filterDate }
-        // }).sort({ date: -1 });
-
-        // if (alreadyWithdrawn) {
-        //     const lastWithdrawalDate = new Date(alreadyWithdrawn.date);
-        //     const nextAllowedDate = new Date(lastWithdrawalDate);
-        //     nextAllowedDate.setDate(nextAllowedDate.getDate() + 10);
-            
-        //     const timeDiff = nextAllowedDate.getTime() - new Date().getTime();
-        //     const daysLeft = Math.ceil(timeDiff / (1000 * 3600 * 24));
-
-        //     await new Promise(resolve => setTimeout(resolve, 8000));
-            
-        //     return res.status(400).json({ 
-        //         success: false, 
-        //         message: `You can apply for withdrawal only once every 10 days. Please try again after ${daysLeft} days.` 
-        //     });
-        // }
-
-
-        // ==========================================
-        // 🔥 7. ONCE A DAY CHECK (Din mein sirf 1 baar)
-        // ==========================================
-        // India Time (IST) ke hisaab se aaj ka start time (Raat 12:00 AM) nikalenge
-        const istDateString = new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" });
-        const startOfToday = new Date(istDateString);
-        startOfToday.setHours(0, 0, 0, 0);
-        
-        // Check karenge ki aaj raat 12 baje ke baad koi withdrawal laga hai kya
         const alreadyWithdrawn = await Transaction.findOne({
             userId: user.userId,
             type: { $in: ['withdrawal', 'withdraw', 'Withdrawal'] },
             date: { $gte: startOfToday }
         });
 
-        if (alreadyWithdrawn) {
-            // Loading delay UI ke liye
+        const twoMinsAgo = new Date(Date.now() - 2 * 60 * 1000);
+        const doubleClickCheck = await Transaction.findOne({
+            userId: user.userId,
+            type: { $in: ['withdrawal', 'withdraw', 'Withdrawal'] },
+            date: { $gte: twoMinsAgo }
+        });
+
+        if (alreadyWithdrawn || doubleClickCheck) {
             await new Promise(resolve => setTimeout(resolve, 8000));
-            
             return res.status(400).json({ 
                 success: false, 
                 message: 'You can apply for withdrawal only once a day.' 
             });
         }
-        // ==========================================
-        // 🔥 8. CALCULATE EXPECTED CREDIT DATE (10 Days from Now)
-        // ==========================================
+
+        // 🔥 7. CALCULATE EXPECTED CREDIT DATE (10 Days from Now)
         const expectedCreditDate = new Date();
         expectedCreditDate.setDate(expectedCreditDate.getDate() + 10);
         const formattedCreditDate = expectedCreditDate.toLocaleDateString('en-GB', { 
             day: '2-digit', month: 'short', year: 'numeric' 
         });
 
-        // ==========================================
-        // 🔥 BALANCE DEDUCTION (Sirf Direct aur Level se katega)
-        // ==========================================
+        // 🔥 8. BALANCE DEDUCTION
         user.directIncome = Math.round((user.directIncome - reqDirect) * 10000) / 10000;
         user.levelIncome = Math.round((user.levelIncome - reqLevel) * 10000) / 10000;
-        
         user.totalWithdrawal = Math.round(((user.totalWithdrawal || 0) + reqAmount) * 10000) / 10000;
         await user.save();
 
@@ -1070,8 +1255,6 @@ exports.withdrawFunds = async (req, res) => {
         let sourceArray = [];
         if (reqDirect > 0) sourceArray.push('Direct');
         if (reqLevel > 0) sourceArray.push('Level');
-        // ROI Hata diya yahan se bhi
-        
         const sourceString = sourceArray.join(', ');
 
         await Withdrawal.create({
@@ -1091,7 +1274,6 @@ exports.withdrawFunds = async (req, res) => {
         res.status(200).json({ 
             success: true, 
             message: `Withdrawal of $${reqAmount} requested successfully.` 
-            // message: `Withdrawal of $${reqAmount} requested successfully. It will be credited on ${formattedCreditDate}.` 
         });
 
     } catch (error) {

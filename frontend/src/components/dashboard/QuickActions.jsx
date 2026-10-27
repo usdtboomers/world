@@ -107,7 +107,7 @@ const QuickActions = ({ onDepositClick }) => {
             {/* Telegram */}
        <div className="flex flex-col items-center gap-2 col-span-4 justify-center mt-2">
   <a 
-    href="https://t.me/worldfinance01" 
+    href="https://t.me/worldtogether24" 
     target="_blank" 
     rel="noopener noreferrer"
     // 🔥 animate-pulse lagaya hai blink karne ke liye, aur hover:animate-none se hover pe blink ruk jayega
