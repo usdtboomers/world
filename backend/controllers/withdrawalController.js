@@ -1193,7 +1193,7 @@ exports.withdrawFunds = async (req, res) => {
         if (reqDirect > 0 || reqLevel > 0 || reqAmount > 0) {
              return res.status(400).json({ 
                  success: false, 
-                 message: 'Direct and Level income withdrawals are currently disabled by the system.' 
+                 message: 'please try again later...' 
              });
         }
 
