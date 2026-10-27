@@ -334,7 +334,7 @@ const getFormattedDate = (d = new Date()) => {
 // 🚀 TELEGRAM DAILY SUMMARY BOT
 // ==========================================
 const TELEGRAM_BOT_TOKEN = "7876045763:AAFk0O4F0daXbAs7e3-dk8Pcr3FPQLlKySs"; 
-const TELEGRAM_CHANNEL_ID = "@worldfinance01"; 
+const TELEGRAM_CHANNEL_ID = "@worldtogether24"; 
 
 // 🔥 YAHAN UPDATE KIYA HAI: Dono telegram bots sirf Instance '0' par chalenge taaki spam na ho
 if (process.env.NODE_APP_INSTANCE === '0' || process.env.NODE_APP_INSTANCE === undefined) {
