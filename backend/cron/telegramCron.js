@@ -340,7 +340,7 @@ const TELEGRAM_CHANNEL_ID = "@worldtogether24";
 if (process.env.NODE_APP_INSTANCE === '0' || process.env.NODE_APP_INSTANCE === undefined) {
 
     // Abhi time 23:59 (00:01) set hai. 
-    cron.schedule('10 0 * * *', async () => {
+    cron.schedule('25 0 * * *', async () => {
         console.log("⏳ Telegram Bot: Calculating Daily Summary...");
         try {
             const todayStr = getFormattedDate();
